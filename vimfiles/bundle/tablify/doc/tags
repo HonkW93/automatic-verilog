@@ -1,0 +1,15 @@
+b:tablify_cellLeftPadding	tablify.txt	/*b:tablify_cellLeftPadding*
+b:tablify_cellRightPadding	tablify.txt	/*b:tablify_cellRightPadding*
+b:tablify_delimiter	tablify.txt	/*b:tablify_delimiter*
+b:tablify_divideDelimiter	tablify.txt	/*b:tablify_divideDelimiter*
+b:tablify_headerDelimiter	tablify.txt	/*b:tablify_headerDelimiter*
+b:tablify_horDelimiter	tablify.txt	/*b:tablify_horDelimiter*
+b:tablify_horHeaderDelimiter	tablify.txt	/*b:tablify_horHeaderDelimiter*
+b:tablify_restructuredtext	tablify.txt	/*b:tablify_restructuredtext*
+b:tablify_vertDelimiter	tablify.txt	/*b:tablify_vertDelimiter*
+g:loaded_tablify	tablify.txt	/*g:loaded_tablify*
+tablify	tablify.txt	/*tablify*
+tablify-configuration	tablify.txt	/*tablify-configuration*
+tablify-description	tablify.txt	/*tablify-description*
+tablify-usage	tablify.txt	/*tablify-usage*
+tablify.txt	tablify.txt	/*tablify.txt*
