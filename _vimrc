@@ -26,7 +26,6 @@ behave mswin                                " Mouse behavior (the Windows way) é
 :nnoremap <A-x> <C-x>
 :nnoremap <A-a> <C-a>
 
-
 " Use the internal diff if available.
 " Otherwise use the special 'diffexpr' for Windows.
 if &diffopt !~# 'internal'

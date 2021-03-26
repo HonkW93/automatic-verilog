@@ -6,7 +6,7 @@
 " Maintainer:     HonkW
 " Version:        2.2.4
 " Last Update:    2017/9/18
-" Last Modified: 2021/01/11 22:42
+" Last Modified:  2021/03/26 00:45
 " For version 7.x or above
 
 " the new signal define store format
@@ -56,7 +56,7 @@ autocmd BufWrite automatic.vim call UpdateVimscriptLastModifyTime()
 function UpdateVimscriptLastModifyTime()
     let line = getline(9)
     if line =~ '\" Last Modified'
-        call setline(9,"\" Last Modified: " . strftime("%Y/%m/%d %H:%M"))
+        call setline(9,"\" Last Modified:  " . strftime("%Y/%m/%d %H:%M"))
     endif
 endfunction
 
@@ -1428,7 +1428,7 @@ function s:GetInstNameAdvance(lnum) "{{{2
     while line_index >= 1
         let line_index = s:SkipCommentLine(1,line_index)
         let line = getline(line_index)
-        let line = substitute(line,'//.*','','')
+        let line = substitute(line,'//.*','','')        "is it '\/\/.*' ??? but repeat work of SkipCommentLine
         let line = substitute(line,'\s*$','','')
 
         if wait_autoinst_pair == 1 || wait_inst_name == 1 || wait_module_name == 1
@@ -1509,7 +1509,6 @@ function s:GetInstNameAdvance(lnum) "{{{2
                     let result = match(line, ')\s*$')
                     call cursor(l:line_index,result+1) " cursor to autoinst line ')'
                     let [tmp1,tmp2] = searchpairpos("\(", "", "\)", 'b')
-                    echo [tmp1,tmp2]
                     if tmp1 == 0 && tmp2 == 0
                         echohl ErrorMsg | echo "() parameter pair not-match in autoinst, line: ".line_index  | echohl None
                         return ['', '']
@@ -1600,7 +1599,9 @@ function s:GetInstFileName(inst) "{{{2
     endif
 endfunction "}}}2
 
-"SkipCommentLine 跳过注释行，寻找最近的非注释行
+"---------------------------------------------------------------
+"        Skip Comment Line 
+"---------------------------------------------------------------
 function s:SkipCommentLine(mode,line_idx) "{{{2
 "---------------------------------------------------------------
 "input: 
@@ -1641,60 +1642,6 @@ function s:SkipCommentLine(mode,line_idx) "{{{2
     else
         for idx in range(a:line_idx,1,-1)
             let line = getline(idx)
-            "*/ symbol at end of the line
-            if line !~ '/\*' && line =~ '\*/\s*$'
-                let in_comment_pair = 1
-                continue
-            "/* symbol at top of the line
-            elseif line =~ '^\s*/\*' && line !~ '\*/'
-                let in_comment_pair = 0
-                continue
-            "in comment pair /* ... */
-            elseif in_comment_pair == 1
-                continue
-            "comment line //
-            elseif line =~ '^\s*\/\/'
-                continue
-            else
-                return idx
-            endif
-        endfor
-    endif
-    return -1
-endfunction "}}}2
-
-function s:SkipCommentLine_array(mode,lines,line_idx) "{{{2
-    "mode: 0 - code search dir is up to down, 1 - is down to up
-    "return no comment line index
-    "must run before comment line
-    let in_comment_pair = 0
-
-    if a:mode == 0
-        for idx in range(a:line_idx,len(a:lines),1)
-            let line = a:lines[idx-1]
-            "/* symbol at top of the line
-            if line =~ '^\s*/\*' && line !~ '\*/'
-                let in_comment_pair = 1
-                continue
-            "*/ symbol at end of the line
-            elseif line !~ '/\*' && line =~ '\*/\s*$'
-                let in_comment_pair = 0
-                continue
-            "in comment pair /* ... */
-            elseif in_comment_pair == 1
-                continue
-            "no think about comment pair /* ... */ in signal line, it may be autocmd
-
-            "comment line //
-            elseif line =~ '^\s*\/\/'
-                continue
-            else
-                return idx
-            endif
-        endfor
-    else
-        for idx in range(a:line_idx,1,-1)
-            let line = a:lines[idx-1]
             "*/ symbol at end of the line
             if line !~ '/\*' && line =~ '\*/\s*$'
                 let in_comment_pair = 1
@@ -1890,6 +1837,9 @@ function s:Filter(lines) "{{{2
    return aft_filter
 endfunction "}}}2
 
+"---------------------------------------------------------------
+"       Get Sequence IO
+"---------------------------------------------------------------
 function s:Seq2String(seq_num) "{{{2
     if a:seq_num < 10
         let seq = '0000' . a:seq_num
@@ -1919,7 +1869,6 @@ function s:GetSeqIO(lines, io_seq_dict) "{{{2
     let have_module = 0
     while line_index <= len(a:lines)
         "1 step,skip comment
-        "let line_index = s:SkipCommentLine_array(0,a:lines,line_index)
         let line_index = s:SkipPairCommentLine_array(0,a:lines,line_index)
         if line_index == -1
             break
@@ -1960,18 +1909,9 @@ function s:GetSeqIO(lines, io_seq_dict) "{{{2
             endif
 
             let seq = s:Seq2String(io_seq)
-"          0     1       2       3    4      5          6       7
-"       [width,type,has_defined,seq,line,signal_name,io_dir,last_port]
-            let value = []
-            call add(value,'c0')        " 0
-            call add(value,'keep')      " 1
-            call add(value,0)           " 2
-            call add(value,seq)         " 3
-            call add(value,line)        " 4
-            call add(value,seq)         " 5
-            call add(value,'')          " 6
-            call add(value,0)           " 7
-
+                "        0     1      2           3   4    5           6      7
+                "       [width,type,  has_defined,seq,line,signal_name,io_dir,last_port]
+            let value = ['c0', 'keep',0          ,seq,line,''         ,''    ,0]
             call extend(tmp_dict, {seq : value})
             let io_seq = io_seq + 1
 
@@ -2115,31 +2055,34 @@ function s:ExtendIoFromLine2(dict,in_line,init_seq) "{{{2
         let line = substitute(line,'^\<reg\>\s*','','')
     endif
 
+    if line =~ '\<signed\>\s*\|\<unsigned\>\s*'
+        let line = substitute(line,'\<signed\>\s*\|\<unsigned\>\s*','','')
+    endif
+
+    let width1 = ''
     if line =~ '^\['
-        let width = matchstr(line,'^\[.*:')
+        let width1 = matchstr(line,'^\[\zs.*\ze:')
+        let width1 = substitute(width1,'^\s*','','')
+        let width1 = substitute(width1,'\s*$','','')
+        let width2 = matchstr(line,'^\[.*:\zs.*\ze\]')
+        let width2 = substitute(width2,'^\s*','','')
+        let width2 = substitute(width2,'\s*$','','')
+        let width = abs(str2nr(width2)-str2nr(width1))
         let line = substitute(line,'^\[.*:.*\]\s*','','')
-        let width = substitute(width,'^\[\s*','','')
-        let width = substitute(width,'\s*:$','','')
     endif
 
     let signal_name = matchstr(line,'\w\+')
     let seq = s:Seq2String(a:init_seq)
-"          0     1       2       3    4      5          6       7
-"       [width,type,has_defined,seq,line,signal_name,io_dir,last_port]
-    let value = []
-    call add(value,width)       " 0
-    call add(value,type)        " 1
-    call add(value,has_defined) " 2
-    call add(value,seq)         " 3
-    call add(value,line0)       " 4
-    call add(value,signal_name) " 5
-    call add(value,io_dir)      " 6
-    call add(value,0)           " 7
-
+    "            0     1    2          3   4      5         6      7
+    "           [width,type,has_defined,seq,line, signal_name,io_dir,last_port]
+    let value = [width,type,has_defined,seq,line0,signal_name,io_dir,0]
     call extend(a:dict, {seq : value})
     return a:init_seq + 1
 endfunction "}}}2
 
+"---------------------------------------------------------------
+"       
+"---------------------------------------------------------------
 function s:ConvertSeqIO(io_seq_dict,io_dict) "{{{2
     for seq in sort(keys(a:io_seq_dict))
         let value = a:io_seq_dict[seq]
@@ -4175,6 +4118,7 @@ function AutoDef() "{{{2
             let inst_io = {}
             "call s:GetIO(inst_lines,inst_io)
             call s:GetSeqIO(inst_lines,inst_io_seq)
+            echo inst_io_seq
             call s:ConvertSeqIO(inst_io_seq,inst_io)
 
             let line_index = line_index + 1
@@ -4403,10 +4347,7 @@ endfunction
 
 "}}}2
 
-"}}}1
-
-
-"Search Up Inst Line{{{1
+"Search Up Inst Line{{{2
 function SearchUpInstLine()
     "it relay the '(' ')' pair match for search the inst module line
     let loss_pair = 0
@@ -4438,6 +4379,8 @@ function SearchUpInstLine()
     endwhile
     call cursor(lnum,0)
 endfunction
+"}}}2
+
 "}}}1
 
 
