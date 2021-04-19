@@ -2,13 +2,14 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/04/05 18:00
+" Last Modified:  2021/04/19 21:48
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
 "------------------------------------------------------------------------------
 " 2021/3/26     HonkW           1.0.0                   First copy from zhangguo's vimscript
-" 2021/4/5      HonkW           1.0.1                   First finish AutoInst & Autopara
+" 2021/4/5      HonkW           1.0.1                   Finish AutoInst & Autopara
+" 2021/4/19     HonkW           1.0.2                   Finish GetReg
 "
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
@@ -1073,7 +1074,7 @@ endfunction
 "   [reg,5,output,31,0,port_b,0,'    output reg [31:0] port_b']
 " Output:
 "   list of port sequences(including comment lines)
-"    0     1        2       3       4       5            6          7
+"    0     1         2       3       4       5            6          7
 "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
 "---------------------------------------------------
 function s:GetIO(lines,mode)
@@ -1085,6 +1086,9 @@ function s:GetIO(lines,mode)
     while idx < len(a:lines)
         let idx = idx + 1
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
+        if idx == -1
+            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+        endif
         let line = a:lines[idx-1]
 
         "find module first
@@ -1135,10 +1139,13 @@ function s:GetIO(lines,mode)
                 endif
 
                 "type reg/wire
-                let type = 'wire'
+                let type = 'none'
                 if line =~ '\<reg\>'
                     let type = 'reg'
+                elseif line =~ '\<wire\>'
+                    let type = 'wire'
                 endif
+
                 "io direction input/output/inout
                 let io_dir = matchstr(line,s:VlogTypePorts)
 
@@ -1162,7 +1169,7 @@ function s:GetIO(lines,mode)
                 let name = matchstr(line,'\w\+')
 
                 "           [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
-                let value = [type,seq,     io_dir, width1, width2, name, 0,         '']
+                let value = [type,seq,     io_dir, width1, width2, name,        0,         '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
             else
@@ -1287,6 +1294,9 @@ function s:GetInstIO(lines)
     while idx < len(a:lines)
         let idx = idx + 1
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
+        if idx == -1
+            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+        endif
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
             let port = matchstr(line,'\.\s*\zs\w\+\ze\s*(.*)')
@@ -1376,8 +1386,7 @@ function s:GetInstModuleName()
                 "find position of inst_name
                 call search('\w\+','b')
                 "get inst_name
-                execute "normal! \"yye"
-                let inst_name = getreg("y")
+                let inst_name = expand('<cword>')
 
                 "record inst_name position
                 let idx1 = line('.')
@@ -1402,8 +1411,7 @@ function s:GetInstModuleName()
             else
                 call search('\w\+','bW')
             endif
-            execute "normal! \"yye"
-            let module_name = getreg("y")
+            let module_name = expand('<cword>')
             break
         endif
 
@@ -1533,8 +1541,8 @@ function s:DrawIO(io_seqs,io_list,config)
     "Draw IO
     let lines = []
     let last_port_flag = 0
-    let io_list = a:io_list
-    let config = a:config
+    let io_list = copy(a:io_list)
+    let config = copy(a:config)
     for seq in sort(keys(a:io_seqs),'N')
         let value = a:io_seqs[seq]
         let type = value[0]
@@ -1634,6 +1642,7 @@ endfunction
 " Function: GetPara
 " Input: 
 "   lines : all lines to get parameter
+"   mode : different use of keys
 "          seq -> use seq as key
 "          name -> use signal_name as key
 " Description:
@@ -1677,6 +1686,9 @@ function s:GetPara(lines,mode)
     while idx < len(a:lines)
         let idx = idx + 1
         let idx = s:SkipCommentLine(0,idx,a:lines)  "skip all comment line
+        if idx == -1
+            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+        endif
         let line = a:lines[idx-1]
         "delete comment line in the middle
         let line = substitute(line,'\/\/.*','','')
@@ -1781,6 +1793,9 @@ function s:GetInstPara(lines)
     while idx < len(a:lines)
         let idx = idx + 1
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
+        if idx == -1
+            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+        endif
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
             call substitute(line,'\.\s*\zs\w\+\ze\s*(.*)','\=add(inst_para_list,submatch(0))','g')
@@ -1859,8 +1874,7 @@ function s:GetParaModuleName()
             let idx2 = line('.')
             "get inst_name
             call search('\w\+')
-            execute "normal! \"yye"
-            let inst_name = getreg("y")
+            let inst_name = expand('<cword>')
 
             "find position of module_name
             call cursor(index,col)
@@ -1868,8 +1882,7 @@ function s:GetParaModuleName()
             call search('\w\+','b')
 
             "get module_name
-            execute "normal! \"yye"
-            let module_name = getreg("y")
+            let module_name = expand('<cword>')
 
             "record module_name position
             let idx1 = line('.')
@@ -1935,7 +1948,7 @@ function s:KillAutoPara(inst_name)
     let idx = line('.')
     let line = getline(idx)
     if line =~ '/\*\<autoinstparam\>'
-        "if current line end with ');', one line
+        "if current line end with ')', one line
         if line =~')\s*$'
             return
         else
@@ -1952,11 +1965,11 @@ function s:KillAutoPara(inst_name)
                     let line = substitute(line,redundant,'','')
                     call setline(idx,line)
                     break
-                    "abnormal end
+                "abnormal end
                 elseif line =~ 'endmodule' || idx == line('$')
                     echohl ErrorMsg | echo "Error running KillAutoInst! Kill abnormally till the end!"| echohl None
                     break
-                    "middle
+                "middle
                 else
                     call deletebufline('%',idx)
                 endif
@@ -2133,6 +2146,321 @@ endfunction
 "}}}3
 
 "-------------------------------------------------------------------
+"                             AutoInstWire
+"-------------------------------------------------------------------
+
+
+
+"-------------------------------------------------------------------
+"                             AutoReg
+"-------------------------------------------------------------------
+"AutoReg-Get
+"GetReg 获取reg{{{3
+"--------------------------------------------------
+" Function: GetReg
+" Input: 
+"   lines : all lines to get reg
+"   mode : different use of keys
+"          seq -> use seq as key
+"          name -> use signal_name as key
+" Description:
+"   Get reg info from declaration and always block
+"   e.g_1
+"   module_name
+"   inst_name
+"   (
+"       input       clk,
+"       input       rst,
+"       input       port_a,
+"       output reg  port_b_valid,
+"       output reg [31:0] port_b
+"   );
+"
+"   e.g_2 
+"   always@(posedge clk or posedge rst)
+"   begin
+"       if(rst)begin
+"           a <= 0;
+"       end
+"       else begin
+"           a <= a + 1;
+"       end
+"   end
+"
+"   always@(*)
+"   begin
+"       if(rst)begin
+"           b <= 0;
+"       end
+"       else begin
+"           b <= 10'd9;
+"       end
+"   end
+"
+"   e.g reg sequences
+"
+" Output:
+"
+"---------------------------------------------------
+function GetReg()
+    "------------------------
+    "read file
+    let lines = readfile(expand('%'))
+    "------------------------
+    
+    "io names
+    let io_names = s:GetIO(lines,'name')
+
+    "io reg names
+    let ioreg_names = {}
+    for name in keys(io_names)
+        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+        let value = io_names[name]
+        let type = value[0]
+        if type == 'reg'
+            call extend(ioreg_names, {name: value})
+        endif
+    endfor
+
+    "flip-flop reg names
+    let freg_names = s:GetfReg(lines,'name')
+
+    "combination logic reg names
+    let creg_names = s:GetcReg(lines,'name')
+
+
+
+    "let creg_seqs = s:GetcReg(lines,'seq')
+    "for seq in sort(keys(creg_seqs),'N')
+    "    let value = creg_seqs[seq]
+    "    let name = value[4]
+    "    let type = value[0]
+    "    let seq = value[1]
+    "    let width1 = value[2]
+    "    let width2 = value[3]
+    "    echo name.'  type: '.type.'  seq :'.seq.'  ['.width1.':'.width2.']'
+    "endfor
+
+endfunction
+"}}}3
+
+"GetfReg 获取非阻塞类型reg{{{3
+"--------------------------------------------------
+" Function: GetfReg
+" Input: 
+"   lines : all lines to get freg
+"   mode : different use of keys
+"          seq -> use seq as key
+"          name -> use signal_name as key
+" Description:
+"   Get freg info from always block
+"
+"   e.g_2 
+"   always@(posedge clk or posedge rst)
+"   begin
+"       if(rst)begin
+"           a <= 0;
+"       end
+"       else begin
+"           a <= a + 1;
+"       end
+"   end
+"
+"   always@(*)
+"   begin
+"       if(rst)begin
+"           b <= 0;
+"       end
+"       else begin
+"           b <= 10'd9;
+"       end
+"   end
+"
+"   e.g reg sequences
+"   ['freg', sequence, width1, width2, signal_name, lines]
+"
+"   ['freg',seq,'c0','c0','a',['    a <= 0;','   a <= a + 1;']]
+"   ['freg',seq,9,0,'b',['    b <= 0;','   b <= 10'd9;']]
+"
+" Output:
+"   list of reg sequences
+"    0       1         2       3       4            5 
+"   ['freg', sequence, width1, width2, signal_name, lines]
+"---------------------------------------------------
+function s:GetfReg(lines,mode)
+    let idx = 1
+    let seq = 0
+    let width_names = {}
+    let reg_names = {}
+
+    while idx < len(a:lines)
+        "skip comment line
+        let idx = s:SkipCommentLine(0,idx,a:lines)
+        if idx == -1
+            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+        endif
+        let line = a:lines[idx-1]
+        "find flip-flop reg
+        if line =~ '^\s*\<always\>\s*@\s*(\s*\<\(posedge\|negedge\)\>'
+            let idx_inblock = idx + 1
+            "find signals in block
+            while 1
+                "skip comment line
+                let idx_inblock = s:SkipCommentLine(0,idx_inblock,a:lines)
+                if idx_inblock == -1
+                    echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+                endif
+                let line = a:lines[idx_inblock-1]
+                "meet another always block, assign statement or instance, break
+                if line =~ '^\s*\<always\>' || line =~ '^\s*\<assign\>' || line =~ '^\s*\<endmodule\>' || line =~ '/\*\<autoinst\>\*/' || line =~ '\s*\.\w\+(.*)' || idx_inblock == len(a:lines)
+                    break
+                else
+                    if line =~ '.*<=.*'
+                        let seq = seq + 1
+                        let left = matchstr(line,'\s*\zs.*\ze\s*<=')
+                        let right = matchstr(line,'<=\s*\zs.*\ze\s*')
+
+                        "get name first
+                        let reg_name_list = s:GetSigName(left)
+
+                        "width_names    
+                        "    0     1            2      3               4            5                6             7
+                        "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
+                        
+                        "sigle signal, find its signal width 
+                        if len(reg_name_list) == 1
+                            let reg_name = reg_name_list[0]
+                            "find width from left side, e.g. reg_a[4:0] (same time initialize width_names)
+                            let width_names = s:GetLeftWidth(left,seq,reg_name,line,width_names)
+
+                            "find width from right side. e.g. 3'd5 reg_b[4:3]
+                            let width_names = s:GetRightWidth(right,reg_name,width_names)
+
+                        "multi signal concatenation, don't calculate signal width anymore. e.g. {reg_a,reg_b,reg_c[2:0]}
+                        else
+                            for reg_name in reg_name_list
+                                let width_names = s:GetLeftWidth(reg_name,seq,reg_name,line,width_names)
+                            endfor
+                        endif
+
+                    endif
+                endif
+                let idx_inblock = idx_inblock + 1
+            endwhile
+        endif
+        let idx = idx + 1
+    endwhile
+
+    "GetSig
+    if a:mode == 'name'
+        let reg_names = s:GetSig('freg',width_names,'name')
+        return reg_names
+    elseif a:mode == 'seq'
+        let reg_seqs = s:GetSig('freg',width_names,'seq')
+        return reg_seqs
+    else
+        echohl ErrorMsg | echo "Error mode input for function GetfReg! mode = ".a:mode| echohl None
+    endif
+
+endfunction
+"}}}3
+
+"GetcReg 获取阻塞类型reg{{{3
+"--------------------------------------------------
+" Function: GetcReg
+" Almost same logic as GetfReg
+" Refer GetfReg for function Description
+"---------------------------------------------------
+function s:GetcReg(lines,mode)
+
+    let idx = 1
+    let seq = 0
+    let width_names = {}
+    let reg_names = {}
+
+    while idx < len(a:lines)
+        "skip comment line
+        let idx = s:SkipCommentLine(0,idx,a:lines)
+        if idx == -1
+            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+        endif
+        let line = a:lines[idx-1]
+        "ignore flip-flop reg
+        if line =~ '^\s*\<always\>\s*@\s*(\s*\<\(posedge\|negedge\)\>'
+
+        "find combination reg
+        elseif line =~ '^\s*\<always\>'
+            let idx_inblock = idx + 1
+            "find signals in block
+            while 1
+                "skip comment line
+                let idx_inblock = s:SkipCommentLine(0,idx_inblock,a:lines)
+                if idx_inblock == -1
+                    echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+                endif
+                let line = a:lines[idx_inblock-1]
+                "meet another always block, assign statement or instance, break
+                if line =~ '^\s*\<always\>' || line =~ '^\s*\<assign\>' || line =~ '^\s*\<endmodule\>' || line =~ '/\*\<autoinst\>\*/' || line =~ '\s*\.\w\+(.*)' || idx_inblock == len(a:lines)
+                    break
+                else
+                    if line =~ '.*=.*'
+                        let seq = seq + 1
+                        let left = matchstr(line,'\s*\zs.*\ze\s*=')
+                        let right = matchstr(line,'=\s*\zs.*\ze\s*')
+
+                        "get name first
+                        let reg_name_list = s:GetSigName(left)
+
+                        "width_names    
+                        "    0     1            2      3               4            5                6             7
+                        "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
+                        
+                        "sigle signal, find its signal width 
+                        if len(reg_name_list) == 1
+                            let reg_name = reg_name_list[0]
+                            "find width from left side, e.g. reg_a[4:0] (same time initialize width_names)
+                            let width_names = s:GetLeftWidth(left,seq,reg_name,line,width_names)
+
+                            "find width from right side. e.g. 3'd5 reg_b[4:3]
+                            let width_names = s:GetRightWidth(right,reg_name,width_names)
+
+                        "multi signal concatenation, don't calculate signal width anymore. e.g. {reg_a,reg_b,reg_c[2:0]}
+                        else
+                            for reg_name in reg_name_list
+                                let width_names = s:GetLeftWidth(reg_name,seq,reg_name,line,width_names)
+                            endfor
+                        endif
+
+                    endif
+                endif
+                let idx_inblock = idx_inblock + 1
+            endwhile
+        endif
+        let idx = idx + 1
+    endwhile
+
+    "GetSig
+    let reg_names = s:GetSig('creg',width_names,'name')
+
+    if a:mode == 'name'
+        let reg_names = s:GetSig('creg',width_names,'name')
+        return reg_names
+    elseif a:mode == 'seq'
+        let reg_seqs = s:GetSig('creg',width_names,'seq')
+        return reg_seqs
+    else
+        echohl ErrorMsg | echo "Error mode input for function GetcReg! mode = ".a:mode| echohl None
+    endif
+
+endfunction
+"}}}3
+
+"-------------------------------------------------------------------
+"                             AutoWire
+"-------------------------------------------------------------------
+
+
+"-------------------------------------------------------------------
 "                             AutoDef
 "-------------------------------------------------------------------
 
@@ -2140,6 +2468,398 @@ endfunction
 "-------------------------------------------------------------------
 "                            Universal
 "-------------------------------------------------------------------
+"Universal-GetSigName
+"{{{3 GetSigName 获取信号名称
+"--------------------------------------------------
+" Function: GetSigName
+" Input: 
+"   str : input string
+" Description:
+" e.g1
+"   data[7:0]
+"
+" e.g2
+"   {data1[7:0],data2[5:1],data3}
+"
+" Output:
+"   list of names
+"
+" e.g1
+"   [data]
+"
+" e.g2
+"   [data1,data2,data3]
+"---------------------------------------------------
+function s:GetSigName(str)
+    let name_list = []
+    if a:str =~ '{.*}'
+        let str = matchstr(a:str,'{\zs.*\ze}') 
+        let str = substitute(str,'\s*','','g')        "delete redundant space
+        let str_list = split(str,',')
+        for str in str_list
+            let name = matchstr(str,'\w\+')
+            call add(name_list,name)
+        endfor
+    else
+        let name_list = [matchstr(a:str,'\w\+')]
+    endif
+    return name_list
+endfunction
+"}}}3
+
+"Universal-GetLeftWidth 
+"GetLeftWidth 获取左半部分信号宽度{{{3
+"--------------------------------------------------
+" Function: GetLeftWidth
+" Input:
+"   left : left side of the sentence
+"   seq : sequences of the signal
+"   line : orginal line
+"   width_names = {signal_name : value} 
+" Description:
+" e.g1
+"   signal_a[3:0]
+" e.g2
+"   signal_a[WIDTH-1:0]
+" e.g3
+"   signal_a[2*3-1:0] signal_b[4/2-1:0]
+" e.g4
+"   signal_a[1]
+"
+"   seqs : record sequence list
+"   lines : record orginal line list
+"   left_width_nrs : record width list that's pure number
+"   left_widths : record width list that's not a pure number, like WIDTH-1 or 2*3-1
+"
+" Output:
+"   list of signal widths
+"   value = 
+"    0     1            2      3               4            5                6             7
+"   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
+"---------------------------------------------------
+function s:GetLeftWidth(left,seq,name,line,width_names)
+
+    "    0     1            2      3               4
+    "   [seqs, signal_name, lines, left_width_nrs, left_widths ......]
+
+    "get value already exist in width_names
+    if has_key(a:width_names,a:name)
+        let old_value = a:width_names[a:name]
+        let seqs = add(old_value[0],a:seq)
+        let lines = add(old_value[2],a:line)
+        let left_width_nrs = old_value[3]
+        let left_widths = old_value[4]
+        let right_width_nrs = old_value[5]
+        let right_widths = old_value[6]
+        let right_signal_link = old_value[7]
+    else
+        let seqs = [a:seq]
+        let lines = [a:line]
+        let left_width_nrs = []
+        let left_widths = []
+        let right_width_nrs = []
+        let right_widths = []
+        let right_signal_link = {}
+    endif
+
+    "get width
+    "left have width
+    if a:left =~ '\[.*\]'
+        let width = matchstr(a:left,'\[.*\]')                 
+        let width = substitute(width,'\s*','','g')          "delete redundant space
+        "left have two width e.g. signal_t[2:0] signal_a[WIDTH-1:0]
+        if width =~ '[.*:.*]'
+            let width1 = matchstr(width,'\v\[\zs\S+\ze:.*\]')   
+            let width2 = matchstr(width,'\v\[.*:\zs\S+\ze\]')
+            "pure number width e.g. signal_a[3:0]
+            if substitute(width1,'\d\+','','g') == '' && substitute(width2,'\d\+','','g') == ''
+                call add(left_width_nrs,str2nr(width1))
+                call add(left_width_nrs,str2nr(width2))
+            "parameter type input width e.g. signal_a[WIDTH-1:0]
+            "calculation type e.g. signal_a[2*3-1:0] signal_b[4/2-1:0]
+            else
+                call add(left_widths,[width1,width2])
+            endif
+        "left have one width of pure number e.g. [1]
+        elseif width =~ '\[\d\]'
+            call add(left_width_nrs,str2nr(matchstr(width,'\[\zs\d\ze\]')))
+        "keep original  e.g. reg_a[cnt]
+        else
+            let width1 = matchstr('[\zs.*\ze]')
+            let width2 = ''
+            call add(left_widths,[width1,width2])
+        endif
+    "left don't have width e.g. signal_a, add nothing
+    else
+
+    endif
+
+    "pair up width_names
+            "    0     1            2      3               4
+            "   [seqs, signal_name, lines, left_width_nrs, left_widths ......]
+    let value = [seqs, a:name,      lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
+
+    call extend(a:width_names,{a:name : value})
+
+    return a:width_names
+
+endfunction
+"}}}3
+
+"Universal-GetRightWidth
+"GetRightWidth 获取右半部分信号宽度{{{3
+"--------------------------------------------------
+" Function: GetRightWidth
+" Input:
+"   right : right side of the sentence
+"   width_names = {signal_name : value} 
+" Description:
+" e.g1                                  
+"   16'hffff;                           --------> right_width_nrs
+"   `WIDTH'hffff;                       --------> right_widths
+" e.g2
+"   signal_a[3];                        --------> right_width_nrs
+" e.g3
+"   signal_a[WIDTH-1:0];                --------> right_widths
+" e.g4
+"   signal_a[2*3-1:0];signal_b[4/2-1:0];--------> right_widths
+" e.g5
+"   signal_a[5:0];                      --------> right_width_nrs
+" e.g6                                  
+"   signal_a; or ~signal_a; or !signal_a; --------> right_signal_link
+" e.g7                                  
+"   {signal_a,signal_b,signal_c[2:0]};    --------> right_signal_link
+" e.g8                                  
+"   signal_a&signal_b&signal_c[2:0];      --------> right_signal_link
+" e.g9                                  
+"   en ? signal_b : signal_c[2:0];        --------> right_signal_link
+"
+"   right_width_nrs : record width list that's pure number
+"   right_widths : record width list that's not a pure number, like WIDTH-1 or 2*3-1
+"   right_signal_link : record width that's link to a signal or a few signals
+"
+" Output:
+"   list of signal widths
+"   value = 
+"    0     1            2      3               4            5                6             7
+"   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
+"---------------------------------------------------
+function s:GetRightWidth(right,name,width_names)
+
+    "    0     1                    5                6             7
+    "   [seqs, signal_name, ......, right_width_nrs, right_widths, right_signal_link]
+
+    "value already exist in width_names
+    let old_value = a:width_names[a:name]
+    let right_width_nrs = old_value[5]
+    let right_widths = old_value[6]
+    let right_signal_link = old_value[7]
+
+    "get width
+    let right = substitute(a:right,'\s*','','g')                    "delete redundant space
+    let right = substitute(right,'#`\?\w\+\(\.\w\+\)\?','','')      "for delay like #0.1
+
+    "match M'bN or M'hN or M'dN
+    "M may be `define or parameter or number
+    if right =~ '^\(`\?\w\+\|\d\+\)' . "'" . '[bhd].*'
+        "pure number width e.g. 5'd0 -> signal_a[4:0]
+        if right =~ '^\d\+' . "'" . '[bhd].*'
+            let width = matchstr(right,'\d\+')   
+            call add(right_width_nrs,str2nr(width)-1)
+            call add(right_width_nrs,0)
+        "parameter type input width e.g. WIDTH'hff -> signal_a[WIDTH-1:0]
+        elseif right =~ '^`\?\w\+\' . "'" . '[bhd].*'
+            let width = matchstr(right,'`\?\w\+')   
+            call add(right_widths,[width.'-1','0'])
+        endif
+
+    "match signal[N], N is integer number
+    elseif right =~ '^\~\?\w\+\[\d\+\];'
+        call add(right_width_nrs,0)
+        
+    "match signal[M:N], M and N is integer number
+    elseif right =~ '^\~\?\w\+\[.*:.*\];'
+            let width1 = matchstr(right,'\v\[\zs\S+\ze:.*\]')   
+            let width2 = matchstr(right,'\v\[.*:\zs\S+\ze\]')
+            "pure number width e.g. signal_a[3:0]
+            if substitute(width1,'\d\+','','g') == '' && substitute(width2,'\d\+','','g') == ''
+                call add(right_width_nrs,str2nr(width1))
+                call add(right_width_nrs,str2nr(width2))
+            "parameter type input width e.g. signal_a[WIDTH-1:0]
+            "calculation type e.g. signal_a[2*3-1:0] signal_b[4/2-1:0]
+            else
+                call add(right_widths,[width1,width2])
+            endif
+
+    "match signal0 == signal1
+    elseif right =~ '^(\?\w\+==\w\+)\?;'
+        call add(right_width_nrs,0)
+
+    "match &signal0 |signal0 or ^signal0
+    elseif right =~ '^[\^&|]\w\+;'
+        call add(right_width_nrs,0)
+
+    "match signal0 or ~signal0
+    elseif right =~ '^\~\?\w\+;'
+        "pure number, ignore
+        if right =~ '^\~\?\d\+;'
+        else
+            let s0 = matchstr(right,'^\~\?\zs\w\+\ze;')
+            call extend(right_signal_link,{s0 : ''})
+        endif
+
+    "match sel ? signal0 : signal1
+    elseif right =~ '^\~\?\w\+?\w\+:\w\+;'
+        let s0 = matchstr(right,'^\~\?\w\+?\zs\w\+\ze:\w\+;')
+        let s1 = matchstr(right,'^\~\?\w\+?\w\+:\zs\w\+\ze;')
+        call extend(right_signal_link,{s0 : ''})
+        call extend(right_signal_link,{s1 : ''})
+
+    "match {signal0,signal1[1:0],signal2......}
+    elseif right =~ '^{.*}'
+        while 1
+            if right =~ '\w\+\[.*\]'
+                let s0 = matchstr(right,'\w\+')
+                let width = matchstr(right,'\[.*\]')
+                let right = substitute(right,'\w\+\[.*\]','','')
+            else
+                let s0 = matchstr(right,'\w\+')
+                let width = ''
+                let right = substitute(right,'\w\+','','')
+            endif
+
+            if s0 == ''
+                break
+            else
+                call extend(right_signal_link,{s0 : ['+',width]})
+            endif
+        endwhile
+
+    "match signal0 & signal1 | signal2 ^ signal3
+    elseif right =~ '^\~\?\w\+\([\&\|\^]\~\?\w\+\)\+;'
+        while 1
+            let s0 = matchstr(right,'\w\+')
+            if s0 == ''
+                break
+            else
+                let right = substitute(right,'\w\+','','')
+                call extend(right_signal_link,{s0 : ''})
+            endif
+        endwhile
+    else
+    "can't recognize right side of 'd4
+
+    endif
+
+    "pair up width_names
+    "    0     1                    5                6             7
+    "   [seqs, signal_name, ......, right_width_nrs, right_widths, right_signal_link]
+    let value = old_value
+    let value[5] = right_width_nrs
+    let value[6] = right_widths
+    let value[7] = right_signal_link
+
+    call extend(a:width_names,{a:name : value})
+
+    return a:width_names
+
+endfunction
+
+"}}}3
+
+"Universal-GetSig
+"GetSig 获取信号列表{{{3
+"--------------------------------------------------
+" Function: GetSig
+" Input:
+"   type : signal type
+"   list of signal widths
+"   value = 
+"    0     1            2      3               4            5                6             7
+"   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
+"   mode : different use of keys
+"          seq -> use seq as key
+"          name -> use signal_name as key
+" Description:
+"   seqs : record sequence list
+"   lines : record orginal line list
+"   left_width_nrs : record left-width list that's pure number
+"   left_widths : record left-width list that's not a pure number, like WIDTH-1 or 2*3-1
+"   right_width_nrs : record right-width list that's pure number
+"   right_widths : record right-width list that's not a pure number, like WIDTH-1 or 2*3-1
+"   right_signal_link : record right-width that's link to a signal or a few signals
+" Output:
+"   list of signal sequences
+"    0     1         2       3       4            5 
+"   [type, sequence, width1, width2, signal_name, lines]
+"---------------------------------------------------
+function s:GetSig(type,width_names,mode)
+
+    let sig_names = {}
+    "left_width_nrs & left_widths & right_width_nrs & right_widths 
+    "process and add width1 & width2
+    for name in keys(a:width_names)
+        let value = a:width_names[name]
+        let seqs = value[0]
+        let lines = value[2]
+        let left_width_nrs = value[3]
+        let left_widths = value[4]
+        let right_width_nrs = value[5]
+        let right_widths = value[6]
+        let right_signal_link = value[7]
+
+        "1. exist width that is not a number type, use first width declaration of this signal
+        "e.g.
+        "parameter type input width e.g. reg_a[WIDTH-1:0]
+        "calculation type e.g. reg_a[2*3-1:0] reg_b[4/2-1:0]
+        "2. only exist width that is a number type, use maximum & minimum number as width. 
+        "e.g. 
+        "reg_t[2:1] reg_t[0] -> width1 = 2, width2 = 0
+        
+        "first judge left width
+        if left_widths != []
+            let [width1,width2] = left_widths[0]
+        elseif left_width_nrs != []
+            let width1 = max(left_width_nrs)
+            let width2 = min(left_width_nrs)
+        elseif right_widths != []
+            let [width1,width2] = right_widths[0]
+        elseif right_width_nrs != []
+            let width1 = max(right_width_nrs)
+            let width2 = min(right_width_nrs)
+        elseif right_signal_link != {}
+            "--------------------------------signal link------------------------------
+            let width1 = 'c0'
+            let width2 = 'c0'
+        else
+            "no width
+            let width1 = 'c0'
+            let width2 = 'c0'
+        endif
+
+        "use first sequence as signal sequence
+        "   [type, sequence, width1, width2, signal_name, line]
+        let sig_value = [a:type,seqs[0],width1,width2,name,lines]
+        call extend(sig_names,{name : sig_value})
+    endfor
+
+    if a:mode == 'name'
+        return sig_names
+    elseif a:mode == 'seq'
+        let sig_seqs = {}
+        for name in keys(sig_names)
+            let value = sig_names[name]
+            let seq = value[1]
+            call extend(sig_seqs,{seq : value})
+        endfor
+        return sig_seqs
+    else
+        echohl ErrorMsg | echo "Error mode input for function GetSig! mode = ".a:mode| echohl None
+    endif
+    
+endfunction
+"}}}3
+
 "Others
 "{{{3 GetDirList 获取需要例化的文件夹名以及是否递归
 "--------------------------------------------------
@@ -2159,16 +2879,18 @@ endfunction
 "       rec = 1
 "---------------------------------------------------
 function s:GetDirList()
-    let dir = ['.'] "default
+    let dir = '.'  "default
+    let dirlist = []
     let rec = 0
     let lines = getline(1,line('$'))
     for line in lines
+        "find directories
         if line =~ 'verilog-library-directories:(.*)'
-            let dir =matchstr(line,'verilog-library-directories:(\zs.*\ze)')
-            let dirlist = []
+            let dir = matchstr(line,'verilog-library-directories:(\zs.*\ze)')
             call substitute(dir,'"\zs\S*\ze"','\=add(dirlist,submatch(0))','g')
         endif
 
+        "find recursive
         if line =~ 'verilog-library-directories-recursive:'
             let rec = matchstr(line,'verilog-library-directories-recursive:\s*\zs\d\ze\s*$')
             if rec != '0' && rec != '1'
@@ -2354,19 +3076,3 @@ endfunction
 
 "}}}1
 
-function VlogTest()
-    let line = getline('.')
-    "let result = search('\/\*autoinst\*\/','W') 
-
-    let lines = readfile(expand("%"))
-    "call GetPara(lines)
-    let dicttt = {}
-    call extend(dicttt,{1:'jkjk'})
-    call extend(dicttt,{2:'aaaa'})
-    call extend(dicttt,{3:'bbbb'})
-    call extend(dicttt,{4:'cccc'})
-    call extend(dicttt,{5:'dddd'})
-    echo len(keys(dicttt))
-
-
-endfunction
