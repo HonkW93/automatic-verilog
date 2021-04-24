@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/04/19 21:48
+" Last Modified:  2021/04/24 10:03
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -10,6 +10,7 @@
 " 2021/3/26     HonkW           1.0.0                   First copy from zhangguo's vimscript
 " 2021/4/5      HonkW           1.0.1                   Finish AutoInst & Autopara
 " 2021/4/19     HonkW           1.0.2                   Finish GetReg
+" 2021/4/24     HonkW           1.0.3                   Add read .sv file 
 "
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
@@ -2929,16 +2930,16 @@ endfunction
 "   rec : recursive
 "   files : dictionary to store
 " Description:
-"   rec = 1, recursively get inst-file dictionary (.v file) 
-"   rec = 0, normally get inst-file dictionary (.v file)
+"   rec = 1, recursively get inst-file dictionary (.v or .sv file) 
+"   rec = 0, normally get inst-file dictionary (.v or .sv file)
 " Output:
-"   files : files-directory dictionary(.v file)
+"   files : files-directory dictionary(.v or .sv file)
 "---------------------------------------------------
 function s:GetFileDirDic(dir,rec,files)
-    let filelist = readdir(a:dir,{n -> n =~ '.v$'})
+    let filelist = readdir(dir,{n -> n =~ '.v$\|.sv$'})
     for file in filelist
         if has_key(a:files,file)
-            echohl ErrorMsg | echo "Same file ".file." exist in both ".a:dir." and ".a:files[file]."! Only use first one as directory"| echohl None
+            echohl ErrorMsg | echo "Same file ".file." exist in both ".a:dir." and ".a:files[file]."! Only use one as directory"| echohl None
         endif
         call extend (a:files,{file : a:dir})
     endfor
