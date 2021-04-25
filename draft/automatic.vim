@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/04/24 10:03
+" Last Modified:  2021/04/25 22:24
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -2880,8 +2880,7 @@ endfunction
 "       rec = 1
 "---------------------------------------------------
 function s:GetDirList()
-    let dir = '.'  "default
-    let dirlist = []
+    let dirlist = [] 
     let rec = 0
     let lines = getline(1,line('$'))
     for line in lines
@@ -2890,7 +2889,6 @@ function s:GetDirList()
             let dir = matchstr(line,'verilog-library-directories:(\zs.*\ze)')
             call substitute(dir,'"\zs\S*\ze"','\=add(dirlist,submatch(0))','g')
         endif
-
         "find recursive
         if line =~ 'verilog-library-directories-recursive:'
             let rec = matchstr(line,'verilog-library-directories-recursive:\s*\zs\d\ze\s*$')
@@ -2899,7 +2897,14 @@ function s:GetDirList()
             endif
         endif
     endfor
+    "default
+    let dir = '.'       
+    if dirlist == [] 
+        let dirlist = [dir]
+    endif
+
     return [dirlist,str2nr(rec)]
+
 endfunction
 "}}}3
 
@@ -2936,7 +2941,7 @@ endfunction
 "   files : files-directory dictionary(.v or .sv file)
 "---------------------------------------------------
 function s:GetFileDirDic(dir,rec,files)
-    let filelist = readdir(dir,{n -> n =~ '.v$\|.sv$'})
+    let filelist = readdir(a:dir,{n -> n =~ '.v$\|.sv$'})
     for file in filelist
         if has_key(a:files,file)
             echohl ErrorMsg | echo "Same file ".file." exist in both ".a:dir." and ".a:files[file]."! Only use one as directory"| echohl None
