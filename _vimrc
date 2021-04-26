@@ -4,11 +4,11 @@
 " Date: 2020-05-26
 " -------------------------------------------------------------
 " 指定文件头内容
-let g:vimrc_author='Honk'
-let g:vimrc_company='NPIC'
-let g:vimrc_prject='Dragon Scale DCS'
-let g:vimrc_device='Actel_IGLOO2_M2GL090'
-let g:vimrc_email='honkwang93@gmail.com'
+let g:vimrc_author='HonkW'
+let g:vimrc_company='HonkW'
+let g:vimrc_prject='VIM'
+let g:vimrc_device=''
+let g:vimrc_email='contact@honk.wang'
 let g:vimrc_website='https://honk.wang'
 
 " 指定template的位置,可自行在template文件夹中的v文件夹下添加verilog相关模板
@@ -25,6 +25,8 @@ behave mswin                                " Mouse behavior (the Windows way) �
 " 避免与windows ctrl+a 冲突，替换为alt+a
 :nnoremap <A-x> <C-x>
 :nnoremap <A-a> <C-a>
+" 快捷Esc
+:inoremap jk <Esc>
 
 " Use the internal diff if available.
 " Otherwise use the special 'diffexpr' for Windows.
