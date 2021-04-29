@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/04/25 22:24
+" Last Modified:  2021/04/30 00:04
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -11,7 +11,7 @@
 " 2021/4/5      HonkW           1.0.1                   Finish AutoInst & Autopara
 " 2021/4/19     HonkW           1.0.2                   Finish GetReg
 " 2021/4/24     HonkW           1.0.3                   Add read .sv file 
-"
+" 2021/4/30     HonkW           1.0.4                   Bug fixed & Add " ',' feature for AutoPara
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
 "Update 记录脚本更新{{{1
@@ -168,6 +168,14 @@ amenu &Verilog.Code.Comment.SingleLineComment<TAB><;//>                 :call Au
 amenu &Verilog.Code.Comment.MultiLineComment<TAB>Visual-Mode\ <;/*>     :call AutoComment2()<CR>
 amenu &Verilog.Code.Comment.CurLineAddComment<TAB><;/$>                 :call AddCurLineComment()<CR>
 amenu &Verilog.Code.Template.LoadTemplate<TAB>                          :call LoadTemplate()<CR>
+
+"Auto
+amenu &Verilog.AutoInst.AutoInst(1)<TAB>All                             :call AutoInst(1)<CR>
+amenu &Verilog.AutoInst.AutoInst(0)<TAB>CurrentLine                     :call AutoInst(0)<CR>
+
+amenu &Verilog.AutoPara.AutoPara(1)<TAB>All                             :call AutoPara(1)<CR>
+amenu &Verilog.AutoPara.AutoPara(0)<TAB>CurrentLine                     :call AutoPara(0)<CR>
+
 "}}}3
 
 "}}}2
@@ -1583,7 +1591,11 @@ function s:DrawIO(io_seqs,io_list,config)
             "Draw IO by Config
             "empty list, default
             if io_list == []
-                let line = prefix.'.'.name.name2bracket.'('.name.width.width2bracket.')'.comma
+                if config[0] == 1
+                    let line = prefix.'.'.name.name2bracket.'('.name.width.width2bracket.')'.comma.' //'.io_dir
+                else
+                    let line = prefix.'.'.name.name2bracket.'('.name.width.width2bracket.')'.comma
+                endif
             "update list,draw io by config
             else
                 if config[0] == 1
@@ -1680,8 +1692,20 @@ endfunction
 "---------------------------------------------------
 function s:GetPara(lines,mode)
     let idx = 0
+
+    "wait for parameter 
     let wait_module = 1
-    let para_list = []
+    let wait_left_braket = 1
+    let wait_port_para = 1
+    let wait_right_braket = 1
+    let wait_decl_para = 1
+
+    "record port & declaration parameter
+    let port_para_lines = []
+    let decl_para_lines = []
+    let port_para_list = []
+    let decl_para_list = []
+
     let para_seqs = {}
 
     while idx < len(a:lines)
@@ -1694,47 +1718,85 @@ function s:GetPara(lines,mode)
         "delete comment line in the middle
         let line = substitute(line,'\/\/.*','','')
 
-        "find module first
+        "find module 
         if line =~ '^\s*module'
             let wait_module = 0
         endif
 
-        "until module,skip
-        if wait_module == 1
+        "until module,skip 
+        if wait_module == 1 
             continue
         endif
 
-        "find parameter
-        call substitute(line,'parameter\s*\w\+\s*=\s*\S\+','\=add(para_list,submatch(0))','g')
+        "find #(
+        if wait_module == 0 && line =~ '#\s*('
+            let wait_left_braket = 0
+        endif
+        "find port parameter 
+        if wait_left_braket == 0 && line =~ 'parameter'
+            let wait_port_para = 0
+        endif
+
+        "record port parameter line
+        if wait_port_para == 0 && wait_right_braket == 1 
+            call add(port_para_lines,line)
+        endif
+
+        "find )
+        if wait_port_para == 0 && line =~ ')'
+            let wait_right_braket = 0
+        endif
+
+        "record normal parameter 
+        if wait_right_braket == 0 && line =~ 'parameter'
+            let wait_decl_para = 0
+        endif
+
+        "record normal parameter 
+        if wait_decl_para == 0
+            call add(decl_para_lines,line)
+        endif
+
+        "find ; wait for parameter again
+        if wait_decl_para == 0 && line =~ ';'
+            let wait_decl_para = 1
+        endif
+
     endwhile
+
+    "unify to use ',' as spliter 
+    let port_para = substitute(join(port_para_lines),')',',','g')
+    let decl_para = substitute(join(decl_para_lines),';',',','g')
+   
+    "find para_list
+    call substitute(port_para,'\w\+\s*=\s*\S\+\ze\s*,','\=add(port_para_list,submatch(0))','g')
+    call substitute(decl_para,'\w\+\s*=\s*\S\+\ze\s*,','\=add(decl_para_list,submatch(0))','g')
 
     "get para_seqs
     let seq = 0
-    for para in para_list
+    for para in port_para_list
         let seq = seq + 1
-        "end with ,
-        if para =~ ','
-            let type = 'port'
-            let last_para = 0
-            let para = substitute(para,',',' ','')
-        "end with ;
-        elseif para =~ ';'
-            let type = 'decl'
-            let last_para = 0
-            let para = substitute(para,';',' ','')
-        else
-            let type = 'port'
-            let last_para = 1
-        endif
-
-        let p_name = matchstr(para,'parameter\s*\zs\w\+\ze\s*=')
+        let type = 'port'
+        let p_name = matchstr(para,'\w\+\ze\s*=')
         let p_value = matchstr(para,'=\s*\zs\S\+')
-
+        if para == port_para_list[-1]
+            let last_para = 1
+        else
+            let last_para = 0
+        endif
         "           [type, sequence, parameter_name, parameter_value ,last_parameter]
         let value = [type, seq     , p_name        , p_value         ,last_para]
-
         call extend(para_seqs, {seq : value})
+    endfor
 
+    for para in decl_para_list
+        let seq = seq + 1
+        let type = 'decl'
+        let p_name = matchstr(para,'\w\+\ze\s*=')
+        let p_value = matchstr(para,'=\s*\zs\S\+')
+        "           [type, sequence, parameter_name, parameter_value ,last_parameter]
+        let value = [type, seq     , p_name        , p_value         ,last_para]
+        call extend(para_seqs, {seq : value})
     endfor
 
     if a:mode == 'seq'
@@ -2046,6 +2108,7 @@ function s:DrawPara(para_seqs,para_list,config)
         let last_seq = seq_list[-1]
     else
         echohl ErrorMsg | echo "Error para_seqs input for function DrawPara! para_seqs length = ".len(keys(a:para_seqs))| echohl None
+        echohl ErrorMsg | echo "Possibly no parameter exist" | echohl None
     endif
 
     "para_list can be changed in function, therefore record if it's empty first
