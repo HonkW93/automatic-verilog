@@ -53,6 +53,7 @@
   - [x] 支持参数重刷（参考`emacs verilog-mode`）
   - [x] 支持新增端口自动添加`//PARA_NEW`（参考`vim automatic-verilog`）
   - [x] 支持删除端口自动添加`//PARA_DEL`（参考`vim automatic-verilog`）
+  - [x] 支持`parameter`连续多个的写法，例如`parameter A = 1, B = 5, C = 6`
   - [ ] 支持`` `ifdef``及`` `endif``
   - [ ] 进行中...
   
