@@ -2,13 +2,13 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/04/30 20:13
+" Last Modified:  2021/05/08 07:54
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
 "------------------------------------------------------------------------------
 " 2021/3/26     HonkW           1.0.0                   First copy from zhangguo's vimscript
-" 2021/4/5      HonkW           1.0.1                   Finish AutoInst & AutoPara
+" 2021/4/5      HonkW           1.0.1                   Finish AutoInst & Autopara
 " 2021/4/19     HonkW           1.0.2                   Finish GetReg
 " 2021/4/24     HonkW           1.0.3                   Add read .sv file 
 " 2021/4/30     HonkW           1.0.4                   Bug fixed & Add " ',' feature for AutoPara
@@ -171,10 +171,10 @@ amenu &Verilog.Code.Template.LoadTemplate<TAB>                          :call Lo
 
 "Auto
 amenu &Verilog.AutoInst.AutoInst(1)<TAB>All                             :call AutoInst(1)<CR>
-amenu &Verilog.AutoInst.AutoInst(0)<TAB>CurrentLine                     :call AutoInst(0)<CR>
+amenu &Verilog.AutoInst.AutoInst(0)<TAB>One                             :call AutoInst(0)<CR>
 
 amenu &Verilog.AutoPara.AutoPara(1)<TAB>All                             :call AutoPara(1)<CR>
-amenu &Verilog.AutoPara.AutoPara(0)<TAB>CurrentLine                     :call AutoPara(0)<CR>
+amenu &Verilog.AutoPara.AutoPara(0)<TAB>One                             :call AutoPara(0)<CR>
 
 "}}}3
 
@@ -3004,21 +3004,33 @@ endfunction
 "   files : files-directory dictionary(.v or .sv file)
 "---------------------------------------------------
 function s:GetFileDirDic(dir,rec,files)
-    let filelist = readdir(a:dir,{n -> n =~ '.v$\|.sv$'})
+    "let filelist = readdir(a:dir,{n -> n =~ '.v$\|.sv$'})
+    let filedirlist = glob(a:dir.'/'.'*',0,1)
+    let idx = 0
+    while idx <len(filedirlist)
+        let file = fnamemodify(filedirlist[idx],':t')
+        let filedirlist[idx] = file
+        let idx = idx + 1
+    endwhile
+    let filelist = filter(copy(filedirlist),{i,v -> v =~ '.v$\|.sv$'})
+
     for file in filelist
         if has_key(a:files,file)
             echohl ErrorMsg | echo "Same file ".file." exist in both ".a:dir." and ".a:files[file]."! Only use one as directory"| echohl None
         endif
         call extend (a:files,{file : a:dir})
     endfor
+
     if a:rec
-        for item in readdir(a:dir)
+        "for item in readdir(a:dir)
+        for item in filedirlist
             if isdirectory(a:dir.'/'.item)
                 call s:GetFileDirDic(a:dir.'/'.item,1,a:files)
             endif
         endfor
     endif
     return a:files
+
 endfunction
 
 "}}}3
