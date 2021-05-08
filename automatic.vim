@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/05/08 07:54
+" Last Modified:  2021/05/08 08:05
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -12,6 +12,7 @@
 " 2021/4/19     HonkW           1.0.2                   Finish GetReg
 " 2021/4/24     HonkW           1.0.3                   Add read .sv file 
 " 2021/4/30     HonkW           1.0.4                   Bug fixed & Add " ',' feature for AutoPara
+" 2021/5/8      HonkW           1.0.5                   Change readdir() to glob()
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
 "Update 记录脚本更新{{{1
