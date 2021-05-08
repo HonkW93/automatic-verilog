@@ -93,6 +93,11 @@
 [Vimcript-AutoMatic | HonkW](https://blog.honk.wang/posts/AutoMatic/)
 
 
+## 更新
+
+[Update](https://blog.honk.wang/posts/AutoMatic/#更新日志release)
+
+
 ## 开源协议
 
 [GPL V3.0](/LICENSE)
