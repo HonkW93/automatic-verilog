@@ -2,16 +2,17 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/04/30 20:13
+" Last Modified:  2021/05/08 23:41
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
 "------------------------------------------------------------------------------
 " 2021/3/26     HonkW           1.0.0                   First copy from zhangguo's vimscript
-" 2021/4/5      HonkW           1.0.1                   Finish AutoInst & AutoPara
+" 2021/4/5      HonkW           1.0.1                   Finish AutoInst & Autopara
 " 2021/4/19     HonkW           1.0.2                   Finish GetReg
 " 2021/4/24     HonkW           1.0.3                   Add read .sv file 
 " 2021/4/30     HonkW           1.0.4                   Bug fixed & Add " ',' feature for AutoPara
+" 2021/5/8      HonkW           1.0.5                   Compatible with vim 7.4
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
 "Update 记录脚本更新{{{1
@@ -171,10 +172,10 @@ amenu &Verilog.Code.Template.LoadTemplate<TAB>                          :call Lo
 
 "Auto
 amenu &Verilog.AutoInst.AutoInst(1)<TAB>All                             :call AutoInst(1)<CR>
-amenu &Verilog.AutoInst.AutoInst(0)<TAB>CurrentLine                     :call AutoInst(0)<CR>
+amenu &Verilog.AutoInst.AutoInst(0)<TAB>One                             :call AutoInst(0)<CR>
 
 amenu &Verilog.AutoPara.AutoPara(1)<TAB>All                             :call AutoPara(1)<CR>
-amenu &Verilog.AutoPara.AutoPara(0)<TAB>CurrentLine                     :call AutoPara(0)<CR>
+amenu &Verilog.AutoPara.AutoPara(0)<TAB>One                             :call AutoPara(0)<CR>
 
 "}}}3
 
@@ -188,6 +189,11 @@ imap <F2> <C-R>=strftime("%x")<CR>
 
 "Invert Wave 时序波形翻转{{{3
 map <C-F8>      :call Invert()<ESC>
+"}}}3
+
+"Auto {{{3
+map <S-F3>      :call AutoInst(0)<ESC>
+map <S-F4>      :call AutoPara(0)<ESC>
 "}}}3
 
 "Code Snippet 代码段{{{3
@@ -1129,7 +1135,7 @@ function s:GetIO(lines,mode)
                 endif
                 "record first null line
                 "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line ]
-                let value = ['keep',seq,     '',     'c0',   'c0',   '',          0,         '']
+                let value = ['keep',seq,     '',     'c0',   'c0',   'NULL',          0,         '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
             " `ifdef `ifndef & single comment line
@@ -1176,6 +1182,9 @@ function s:GetIO(lines,mode)
                 let line = substitute(line,type,'','')
                 let line = substitute(line,'\[.*:.*\]','','')
                 let name = matchstr(line,'\w\+')
+                if name == ''
+                    let name = 'NULL'
+                endif
 
                 "           [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
                 let value = [type,seq,     io_dir, width1, width2, name,        0,         '']
@@ -1201,8 +1210,7 @@ function s:GetIO(lines,mode)
             let type = value[0]
             if type !~ 'keep'
                 let value[7] = 1
-                call remove(io_seqs,seq)
-                call extend(io_seqs,{seq:value})
+                call extend(io_seqs,{seq : value})
                 break
             end
         endif
@@ -1465,6 +1473,8 @@ endfunction
 "   line after kill
 "---------------------------------------------------
 function s:KillAutoInst() 
+    let orig_idx = line('.')
+    let orig_col = col('.')
     let idx = line('.')
     let line = getline(idx)
     if line =~ '/\*\<autoinst\>'
@@ -1481,21 +1491,25 @@ function s:KillAutoInst()
                 let line = getline(idx)
                 "end of inst
                 if line =~ ');\s*$'
-                    call deletebufline('%',idx)
+                    "call deletebufline('%',idx)
+                    execute ':'.idx.'d'
                     break
-                    "abnormal end
+                "abnormal end
                 elseif line =~ 'endmodule' || idx == line('$')
                     echohl ErrorMsg | echo "Error running KillAutoInst! Kill abnormally till the end!"| echohl None
                     break
-                    "middle
+                "middle
                 else
-                    call deletebufline('%',idx)
+                    "call deletebufline('%',idx)
+                    execute ':'.idx.'d'
                 endif
             endwhile
         endif
     else
         echohl ErrorMsg | echo "Error running KillAutoInst! Kill line not match /*autoinst*/ !"| echohl None
     endif
+    "cursor back
+    call cursor(orig_idx,orig_col)
 endfunction
 "}}}3
 
@@ -1532,7 +1546,7 @@ function s:DrawIO(io_seqs,io_list,config)
     "guarantee spaces width
     let max_lbracket_len = 0
     let max_rbracket_len = 0
-    for seq in sort(keys(a:io_seqs),'N')
+    for seq in sort(keys(a:io_seqs),'n')
         let value = a:io_seqs[seq]
         let type = value[0]
         if type != 'keep' 
@@ -1552,7 +1566,7 @@ function s:DrawIO(io_seqs,io_list,config)
     let last_port_flag = 0
     let io_list = copy(a:io_list)
     let config = copy(a:config)
-    for seq in sort(keys(a:io_seqs),'N')
+    for seq in sort(keys(a:io_seqs),'n')
         let value = a:io_seqs[seq]
         let type = value[0]
         let line = value[7]
@@ -2008,6 +2022,8 @@ endfunction
 "   kill untill inst_name
 "---------------------------------------------------
 function s:KillAutoPara(inst_name) 
+    let orig_idx = line('.')
+    let orig_col = col('.')
     let idx = line('.')
     let line = getline(idx)
     if line =~ '/\*\<autoinstparam\>'
@@ -2034,13 +2050,16 @@ function s:KillAutoPara(inst_name)
                     break
                 "middle
                 else
-                    call deletebufline('%',idx)
+                    "call deletebufline('%',idx)
+                    execute ':'.idx.'d'
                 endif
             endwhile
         endif
     else
         echohl ErrorMsg | echo "Error running KillAutoPara! Kill line not match /*autoinstparam*/ !"| echohl None
     endif
+    "cursor back
+    call cursor(orig_idx,orig_col)
 endfunction 
 "}}}3
 
@@ -2089,7 +2108,7 @@ function s:DrawPara(para_seqs,para_list,config)
     "guarantee spaces width
     let max_lbracket_len = 0
     let max_rbracket_len = 0
-    for seq in sort(keys(a:para_seqs),'N')
+    for seq in sort(keys(a:para_seqs),'n')
         let value = a:para_seqs[seq]
         let p_name = value[2]
         let p_value = value[3]
@@ -2118,7 +2137,7 @@ function s:DrawPara(para_seqs,para_list,config)
         let para_list_empty = 0
     endif
 
-    for seq in sort(keys(a:para_seqs),'N')
+    for seq in sort(keys(a:para_seqs),'n')
         let value = a:para_seqs[seq]
         "Format parameter sequences
         "   [type, sequence, parameter_name, parameter_value ,last_parameter]
@@ -3004,21 +3023,34 @@ endfunction
 "   files : files-directory dictionary(.v or .sv file)
 "---------------------------------------------------
 function s:GetFileDirDic(dir,rec,files)
-    let filelist = readdir(a:dir,{n -> n =~ '.v$\|.sv$'})
+    "let filelist = readdir(a:dir,{n -> n =~ '.v$\|.sv$'})
+    let filedirlist = glob(a:dir.'/'.'*',0,1)
+    let idx = 0
+    while idx <len(filedirlist)
+        let file = fnamemodify(filedirlist[idx],':t')
+        let filedirlist[idx] = file
+        let idx = idx + 1
+    endwhile
+
+    let filelist = filter(copy(filedirlist),'v:val =~ ".v$" || v:val =~ ".sv$"')
+
     for file in filelist
         if has_key(a:files,file)
             echohl ErrorMsg | echo "Same file ".file." exist in both ".a:dir." and ".a:files[file]."! Only use one as directory"| echohl None
         endif
         call extend (a:files,{file : a:dir})
     endfor
+
     if a:rec
-        for item in readdir(a:dir)
+        "for item in readdir(a:dir)
+        for item in filedirlist
             if isdirectory(a:dir.'/'.item)
                 call s:GetFileDirDic(a:dir.'/'.item,1,a:files)
             endif
         endfor
     endif
     return a:files
+
 endfunction
 
 "}}}3
@@ -3049,7 +3081,7 @@ function s:GetModuleFileDict(files)
             endif
         endfor
         if module == ''
-            call extend(modules,{'' : file})
+            call extend(modules,{'NULL' : file})
         else
             call extend(modules,{module : file})
         endif
