@@ -45,6 +45,7 @@
   - [x] 支持行尾自动添加端口类型`input/output/inout` （参考`vim automatic-verilog`）
   - [x] 支持新增端口自动添加`//INST_NEW`（参考`vim automatic-verilog`）
   - [x] 支持删除端口自动添加`//INST_DEL`（参考`vim automatic-verilog`）
+  - [x] 支持例化文件名与模块名不同的模块
   - [ ] 支持`` `ifdef``及`` `endif``
   - [ ] 进行中...
   
