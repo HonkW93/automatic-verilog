@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/05/08 23:41
+" Last Modified:  2021/05/09 20:59
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -51,7 +51,7 @@ let s:INST_DEL = 1      "add //INST_DEL if port has been deleted from the module
 "}}}2
 
 "AutoPara 自动参数配置{{{2
-let s:ONLY_PORT = 1     "add only port parameter definition,ignore parameter = value; definition
+let s:ONLY_PORT = 0     "add only port parameter definition,ignore parameter = value; definition
 let s:PARA_NEW = 1      "add //PARA_NEW if parameter has been newly added to the module
 let s:PARA_DEL = 1      "add //PARA_DEL if parameter has been deleted from the module
 "}}}2
@@ -1546,7 +1546,7 @@ function s:DrawIO(io_seqs,io_list,config)
     "guarantee spaces width
     let max_lbracket_len = 0
     let max_rbracket_len = 0
-    for seq in sort(keys(a:io_seqs),'n')
+    for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
         let value = a:io_seqs[seq]
         let type = value[0]
         if type != 'keep' 
@@ -1566,7 +1566,7 @@ function s:DrawIO(io_seqs,io_list,config)
     let last_port_flag = 0
     let io_list = copy(a:io_list)
     let config = copy(a:config)
-    for seq in sort(keys(a:io_seqs),'n')
+    for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
         let value = a:io_seqs[seq]
         let type = value[0]
         let line = value[7]
@@ -1759,6 +1759,9 @@ function s:GetPara(lines,mode)
         "find )
         if wait_port_para == 0 && line =~ ')'
             let wait_right_braket = 0
+        "no #() parameter skip
+        elseif wait_left_braket == 1 && line =~ 'parameter'
+            let wait_right_braket = 0
         endif
 
         "record normal parameter 
@@ -1809,7 +1812,7 @@ function s:GetPara(lines,mode)
         let p_name = matchstr(para,'\w\+\ze\s*=')
         let p_value = matchstr(para,'=\s*\zs\S\+')
         "           [type, sequence, parameter_name, parameter_value ,last_parameter]
-        let value = [type, seq     , p_name        , p_value         ,last_para]
+        let value = [type, seq     , p_name        , p_value         ,0]
         call extend(para_seqs, {seq : value})
     endfor
 
@@ -2108,7 +2111,7 @@ function s:DrawPara(para_seqs,para_list,config)
     "guarantee spaces width
     let max_lbracket_len = 0
     let max_rbracket_len = 0
-    for seq in sort(keys(a:para_seqs),'n')
+    for seq in sort(s:Str2Num(keys(a:para_seqs)),'n')
         let value = a:para_seqs[seq]
         let p_name = value[2]
         let p_value = value[3]
@@ -2137,7 +2140,7 @@ function s:DrawPara(para_seqs,para_list,config)
         let para_list_empty = 0
     endif
 
-    for seq in sort(keys(a:para_seqs),'n')
+    for seq in sort(s:Str2Num(keys(a:para_seqs)),'n')
         let value = a:para_seqs[seq]
         "Format parameter sequences
         "   [type, sequence, parameter_name, parameter_value ,last_parameter]
@@ -3173,6 +3176,22 @@ function s:SkipCommentLine(mode,idx,lines)
 endfunction
 "}}}3
 
+"--------------------------------------------------
+" Function: Str2Num
+" Input: 
+"   string list
+" Description:
+"   convert every string into number
+" Output:
+"   output number list
+"---------------------------------------------------
+function s:Str2Num(list)
+    let nr_list = []
+    for item in a:list
+        call add(nr_list,str2nr(item))
+    endfor
+    return nr_list
+endfunction
 "}}}2
 
 "}}}1
