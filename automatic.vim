@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/05/18 22:34
+" Last Modified:  2021/05/19 00:10
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -50,7 +50,7 @@ let s:start_prefix = repeat(' ',s:start_pos)
 let s:AUTOINST_IO_DIR = 1       "add //input or //output in the end of instance
 let s:AUTOINST_INST_NEW = 1     "add //INST_NEW if port has been newly added to the module
 let s:AUTOINST_INST_DEL = 1     "add //INST_DEL if port has been deleted from the module
-let s:AUTOINST_KEEP_CHANGED= 0  "keep changed inst io
+let s:AUTOINST_KEEP_CHANGED= 1  "keep changed inst io
 "}}}2
 
 "AutoPara 自动参数配置{{{2
@@ -1479,8 +1479,9 @@ endfunction
 "   (
 "       .clk(s_clk),
 "       .rst(s_rst),
+"       .in_test(10'd0),
 "       /*autoinst*/
-"       .port_a(port_a_o),
+"       .port_a(port_a_o[4:0]),
 "       .port_b_valid(port_b_valid),
 "       .port_b(port_b)
 "   );
@@ -1491,7 +1492,8 @@ endfunction
 "   cinst_names = {
 "                   'clk':'s_clk'
 "                   'rst':'s_rst'
-"                   'port_a':'port_a_o'
+"                   'in_test':'10'd0'
+"                   'port_a':'port_a_o[4:0]'
 "                 }
 "---------------------------------------------------
 function s:GetChangedInstIO(lines)
@@ -1505,11 +1507,11 @@ function s:GetChangedInstIO(lines)
         endif
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
-            let port = matchstr(line,'\.\s*\zs\w\+\ze\s*(.*)')
-            let connect = matchstr(line,'\.\s*\w\+\s*(\zs.\{-\}\ze\s*)')
-            let connect = matchstr(connect,'\w\+')  "in case of .port(connect[2:0])
-            if port != connect
-                call extend(cinst_names,{port : connect})
+            let inst_name = matchstr(line,'\.\s*\zs\w\+\ze\s*(.*)')
+            let conn = matchstr(line,'\.\s*\w\+\s*(\s*\zs.\{-\}\ze\s*)')    "connection
+            let conn_name = matchstr(conn,'\w\+')                           "connection name
+            if inst_name != conn_name
+                call extend(cinst_names,{inst_name : conn})
             endif
         endif
     endwhile
@@ -1746,22 +1748,24 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
         let value = a:io_seqs[seq]
         let type = value[0]
         if type != 'keep' 
-            "io that's changed will be keeped if config 
             let name = value[5]
-            let name1 = value[5]
-            if config[3] == 1
-                if(has_key(chg_io_names,name))
-                    let name1 = chg_io_names[name]
-                endif
-            endif
             "calculate maximum len of position to Draw
             if value[3] == 'c0' || value[4] == 'c0'
                 let width = ''
             else
                 let width = '['.value[3].':'.value[4].']'
             endif
+
+            "io that's changed will be keeped if config 
+            let connect = name.width
+            if config[3] == 1
+                if(has_key(chg_io_names,name))
+                    let connect = chg_io_names[name]
+                endif
+            endif
+
             let max_lbracket_len = max([max_lbracket_len,len(prefix)+1+len(name)+4,s:name_pos_max])
-            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+1+len(name1)+len(width)+4,s:symbol_pos_max])
+            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+1+len(connect)+4,s:symbol_pos_max])
         endif
     endfor
 
@@ -1782,14 +1786,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             "Format IO sequences
             "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
             "name
-            "io that's changed will be keeped if config 
             let name = value[5]
-            let name1 = value[5]
-            if config[3] == 1
-                if(has_key(chg_io_names,name))
-                    let name1 = chg_io_names[name]
-                endif
-            endif
 
             "name2bracket
             let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(name)-1)
@@ -1799,8 +1796,17 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             else
                 let width = '['.value[3].':'.value[4].']'
             endif
+
+            "io that's changed will be keeped if config 
+            let connect = name.width
+            if config[3] == 1
+                if(has_key(chg_io_names,name))
+                    let connect = chg_io_names[name]
+                endif
+            endif
+            
             "width2bracket
-            let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(name1)-len(width))
+            let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(connect))
             "comma
             let last_port = value[6]
             if last_port == 1
@@ -1816,16 +1822,16 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             "empty list, default
             if io_list == []
                 if config[0] == 1
-                    let line = prefix.'.'.name.name2bracket.'('.name1.width.width2bracket.')'.comma.' //'.io_dir
+                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
                 else
-                    let line = prefix.'.'.name.name2bracket.'('.name1.width.width2bracket.')'.comma
+                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
                 endif
             "update list,draw io by config
             else
                 if config[0] == 1
-                    let line = prefix.'.'.name.name2bracket.'('.name1.width.width2bracket.')'.comma.' //'.io_dir
+                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
                 else
-                    let line = prefix.'.'.name.name2bracket.'('.name1.width.width2bracket.')'.comma
+                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
                 endif
                 "process //INST_NEW
                 let io_idx = index(io_list,name) 
