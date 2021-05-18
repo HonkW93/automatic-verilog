@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/05/15 15:46
+" Last Modified:  2021/05/18 22:34
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -14,6 +14,7 @@
 " 2021/4/30     HonkW           1.0.4                   Bug fixed & Add " ',' feature for AutoPara
 " 2021/5/8      HonkW           1.0.5                   Compatible with vim 7.4
 " 2021/5/15     HonkW           1.0.6                   add autopara & modified autopara to autopara_value
+" 2021/5/18     HonkW           1.0.7                   add keep changed name inst 
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
 "Update 记录脚本更新{{{1
@@ -49,6 +50,7 @@ let s:start_prefix = repeat(' ',s:start_pos)
 let s:AUTOINST_IO_DIR = 1       "add //input or //output in the end of instance
 let s:AUTOINST_INST_NEW = 1     "add //INST_NEW if port has been newly added to the module
 let s:AUTOINST_INST_DEL = 1     "add //INST_DEL if port has been deleted from the module
+let s:AUTOINST_KEEP_CHANGED= 0  "keep changed inst io
 "}}}2
 
 "AutoPara 自动参数配置{{{2
@@ -859,6 +861,8 @@ function AutoInst(mode)
             "get inst io list
             let keep_io_list = s:GetInstIO(getline(idx1,line('.')))
             let upd_io_list = s:GetInstIO(getline(line('.'),idx2))
+            "changed inst io dict
+            let chg_io_names = s:GetChangedInstIO(getline(line('.'),idx2))
         endtry
 
         try
@@ -899,11 +903,12 @@ function AutoInst(mode)
         "if io_seqs has new signal_name that's never in upd_io_list, add //INST_NEW
         "if io_seqs has same signal_name that's in upd_io_list, cover
         "if io_seqs doesn't have signal_name that's in upd_io_list, add //INST_DEL
-        "config: [1,     1,       1       ] default
-        "        [AUTOINST_IO_DIR,AUTOINST_INST_NEW,AUTOINST_INST_DEL]
+        "if io_seqs connection has been changed, keep it
+        "config: [1,               1,                 1,                 0] default
+        "        [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, AUTOINST_KEEP_CHANGED]
         "        0 for close, 1 for open
-        let config = [s:AUTOINST_IO_DIR,s:AUTOINST_INST_NEW,s:AUTOINST_INST_DEL]
-        let lines = s:DrawIO(io_seqs,upd_io_list,config)
+        let config = [s:AUTOINST_IO_DIR,s:AUTOINST_INST_NEW,s:AUTOINST_INST_DEL,s:AUTOINST_KEEP_CHANGED]
+        let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names,config)
         "delete current line );
         let line = substitute(getline(line('.')),')\s*;','','')
         call setline(line('.'),line)
@@ -1458,6 +1463,60 @@ function s:GetInstIO(lines)
 endfunction
 "}}}3
 
+"GetChangedInstIO 获取修改过的例化端口{{{3
+"--------------------------------------------------
+" Function: GetChangedInstIO
+" Input: 
+"   lines : lines to get inst IO port
+" Description:
+"   Get changed inst io port info from lines
+"   e.g
+"   module_name #(
+"       .A_PARAMETER (A_PARAMETER)
+"       .B_PARAMETER (B_PARAMETER)
+"   )
+"   inst_name
+"   (
+"       .clk(s_clk),
+"       .rst(s_rst),
+"       /*autoinst*/
+"       .port_a(port_a_o),
+"       .port_b_valid(port_b_valid),
+"       .port_b(port_b)
+"   );
+"
+" Output:
+"   dict of changed port (according to input lines)
+"   e.g_1
+"   cinst_names = {
+"                   'clk':'s_clk'
+"                   'rst':'s_rst'
+"                   'port_a':'port_a_o'
+"                 }
+"---------------------------------------------------
+function s:GetChangedInstIO(lines)
+    let idx = 0
+    let cinst_names = {}
+    while idx < len(a:lines)
+        let idx = idx + 1
+        let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
+        if idx == -1
+            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+        endif
+        let line = a:lines[idx-1]
+        if line =~ '\.\s*\w\+\s*(.*)'
+            let port = matchstr(line,'\.\s*\zs\w\+\ze\s*(.*)')
+            let connect = matchstr(line,'\.\s*\w\+\s*(\zs.\{-\}\ze\s*)')
+            let connect = matchstr(connect,'\w\+')  "in case of .port(connect[2:0])
+            if port != connect
+                call extend(cinst_names,{port : connect})
+            endif
+        endif
+    endwhile
+    return cinst_names
+endfunction
+"}}}3
+
 "GetInstModuleName 获取例化名和模块名{{{3
 "--------------------------------------------------
 " Function: GetInstModuleName
@@ -1654,9 +1713,10 @@ endfunction
 " Input: 
 "   io_seqs : new inst io sequences for align
 "   io_list : old inst io name list
+"   chg_io_names : old inst io names that has been changed
 "   config: configuration for output
-    "config: [1,     1,       1       ] default
-    "        [io_dir,INST_NEW,INST_DEL]
+    "config: [1,               1,                 1,                 0] default
+    "        [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, AUTOINST_KEEP_CHANGED]
     "        0 for close, 1 for open
 " Description:
 " e.g draw io port sequences
@@ -1674,9 +1734,11 @@ endfunction
 "   e.g
 "       .signal_name   (signal_name[width1:width2]      ), //io_dir
 "---------------------------------------------------
-function s:DrawIO(io_seqs,io_list,config)
+function s:DrawIO(io_seqs,io_list,chg_io_names,config)
     let prefix = s:start_prefix.repeat(' ',4)
-
+    let io_list = copy(a:io_list)
+    let chg_io_names = copy(a:chg_io_names)
+    let config = copy(a:config)
     "guarantee spaces width
     let max_lbracket_len = 0
     let max_rbracket_len = 0
@@ -1684,22 +1746,28 @@ function s:DrawIO(io_seqs,io_list,config)
         let value = a:io_seqs[seq]
         let type = value[0]
         if type != 'keep' 
+            "io that's changed will be keeped if config 
             let name = value[5]
+            let name1 = value[5]
+            if config[3] == 1
+                if(has_key(chg_io_names,name))
+                    let name1 = chg_io_names[name]
+                endif
+            endif
+            "calculate maximum len of position to Draw
             if value[3] == 'c0' || value[4] == 'c0'
                 let width = ''
             else
                 let width = '['.value[3].':'.value[4].']'
             endif
             let max_lbracket_len = max([max_lbracket_len,len(prefix)+1+len(name)+4,s:name_pos_max])
-            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+1+len(name)+len(width)+4,s:symbol_pos_max])
+            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+1+len(name1)+len(width)+4,s:symbol_pos_max])
         endif
     endfor
 
     "Draw IO
     let lines = []
     let last_port_flag = 0
-    let io_list = copy(a:io_list)
-    let config = copy(a:config)
     for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
         let value = a:io_seqs[seq]
         let type = value[0]
@@ -1714,7 +1782,15 @@ function s:DrawIO(io_seqs,io_list,config)
             "Format IO sequences
             "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
             "name
+            "io that's changed will be keeped if config 
             let name = value[5]
+            let name1 = value[5]
+            if config[3] == 1
+                if(has_key(chg_io_names,name))
+                    let name1 = chg_io_names[name]
+                endif
+            endif
+
             "name2bracket
             let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(name)-1)
             "width
@@ -1724,7 +1800,7 @@ function s:DrawIO(io_seqs,io_list,config)
                 let width = '['.value[3].':'.value[4].']'
             endif
             "width2bracket
-            let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(name)-len(width))
+            let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(name1)-len(width))
             "comma
             let last_port = value[6]
             if last_port == 1
@@ -1740,16 +1816,16 @@ function s:DrawIO(io_seqs,io_list,config)
             "empty list, default
             if io_list == []
                 if config[0] == 1
-                    let line = prefix.'.'.name.name2bracket.'('.name.width.width2bracket.')'.comma.' //'.io_dir
+                    let line = prefix.'.'.name.name2bracket.'('.name1.width.width2bracket.')'.comma.' //'.io_dir
                 else
-                    let line = prefix.'.'.name.name2bracket.'('.name.width.width2bracket.')'.comma
+                    let line = prefix.'.'.name.name2bracket.'('.name1.width.width2bracket.')'.comma
                 endif
             "update list,draw io by config
             else
                 if config[0] == 1
-                    let line = prefix.'.'.name.name2bracket.'('.name.width.width2bracket.')'.comma.' //'.io_dir
+                    let line = prefix.'.'.name.name2bracket.'('.name1.width.width2bracket.')'.comma.' //'.io_dir
                 else
-                    let line = prefix.'.'.name.name2bracket.'('.name.width.width2bracket.')'.comma
+                    let line = prefix.'.'.name.name2bracket.'('.name1.width.width2bracket.')'.comma
                 endif
                 "process //INST_NEW
                 let io_idx = index(io_list,name) 
