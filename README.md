@@ -29,7 +29,7 @@
 
 一款基于Vimscript的自动化verilog脚本。由[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)修改而来，原作者zhangguo。
 
-[![Release-Version](https://img.shields.io/badge/Release-1.0.7-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
+[![Release-Version](https://img.shields.io/badge/Release-1.0.8-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
 
 ## 安装
 
@@ -47,7 +47,7 @@
   - [x] 支持删除端口自动添加`//INST_DEL`（参考`vim automatic-verilog`）
   - [x] 支持例化文件名与模块名不同的模块
   - [x] 支持配置为修改端口自动不重刷
-  - [ ] 支持`` `ifdef``及`` `endif``
+  - [x] 支持`` `ifdef``及`` `endif``
   - [ ] 进行中...
   
 - 自动参数（`AutoPara`）

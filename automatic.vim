@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/05/19 00:10
+" Last Modified:  2021/05/19 22:45
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -15,6 +15,7 @@
 " 2021/5/8      HonkW           1.0.5                   Compatible with vim 7.4
 " 2021/5/15     HonkW           1.0.6                   add autopara & modified autopara to autopara_value
 " 2021/5/18     HonkW           1.0.7                   add keep changed name inst 
+" 2021/5/19     HonkW           1.0.8                   add `ifdef for autoinst, add config for `ifdef and comment 
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
 "Update 记录脚本更新{{{1
@@ -47,10 +48,12 @@ let s:start_prefix = repeat(' ',s:start_pos)
 "}}}2
 
 "AutoInst 自动例化配置{{{2
-let s:AUTOINST_IO_DIR = 1       "add //input or //output in the end of instance
-let s:AUTOINST_INST_NEW = 1     "add //INST_NEW if port has been newly added to the module
-let s:AUTOINST_INST_DEL = 1     "add //INST_DEL if port has been deleted from the module
-let s:AUTOINST_KEEP_CHANGED= 1  "keep changed inst io
+let s:AUTOINST_IO_DIR = 1           "add //input or //output in the end of instance
+let s:AUTOINST_INST_NEW = 1         "add //INST_NEW if port has been newly added to the module
+let s:AUTOINST_INST_DEL = 1         "add //INST_DEL if port has been deleted from the module
+let s:AUTOINST_KEEP_CHANGED = 1      "keep changed inst io
+let s:AUTOINST_INCLUDE_COMMENT = 1   "include comment line of // (/*...*/ will always be ignored)
+let s:AUTOINST_INCLUDE_IFDEF = 1     "include ifdef like `ifdef `endif
 "}}}2
 
 "AutoPara 自动参数配置{{{2
@@ -861,7 +864,7 @@ function AutoInst(mode)
             "get inst io list
             let keep_io_list = s:GetInstIO(getline(idx1,line('.')))
             let upd_io_list = s:GetInstIO(getline(line('.'),idx2))
-            "changed inst io dict
+            "changed inst io names
             let chg_io_names = s:GetChangedInstIO(getline(line('.'),idx2))
         endtry
 
@@ -904,10 +907,14 @@ function AutoInst(mode)
         "if io_seqs has same signal_name that's in upd_io_list, cover
         "if io_seqs doesn't have signal_name that's in upd_io_list, add //INST_DEL
         "if io_seqs connection has been changed, keep it
-        "config: [1,               1,                 1,                 0] default
-        "        [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, AUTOINST_KEEP_CHANGED]
+        "config: [1,               1,                 1,                 
+        "        [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, 
+        "         1,                     1,                        1,] default
+        "         AUTOINST_KEEP_CHANGED, AUTOINST_INCLUDE_COMMENT, AUTOINST_INCLUDE_IFDEF]
+        "
         "        0 for close, 1 for open
-        let config = [s:AUTOINST_IO_DIR,s:AUTOINST_INST_NEW,s:AUTOINST_INST_DEL,s:AUTOINST_KEEP_CHANGED]
+        "
+        let config = [s:AUTOINST_IO_DIR,s:AUTOINST_INST_NEW,s:AUTOINST_INST_DEL,s:AUTOINST_KEEP_CHANGED,s:AUTOINST_INCLUDE_COMMENT,s:AUTOINST_INCLUDE_IFDEF]
         let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names,config)
         "delete current line );
         let line = substitute(getline(line('.')),')\s*;','','')
@@ -1278,7 +1285,7 @@ function s:GetIO(lines,mode)
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
             " `ifdef `ifndef & single comment line
-            elseif line =~ '^\s*\`\(if\|else\|endif\)' || (line =~ '^\s*\/\/' && line !~ '^\s*\/\/\s*{{{')
+            elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)' || (line =~ '^\s*\/\/' && line !~ '^\s*\/\/\s*{{{')
                 "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line ]
                 let value = ['keep',seq,     '',     'c0',   'c0',   line,        0,         line]
                 call extend(io_seqs, {seq : value})
@@ -1325,7 +1332,7 @@ function s:GetIO(lines,mode)
                     let name = 'NULL'
                 endif
 
-                "           [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
+                "dict           [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
                 let value = [type,seq,     io_dir, width1, width2, name,        0,         '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
@@ -1348,7 +1355,7 @@ function s:GetIO(lines,mode)
             let value = io_seqs[seq]
             let type = value[0]
             if type !~ 'keep'
-                let value[7] = 1
+                let value[6] = 1
                 call extend(io_seqs,{seq : value})
                 break
             end
@@ -1717,9 +1724,11 @@ endfunction
 "   io_list : old inst io name list
 "   chg_io_names : old inst io names that has been changed
 "   config: configuration for output
-    "config: [1,               1,                 1,                 0] default
-    "        [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, AUTOINST_KEEP_CHANGED]
-    "        0 for close, 1 for open
+"   [1,               1,                 1,                 
+"   [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, 
+"    1,                     1,                        1,] default
+"    AUTOINST_KEEP_CHANGED, AUTOINST_INCLUDE_COMMENT, AUTOINST_INCLUDE_IFDEF]
+"   0 for close, 1 for open
 " Description:
 " e.g draw io port sequences
 "   [wire,1,input,'c0','c0',clk,0,'       input       clk,']
@@ -1779,8 +1788,19 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
         "add single line comment line
         if type == 'keep' 
             if line =~ '^\s*\/\/'
-                let line = prefix.line
-                call add(lines,line)
+                if config[4] == 1
+                    let line = prefix.substitute(line,'^\s*','','')
+                    call add(lines,line)
+                else
+                    "ignore comment line when not config
+                endif
+            elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)'
+                if config[5] == 1
+                    let line = prefix.substitute(line,'^\s*','','')
+                    call add(lines,line)
+                else
+                    "ignore ifdef line when not config
+                endif
             endif
         else
             "Format IO sequences
@@ -1810,14 +1830,13 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             "comma
             let last_port = value[6]
             if last_port == 1
-                let comma = ' '      "space
+                let comma = ' '         "space
                 let last_port_flag = 1  "special case: last port has been put in keep_io_list, there exist no last_port
             else
                 let comma = ','      "comma exists
             endif
             "io_dir
             let io_dir = value[2]
-
             "Draw IO by Config
             "empty list, default
             if io_list == []
@@ -1851,13 +1870,19 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
 
             call add(lines,line)
 
+            "in case special case happen(last port has been put in keep_io_list, there exist no last_port)
+            "same time last line is not an io type, must record last_port index here
+            if type != 'keep'
+                let self_last_port_idx = index(lines,line) 
+            endif
+
         endif
     endfor
 
     "special case: last port has been put in keep_io_list, there exist no last_port
     if last_port_flag == 0
         "set last item as last_port
-        let lines[-1] = substitute(lines[-1],',',' ','') 
+        let lines[self_last_port_idx] = substitute(lines[self_last_port_idx],',',' ','') 
     endif
 
     if io_list == []
