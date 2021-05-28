@@ -2,20 +2,14 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/05/19 22:45
+" Last Modified:  2021/05/28 22:38
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
 "------------------------------------------------------------------------------
 " 2021/3/26     HonkW           1.0.0                   First copy from zhangguo's vimscript
 " 2021/4/5      HonkW           1.0.1                   Finish AutoInst & Autopara
-" 2021/4/19     HonkW           1.0.2                   Finish GetReg
-" 2021/4/24     HonkW           1.0.3                   Add read .sv file 
-" 2021/4/30     HonkW           1.0.4                   Bug fixed & Add " ',' feature for AutoPara
-" 2021/5/8      HonkW           1.0.5                   Compatible with vim 7.4
-" 2021/5/15     HonkW           1.0.6                   add autopara & modified autopara to autopara_value
-" 2021/5/18     HonkW           1.0.7                   add keep changed name inst 
-" 2021/5/19     HonkW           1.0.8                   add `ifdef for autoinst, add config for `ifdef and comment 
+" 2021/5/28     HonkW           1.1.0                   Optimize AutoInst & AutoPara
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
 "Update 记录脚本更新{{{1
@@ -48,18 +42,21 @@ let s:start_prefix = repeat(' ',s:start_pos)
 "}}}2
 
 "AutoInst 自动例化配置{{{2
-let s:AUTOINST_IO_DIR = 1           "add //input or //output in the end of instance
-let s:AUTOINST_INST_NEW = 1         "add //INST_NEW if port has been newly added to the module
-let s:AUTOINST_INST_DEL = 1         "add //INST_DEL if port has been deleted from the module
+let s:AUTOINST_IO_DIR = 1            "add //input or //output in the end of instance
+let s:AUTOINST_INST_NEW = 1          "add //INST_NEW if port has been newly added to the module
+let s:AUTOINST_INST_DEL = 1          "add //INST_DEL if port has been deleted from the module
 let s:AUTOINST_KEEP_CHANGED = 1      "keep changed inst io
 let s:AUTOINST_INCLUDE_COMMENT = 1   "include comment line of // (/*...*/ will always be ignored)
 let s:AUTOINST_INCLUDE_IFDEF = 1     "include ifdef like `ifdef `endif
 "}}}2
 
 "AutoPara 自动参数配置{{{2
-let s:AUTOPARA_ONLY_PORT = 0     "add only port parameter definition,ignore parameter = value; definition
-let s:AUTOPARA_PARA_NEW = 1      "add //PARA_NEW if parameter has been newly added to the module
-let s:AUTOPARA_PARA_DEL = 1      "add //PARA_DEL if parameter has been deleted from the module
+let s:AUTOPARA_ONLY_PORT = 0         "add only port parameter definition,ignore parameter = value; definition
+let s:AUTOPARA_PARA_NEW = 1          "add //PARA_NEW if parameter has been newly added to the module
+let s:AUTOPARA_PARA_DEL = 1          "add //PARA_DEL if parameter has been deleted from the module
+let s:AUTOPARA_KEEP_CHANGED = 1      "keep changed parameter
+let s:AUTOPARA_INCLUDE_COMMENT = 0   "include comment line of // (/*...*/ will always be ignored)
+let s:AUTOPARA_INCLUDE_IFDEF = 0     "include ifdef like `ifdef `endif
 "}}}2
 
 "Timing Wave 定义波形{{{2
@@ -199,9 +196,10 @@ imap <F2> <C-R>=strftime("%x")<CR>
 map <C-F8>      :call Invert()<ESC>
 "}}}3
 
-"Auto {{{3
+"Auto 自动化 {{{3
 map <S-F3>      :call AutoInst(0)<ESC>
 map <S-F4>      :call AutoPara(0)<ESC>
+map <S-F5>      :call AutoParaValue(0)<ESC>
 "}}}3
 
 "Code Snippet 代码段{{{3
@@ -948,8 +946,8 @@ endfunction
 "   Formatted autoinstparam code
 " Note:
 "   list of parameter sequences
-"    0     1         2               3                4
-"   [type, sequence, parameter_name, parameter_value ,last_parameter]
+"    0     1         2               3                4                    5     6
+"   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
 "   para_seqs = {seq : value }
 "   para_names = {parameter_name : value }
 "---------------------------------------------------
@@ -1000,6 +998,8 @@ function AutoPara(mode)
             "get inst parameter list
             let keep_para_list = s:GetInstPara(getline(idx1,line('.')))
             let upd_para_list = s:GetInstPara(getline(line('.'),idx2))
+            "changed parameter names
+            let chg_para_names = s:GetChangedPara(getline(line('.'),idx2))
         endtry
 
         try
@@ -1019,7 +1019,7 @@ function AutoPara(mode)
         endtry
 
         "remove parameter from para_seqs that want to be keep when autoinstparam
-        "   value = [type, sequence, parameter_name, parameter_value ,last_parameter]
+        "   value = [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
         "   para_seqs = {seq : value }
         "   para_names = {parameter_name : value }
         for name in keep_para_list
@@ -1040,11 +1040,16 @@ function AutoPara(mode)
         "if para_seqs has new parameter_name that's never in upd_para_list, add //PARA_NEW
         "if para_seqs has same parameter_name that's in upd_para_list, cover
         "if para_seqs doesn't have parameter_name that's in upd_para_list, add //PARA_DEL
-        "config: [1,     1,       1       ] default
-        "        [AUTOPARA_ONLY_PORT,AUTOPARA_PARA_NEW,AUTOPARA_PARA_DEL]
+        "if para_seqs connection has been changed, keep it
+        "config: [1,                  1,                 1
+        "        [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL
+        "         1,                     1,                        1,] default
+        "         AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT, AUTOPARA_INCLUDE_IFDEF]
+        "
         "        0 for close, 1 for open
-        let config = [s:AUTOPARA_ONLY_PORT,s:AUTOPARA_PARA_NEW,s:AUTOPARA_PARA_DEL]
-        let lines = s:DrawPara(para_seqs,upd_para_list,config)
+
+        let config = [s:AUTOPARA_ONLY_PORT,s:AUTOPARA_PARA_NEW,s:AUTOPARA_PARA_DEL,s:AUTOPARA_KEEP_CHANGED,s:AUTOPARA_INCLUDE_COMMENT,s:AUTOPARA_INCLUDE_IFDEF]
+        let lines = s:DrawPara(para_seqs,upd_para_list,chg_para_names,config)
 
         "delete current line )
         let line = substitute(getline(line('.')),')\s*','','')
@@ -1079,8 +1084,8 @@ endfunction
 "   Formatted autoinstparam code
 " Note:
 "   list of parameter sequences
-"    0     1         2               3                4
-"   [type, sequence, parameter_name, parameter_value ,last_parameter]
+"    0     1         2               3                4                    5     6
+"   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
 "   para_seqs = {seq : value }
 "   para_names = {parameter_name : value }
 "---------------------------------------------------
@@ -1249,6 +1254,7 @@ function s:GetIO(lines,mode)
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
 
@@ -1341,6 +1347,11 @@ function s:GetIO(lines,mode)
 
             "abnormal break
             if line =~ '^\s*\<always\>' || line =~ '^\s*\<assign\>' || line =~ '^\s*\<endmodule\>' || line =~ '\<autodef\>'
+                break
+            endif
+            
+            "normal break, find end of port declaration
+            if line =~ ')\s*;\s*$'
                 break
             endif
 
@@ -1459,6 +1470,7 @@ function s:GetInstIO(lines)
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
@@ -1511,6 +1523,7 @@ function s:GetChangedInstIO(lines)
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
@@ -1565,6 +1578,7 @@ function s:GetInstModuleName()
         let idx = s:SkipCommentLine(1,idx,getline(1,line('$')))
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         "afer skip, still use current buffer
         let line = getline(idx)
@@ -1781,11 +1795,19 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
     "Draw IO
     let lines = []
     let last_port_flag = 0
+
+    "io_list can be changed in function, therefore record if it's empty first
+    if io_list == []
+        let io_list_empty = 1
+    else
+        let io_list_empty = 0
+    endif
+
     for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
         let value = a:io_seqs[seq]
         let type = value[0]
         let line = value[7]
-        "add single line comment line
+        "add single comment/ifdef line 
         if type == 'keep' 
             if line =~ '^\s*\/\/'
                 if config[4] == 1
@@ -1803,6 +1825,8 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
                 endif
             endif
         else
+        "add io line
+        
             "Format IO sequences
             "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
             "name
@@ -1837,9 +1861,10 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             endif
             "io_dir
             let io_dir = value[2]
+
             "Draw IO by Config
             "empty list, default
-            if io_list == []
+            if io_list_empty == 1
                 if config[0] == 1
                     let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
                 else
@@ -1872,9 +1897,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
 
             "in case special case happen(last port has been put in keep_io_list, there exist no last_port)
             "same time last line is not an io type, must record last_port index here
-            if type != 'keep'
-                let self_last_port_idx = index(lines,line) 
-            endif
+            let self_last_port_idx = index(lines,line) 
 
         endif
     endfor
@@ -1894,6 +1917,10 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
                 call add(lines,line)
             endfor
         endif
+    endif
+
+    if lines == []
+        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition!" | echohl None
     endif
 
     return lines
@@ -1919,6 +1946,7 @@ endfunction
 "   module_name #(
 "       parameter A = 16,
 "       parameter B = 4'd11,
+"       //comment line
 "       parameter C = 16'h55
 "   )
 "   inst_name
@@ -1933,17 +1961,19 @@ endfunction
 "   parameter E = 'HEAD';
 "
 "   e.g parameter sequences
-"   [type, sequence, parameter_name, parameter_value ,last_parameter]
-"   [port,1,'A', '16',0]
-"   [port,2,'B', '4'd11',0]
-"   [port,3,'C', '16'h55',1]
-"   [decl,4,'D', '10_0000',0]
-"   [decl,5,'E', ''HEAD'',0]
+"    0     1         2               3                4                    5     6
+"   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
+"   [port,1,'A', '16',0,'',0]
+"   [port,2,'B', '4'd11',0,'',0]
+"   [keep,3,'c0','c0',0,'    //comment line',0]
+"   [port,4,'C', '16'h55',1,'',0]
+"   [decl,5,'D', '10_0000',0,'',0]
+"   [decl,6,'E', ''HEAD'',0,'',1]
 "
 " Output:
 "   list of parameter sequences
-"    0     1         2               3                4
-"   [type, sequence, parameter_name, parameter_value ,last_parameter]
+"    0     1         2               3                4                    5     6
+"   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
 "---------------------------------------------------
 function s:GetPara(lines,mode)
     let idx = 0
@@ -1955,23 +1985,21 @@ function s:GetPara(lines,mode)
     let wait_right_braket = 1
     let wait_decl_para = 1
 
+    "record single comment line & ifdef
     "record port & declaration parameter
-    let port_para_lines = []
-    let decl_para_lines = []
-    let port_para_list = []
-    let decl_para_list = []
-
+    let line_idxs = {}
     let para_seqs = {}
 
     while idx < len(a:lines)
         let idx = idx + 1
-        let idx = s:SkipCommentLine(0,idx,a:lines)  "skip all comment line
+        let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         "delete comment line in the middle
-        let line = substitute(line,'\/\/.*','','')
+        let line = substitute(line,'^\s*\([^s \& ^/]\)\+.*\zs\/\/.*','','')
 
         "find module 
         if line =~ '^\s*module'
@@ -1987,6 +2015,19 @@ function s:GetPara(lines,mode)
         if wait_module == 0 && line =~ '#\s*('
             let wait_left_braket = 0
         endif
+
+        "record single comment/ifdef line in port parameter 
+        if wait_left_braket == 0 && wait_right_braket == 1 
+            if line =~ '^\s*\`\(if\|elsif\|else\|endif\)' || (line =~ '^\s*\/\/' && line !~ '^\s*\/\/\s*{{{')
+                "[type, idx, line]
+                let type = 'keep'
+                let value = [type,idx,line]
+                call extend(line_idxs,{idx : value})
+                continue
+            endif
+        endif
+        "}}}
+
         "find port parameter 
         if wait_left_braket == 0 && line =~ 'parameter'
             let wait_port_para = 0
@@ -1994,17 +2035,32 @@ function s:GetPara(lines,mode)
 
         "record port parameter line
         if wait_port_para == 0 && wait_right_braket == 1 
-            call add(port_para_lines,line)
+            "[type, idx, line]
+            let type = 'port'
+            let value = [type,idx,line]
+            call extend(line_idxs,{idx : value})
         endif
 
         "find )
         if wait_port_para == 0 && line =~ ')'
             let wait_right_braket = 0
-        "no #() parameter skip
+        "no #() parameter, skip
         elseif wait_left_braket == 1 && line =~ 'parameter'
             let wait_right_braket = 0
         endif
 
+        "record single comment/ifdef line in declaration parameter 
+        if wait_right_braket == 0 && wait_decl_para == 1 
+            if line =~ '^\s*\`\(if\|elsif\|else\|endif\)' || (line =~ '^\s*\/\/' && line !~ '^\s*\/\/\s*{{{')
+                "[type, idx, line]
+                let type = 'keep'
+                let value = [type,idx,line]
+                call extend(line_idxs,{idx : value})
+                continue
+            endif
+        endif
+        "}}}
+        
         "record normal parameter 
         if wait_right_braket == 0 && line =~ 'parameter'
             let wait_decl_para = 0
@@ -2012,7 +2068,10 @@ function s:GetPara(lines,mode)
 
         "record normal parameter 
         if wait_decl_para == 0
-            call add(decl_para_lines,line)
+            "[type, idx, line]
+            let type = 'decl'
+            let value = [type,idx,line]
+            call extend(line_idxs,{idx : value})
         endif
 
         "find ; wait for parameter again
@@ -2022,41 +2081,209 @@ function s:GetPara(lines,mode)
 
     endwhile
 
-    "unify to use ',' as spliter 
-    let port_para = substitute(join(port_para_lines),')',',','g')
-    let decl_para = substitute(join(decl_para_lines),';',',','g')
-   
-    "find para_list
-    call substitute(port_para,'\w\+\s*=\s*\S\+\ze\s*,','\=add(port_para_list,submatch(0))','g')
-    call substitute(decl_para,'\w\+\s*=\s*\S\+\ze\s*,','\=add(decl_para_list,submatch(0))','g')
+    "{{{4 Problem with `ifdef and //single comment line
+    let last_port_para_idx = 0
+    let last_decl_para_idx = 0
 
-    "get para_seqs
-    let seq = 0
-    for para in port_para_list
-        let seq = seq + 1
-        let type = 'port'
-        let p_name = matchstr(para,'\w\+\ze\s*=')
-        let p_value = matchstr(para,'=\s*\zs\S\+')
-        if para == port_para_list[-1]
-            let last_para = 1
-        else
-            let last_para = 0
+    "remove single comment line before first declaration parameter
+    "find last port parameter first 
+    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+        let value = line_idxs[idx]
+        let type = value[0]
+        if type == 'port'
+            let last_port_para_idx = idx 
         endif
-        "           [type, sequence, parameter_name, parameter_value ,last_parameter]
-        let value = [type, seq     , p_name        , p_value         ,last_para]
-        call extend(para_seqs, {seq : value})
+    endfor
+    "find last decl parameter first 
+    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+        let value = line_idxs[idx]
+        let type = value[0]
+        if type == 'decl'
+            let last_decl_para_idx = idx 
+        endif
     endfor
 
-    for para in decl_para_list
-        let seq = seq + 1
-        let type = 'decl'
-        let p_name = matchstr(para,'\w\+\ze\s*=')
-        let p_value = matchstr(para,'=\s*\zs\S\+')
-        "           [type, sequence, parameter_name, parameter_value ,last_parameter]
-        let value = [type, seq     , p_name        , p_value         ,0]
-        call extend(para_seqs, {seq : value})
+    "remove single comment line
+    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+        let value = line_idxs[idx]
+        let type = value[0]
+        let line = value[2]
+        "search for idx after last port parameter
+        if idx > last_port_para_idx
+            if type == 'keep'
+                if line =~ '^\s*\/\/'
+                    call remove(line_idxs,idx)
+                endif
+            elseif type == 'decl'
+                break
+            endif
+        endif
     endfor
 
+    "---------------------------------------------------------------
+    " Problem Here. Cannot be solved right now.
+    " Description:
+    " cannot keep ifdef ... endif for declaration parameter since it's mixed with other line ifdef 
+    " e.g 
+    " module test #( 
+    "   parameter A = 0,
+    "   parameter B = 0,
+    " )
+    " (
+    "   `ifdef
+    "   input aaaa;
+    "   output bbbb;
+    "   `endif
+    " );
+    "   `ifdef  
+    "       parameter C = 0;
+    "       parameter D = 0;
+    "   `endif
+    "
+    "   `ifdef
+    "       assign bbbb = aaaa;
+    "   `endif
+    "---------------------------------------------------------------
+    "remove single comment line after last declaration parameter
+    for idx in reverse(sort(s:Str2Num(keys(line_idxs)),'n'))
+        let value = line_idxs[idx]
+        let type = value[0]
+        let line = value[2]
+        if type == 'keep'
+            if line =~ '^\s*\/\/'
+                call remove(line_idxs,idx)
+            endif
+        elseif type == 'decl' || type == 'port'
+            break
+        endif
+    endfor
+
+    "ifdef keeped if below is declaration parameter
+    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+        let value = line_idxs[idx]
+        let type = value[0]
+        let line = value[2]
+        "search for idx after last port parameter
+        if idx > last_port_para_idx
+            if type == 'keep'
+                if line =~ '^\s*\`if' 
+                    if idx < last_decl_para_idx
+                        "keep ifdef
+                    else
+                        "remove ifdef
+                        call remove(line_idxs,idx)
+                    endif
+                endif
+            elseif type == 'decl'
+                break
+            endif
+        endif
+    endfor
+
+    let endif_exist = 0
+    "endif keeped only once after declaration parameter
+    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+        let value = line_idxs[idx]
+        let type = value[0]
+        let line = value[2]
+        "search for idx after last decl parameter
+        if idx > last_decl_para_idx
+            if type == 'keep'
+                if endif_exist == 1
+                    "remove endif
+                    call remove(line_idxs,idx)
+                elseif line =~ '^\s*\`endif' 
+                    "keep endif
+                    let endif_exist = 1
+                endif
+            endif
+        endif
+    endfor
+    "}}}4
+
+    "generate parameter sequences
+    let seq = 0
+    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+        let value = line_idxs[idx]
+        "[type, idx, line]
+        let type = value[0]
+        let line = value[2]
+
+        if type == 'keep'
+            let seq = seq + 1
+                    "   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
+            let value = [type, seq     , 'c0',           'c0',            0,                   line, 0]
+            call extend(para_seqs, {seq : value})
+        elseif type == 'port'
+            let port_para_list = []
+            "unify to use ',' as spliter,add spliter for last_para
+            let port_para = substitute(line,')',',','g')
+            call substitute(port_para,'\w\+\s*=\s*\S\+\ze\s*,','\=add(port_para_list,submatch(0))','g')
+            for para in port_para_list
+                let seq = seq + 1
+                let p_name = matchstr(para,'\w\+\ze\s*=')
+                let p_value = matchstr(para,'=\s*\zs\S\+')
+                        "   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
+                let value = [type, seq     , p_name        , p_value         ,0,                   '',   0]
+                call extend(para_seqs, {seq : value})
+            endfor
+        elseif type == 'decl'
+            let decl_para_list = []
+            "unify to use ',' as spliter,add spliter for last_para
+            let decl_para = substitute(line,';',',','g')
+            call substitute(decl_para,'\w\+\s*=\s*\S\+\ze\s*,','\=add(decl_para_list,submatch(0))','g')
+            for para in decl_para_list
+                let seq = seq + 1
+                let p_name = matchstr(para,'\w\+\ze\s*=')
+                let p_value = matchstr(para,'=\s*\zs\S\+')
+                        "   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
+                let value = [type, seq     , p_name        , p_value         ,0,                   '',   0]
+                call extend(para_seqs, {seq : value})
+            endfor
+        endif
+
+    endfor
+
+    if len(keys(para_seqs)) > 0
+        "last parameter in port 
+        let last_port_seq = 0
+        for seq in sort(s:Str2Num(keys(para_seqs)),'n')
+            let value = para_seqs[seq]
+            let type = value[0]
+            if type == 'port'
+                let last_port_seq = seq 
+            endif
+        endfor
+        "last parameter in declaration
+        let last_decl_seq = 0
+        for seq in sort(s:Str2Num(keys(para_seqs)),'n')
+            let value = para_seqs[seq]
+            let type = value[0]
+            if(type == 'decl')
+                let last_decl_seq = seq
+            endif
+        endfor 
+    else
+        echohl ErrorMsg | echo "Error para_seqs when GetPara! para_seqs length = ".len(keys(para_seqs))| echohl None
+        echohl ErrorMsg | echo "Possibly no parameter exist" | echohl None
+    endif
+
+    "add last_port_parameter 
+    if last_port_seq != 0
+        let value = para_seqs[last_port_seq]
+        "   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
+        let value[4] = 1
+        call extend(para_seqs,{last_port_seq : value})
+    endif
+    "add last_decl_parameter 
+    if last_decl_seq != 0
+        let value = para_seqs[last_decl_seq]
+        "   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
+        let value[6] = 1
+        call extend(para_seqs,{last_decl_seq : value})
+    endif
+
+    "output
     if a:mode == 'seq'
         return para_seqs
     elseif a:mode == 'name'
@@ -2116,6 +2343,7 @@ function s:GetInstPara(lines)
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
@@ -2123,6 +2351,54 @@ function s:GetInstPara(lines)
         endif
     endwhile
     return inst_para_list
+endfunction
+"}}}3
+
+"GetChangedPara 获取修改过的参数{{{3
+"--------------------------------------------------
+" Function: GetChangedPara
+" Input: 
+"   lines : lines to get parameter
+" Description:
+"   Get changed parameter info from lines
+"   e.g
+"   module_name #(
+"       .A_PARAMETER (5'd20)
+"       .B_PARAMETER (B_PARAMETER)
+"   )
+"   inst_name
+"   (
+"       ....
+"   );
+"
+" Output:
+"   dict of changed parameter (according to input lines)
+"   e.g_1
+"   cpara_names = {
+"                   'A_PARAMETER':'5'd20'
+"                 }
+"---------------------------------------------------
+function s:GetChangedPara(lines)
+    let idx = 0
+    let cpara_names = {}
+    while idx < len(a:lines)
+        let idx = idx + 1
+        let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
+        if idx == -1
+            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
+        endif
+        let line = a:lines[idx-1]
+        if line =~ '\.\s*\w\+\s*(.*)'
+            let para_name = matchstr(line,'\.\s*\zs\w\+\ze\s*(.*)')
+            let conn = matchstr(line,'\.\s*\w\+\s*(\s*\zs.\{-\}\ze\s*)')    "connection
+            let conn_name = matchstr(conn,'\w\+')                           "connection name
+            if para_name != conn_name
+                call extend(cpara_names,{para_name : conn})
+            endif
+        endif
+    endwhile
+    return cpara_names
 endfunction
 "}}}3
 
@@ -2163,6 +2439,7 @@ function s:GetParaModuleName()
         let idx = s:SkipCommentLine(1,idx,getline(1,line('$')))
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         "afer skip, still use current buffer
         let line = getline(idx)
@@ -2314,23 +2591,29 @@ endfunction
 " Input: 
 "   para_seqs : new inst para sequences for align
 "   para_list : old inst para name list
+"   chg_para_names : old parameter names that has been changed
 "   config: configuration for output
-    "config: [1,        1,       1       ] default
-    "        [ONLY_PORT,PARA_NEW,PARA_DEL]
-    "        0 for close, 1 for open
+"        [1,                  1,                 1
+"        [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL
+"         1,                     0,                         0,] default
+"         AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT,  AUTOPARA_INCLUDE_IFDEF]
+"
 " Description:
-" e.g draw parameter sequences
-"   [type, sequence, parameter_name, parameter_value ,last_parameter]
-"   [port,1,'A', '16',0]
-"   [port,2,'B', '4'd11',0]
-"   [port,3,'C', '16'h55',1]
-"   [decl,4,'D', '10_0000',0]
-"   [decl,5,'E', ''HEAD'',0]
+" e.g draw parameter sequences as format of para-para
+"    0     1         2               3                4                    5     6
+"   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
+"   [port,1,'A', '16',0,'',0]
+"   [port,2,'B', '4'd11',0,'',0]
+"   [keep,3,'c0','c0',0,'    //comment line',0]
+"   [port,4,'C', '16'h55',1,'',0]
+"   [decl,5,'D', '10_0000',0,'',0]
+"   [decl,6,'E', ''HEAD'',0,'',1]
 "
 "   module_name #(
 "       /*autoinstparam*/
 "       .A      (A              ),
 "       .B      (B              ),
+"       //comment line
 "       .C      (C              ),
 "       .D      (D              ),
 "       .E      (E              ),
@@ -2346,8 +2629,12 @@ endfunction
 "       .parameter_name   (parameter_name       ),
 "       .parameter_name   (parameter_name       )  //last_parameter
 "---------------------------------------------------
-function s:DrawPara(para_seqs,para_list,config)
+function s:DrawPara(para_seqs,para_list,chg_para_names,config)
     let prefix = s:start_prefix.repeat(' ',4)
+
+    let para_list  = copy(a:para_list)
+    let config = copy(a:config)
+    let chg_para_names = copy(a:chg_para_names)
 
     "guarantee spaces width
     let max_lbracket_len = 0
@@ -2356,23 +2643,21 @@ function s:DrawPara(para_seqs,para_list,config)
         let value = a:para_seqs[seq]
         let p_name = value[2]
         let p_value = p_name
+
+        "para that's changed will be keeped if config 
+        if config[3] == 1
+            if(has_key(chg_para_names,p_name))
+                let p_value = chg_para_names[p_name]
+            endif
+        endif
+
         let max_lbracket_len = max([max_lbracket_len,len(prefix)+1+len(p_name)+4,s:name_pos_max])
         let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+1+len(p_value)+4,s:symbol_pos_max])
     endfor
 
     "Draw Para
     let lines = []
-    let para_list = a:para_list
-    let config = a:config
-
-    "find last_seq for config[0] = 0
-    if len(keys(a:para_seqs)) > 0
-        let seq_list = sort(s:Str2Num(keys(a:para_seqs)),'n')
-        let last_seq = seq_list[-1]
-    else
-        echohl ErrorMsg | echo "Error para_seqs input for function DrawPara! para_seqs length = ".len(keys(a:para_seqs))| echohl None
-        echohl ErrorMsg | echo "Possibly no parameter exist" | echohl None
-    endif
+    let last_para_flag = 0
 
     "para_list can be changed in function, therefore record if it's empty first
     if para_list == []
@@ -2383,70 +2668,104 @@ function s:DrawPara(para_seqs,para_list,config)
 
     for seq in sort(s:Str2Num(keys(a:para_seqs)),'n')
         let value = a:para_seqs[seq]
-        "Format parameter sequences
-        "   [type, sequence, parameter_name, parameter_value ,last_parameter]
-
-        "p_name
-        let p_name = value[2]
-        "p_value
-        let p_value = p_name
-        "name2bracket
-        let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(p_name)-1)
-        "value2bracket
-        let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
-
-        "last_para
-        "use all parameter
-        if config[0] == 0
-            if seq == last_seq
-                let last_para = 1
-            else
-                let last_para = 0
-            endif
-        "use only port parameter
-        else
-            let last_para = value[4]
-        endif
-
-        "comma
-        if last_para == 1
-            let comma = ' '      "space
-        else
-            let comma = ','      "comma exists
-        endif
-
-        "type
         let type = value[0]
-
-        "Draw para by Config
-        "Only draw port or draw all
-        if (config[0] == 1 && type == 'port') || (config[0] == 0)
-            "empty list, default
-            if para_list_empty == 1
-                let line = prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'.comma
-            "update list,draw para by config
-            else
-                let line = prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'.comma
-                "process //INST_NEW
-                let para_idx = index(para_list,p_name) 
-                "name not exist in old para_list, add //INST_NEW
-                if para_idx == -1
-                    if config[1] == 1
-                        let line = line . ' // PARA_NEW'
-                    else
-                        let line = line
-                    endif
-                "name already exist in old para_list,cover
+        let line = value[5]
+        "add single comment/ifdef line 
+        if type == 'keep' 
+            if line =~ '^\s*\/\/'
+                if config[4] == 1
+                    let line = prefix.substitute(line,'^\s*','','')
+                    call add(lines,line)
                 else
-                    let line = line
-                    call remove(para_list,para_idx)
+                    "ignore comment line when not config
+                endif
+            elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)'
+                if config[5] == 1
+                    let line = prefix.substitute(line,'^\s*','','')
+                    call add(lines,line)
+                else
+                    "ignore ifdef line when not config
+                endif
+            endif
+        else
+        "add parameter line
+
+            "Format parameter sequences
+            "    0     1         2               3                4                    5     6
+            "   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
+
+            "p_name
+            let p_name = value[2]
+            "p_value
+            let p_value = p_name
+
+            "para that's changed will be keeped if config 
+            if config[3] == 1
+                if(has_key(chg_para_names,p_name))
+                    let p_value = chg_para_names[p_name]
                 endif
             endif
 
-            call add(lines,line)
+            "name2bracket
+            let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(p_name)-1)
+            "value2bracket
+            let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
+            "comma
+            if config[0] == 0   "use all parameter
+                let last_para = value[6]
+            else                "use only port parameter
+                let last_para = value[4]
+            endif
+            if last_para == 1
+                let comma = ' '         "space
+                let last_para_flag = 1  "special case: last parameter has been put in keep_io_list, there exist no last_para
+            else
+                let comma = ','      "comma exists
+            endif
 
+            "type
+            let type = value[0]
+
+            "Draw para by Config
+            "Only draw port or draw all
+            if (config[0] == 1 && type == 'port') || (config[0] == 0)
+                "empty list, default
+                if para_list_empty == 1
+                    let line = prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'.comma
+                "update list,draw para by config
+                else
+                    let line = prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'.comma
+                    "process //INST_NEW
+                    let para_idx = index(para_list,p_name) 
+                    "name not exist in old para_list, add //INST_NEW
+                    if para_idx == -1
+                        if config[1] == 1
+                            let line = line . ' // PARA_NEW'
+                        else
+                            let line = line
+                        endif
+                    "name already exist in old para_list,cover
+                    else
+                        let line = line
+                        call remove(para_list,para_idx)
+                    endif
+                endif
+
+                call add(lines,line)
+
+                "in case special case happen(last parameter has been put in keep_io_list, there exist no last_para)
+                "same time last line is not a parameter type, must record last_para index here
+                let self_last_para_idx = index(lines,line) 
+
+            endif
         endif
     endfor
+
+    "special case: last parameter has been put in keep_para_list, there exist no last_para
+    if last_para_flag == 0
+        "set last item as last_para
+        let lines[self_last_para_idx] = substitute(lines[self_last_para_idx],',',' ','') 
+    endif
 
     if para_list == []
     "remain port in para_list
@@ -2458,10 +2777,6 @@ function s:DrawPara(para_seqs,para_list,config)
             endfor
         endif
     endif
-
-    "special case: last parameter has been put in keep_para_list, there exist no last_parameter
-    "set last item as last_port
-    let lines[-1] = substitute(lines[-1],',',' ','') 
 
     if lines == []
         echohl ErrorMsg | echo "Error para_seqs input for function DrawPara! para_seqs has no parameter definition!" | echohl None
@@ -2479,17 +2794,19 @@ endfunction
 "   para_seqs : new inst para sequences for align
 "   para_list : old inst para name list
 "   config: configuration for output
-    "config: [1,        1,       1       ] default
-    "        [ONLY_PORT,PARA_NEW,PARA_DEL]
-    "        0 for close, 1 for open
+"   config: [1,        1,       1       ] default
+"           [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL]
+"   0 for close, 1 for open
 " Description:
-" e.g draw parameter sequences
-"   [type, sequence, parameter_name, parameter_value ,last_parameter]
-"   [port,1,'A', '16',0]
-"   [port,2,'B', '4'd11',0]
-"   [port,3,'C', '16'h55',1]
-"   [decl,4,'D', '10_0000',0]
-"   [decl,5,'E', ''HEAD'',0]
+" e.g draw parameter sequences as format of para-value
+"    0     1         2               3                4                    5     6
+"   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
+"   [port,1,'A', '16',0,'',0]
+"   [port,2,'B', '4'd11',0,'',0]
+"   [keep,3,'c0','c0',0,'    //comment line',0]
+"   [port,4,'C', '16'h55',1,'',0]
+"   [decl,5,'D', '10_0000',0,'',0]
+"   [decl,6,'E', ''HEAD'',0,'',1]
 "
 "   module_name #(
 "       /*autoinstparam*/
@@ -2513,6 +2830,9 @@ endfunction
 function s:DrawParaValue(para_seqs,para_list,config)
     let prefix = s:start_prefix.repeat(' ',4)
 
+    let para_list = copy(a:para_list)
+    let config = copy(a:config)
+
     "guarantee spaces width
     let max_lbracket_len = 0
     let max_rbracket_len = 0
@@ -2526,17 +2846,7 @@ function s:DrawParaValue(para_seqs,para_list,config)
 
     "Draw Para
     let lines = []
-    let para_list = a:para_list
-    let config = a:config
-
-    "find last_seq for config[0] = 0
-    if len(keys(a:para_seqs)) > 0
-        let seq_list = sort(s:Str2Num(keys(a:para_seqs)),'n')
-        let last_seq = seq_list[-1]
-    else
-        echohl ErrorMsg | echo "Error para_seqs input for function DrawPara! para_seqs length = ".len(keys(a:para_seqs))| echohl None
-        echohl ErrorMsg | echo "Possibly no parameter exist" | echohl None
-    endif
+    let last_para_flag = 0
 
     "para_list can be changed in function, therefore record if it's empty first
     if para_list == []
@@ -2547,70 +2857,80 @@ function s:DrawParaValue(para_seqs,para_list,config)
 
     for seq in sort(s:Str2Num(keys(a:para_seqs)),'n')
         let value = a:para_seqs[seq]
-        "Format parameter sequences
-        "   [type, sequence, parameter_name, parameter_value ,last_parameter]
-
-        "p_value
-        let p_value = value[3]
-        "p_name
-        let p_name = value[2]
-        "name2bracket
-        let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(p_name)-1)
-        "value2bracket
-        let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
-
-        "last_para
-        "use all parameter
-        if config[0] == 0
-            if seq == last_seq
-                let last_para = 1
-            else
-                let last_para = 0
-            endif
-        "use only port parameter
-        else
-            let last_para = value[4]
-        endif
-
-        "comma
-        if last_para == 1
-            let comma = ' '      "space
-        else
-            let comma = ','      "comma exists
-        endif
-
-        "type
         let type = value[0]
+        "ignore single comment/ifdef line 
+        if type == 'keep' 
+        else
+        "add parameter line
+            "Format parameter sequences
+            "    0     1         2               3                4               5
+            "   [type, sequence, parameter_name, parameter_value, last_parameter, line] 
 
-        "Draw para by Config
-        "Only draw port or draw all
-        if (config[0] == 1 && type == 'port') || (config[0] == 0)
-            "empty list, default
-            if para_list_empty == 1
-                let line = prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'.comma
-            "update list,draw para by config
+            "p_name
+            let p_name = value[2]
+            "p_value
+            let p_value = value[3]
+            "name2bracket
+            let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(p_name)-1)
+            "value2bracket
+            let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
+            "comma
+            if config[0] == 0   "use all parameter
+                let last_para = value[6]
+            else                "use only port parameter
+                let last_para = value[4]
+            endif
+
+            if last_para == 1
+                let comma = ' '         "space
+                let last_para_flag = 1  "special case: last parameter has been put in keep_io_list, there exist no last_para
             else
-                let line = prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'.comma
-                "process //INST_NEW
-                let para_idx = index(para_list,p_name) 
-                "name not exist in old para_list, add //INST_NEW
-                if para_idx == -1
-                    if config[1] == 1
-                        let line = line . ' // PARA_NEW'
+                let comma = ','      "comma exists
+            endif
+
+            "type
+            let type = value[0]
+
+            "Draw para by Config
+            "Only draw port or draw all
+            if (config[0] == 1 && type == 'port') || (config[0] == 0)
+                "empty list, default
+                if para_list_empty == 1
+                    let line = prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'.comma
+                "update list,draw para by config
+                else
+                    let line = prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'.comma
+                    "process //INST_NEW
+                    let para_idx = index(para_list,p_name) 
+                    "name not exist in old para_list, add //INST_NEW
+                    if para_idx == -1
+                        if config[1] == 1
+                            let line = line . ' // PARA_NEW'
+                        else
+                            let line = line
+                        endif
+                    "name already exist in old para_list,cover
                     else
                         let line = line
+                        call remove(para_list,para_idx)
                     endif
-                "name already exist in old para_list,cover
-                else
-                    let line = line
-                    call remove(para_list,para_idx)
                 endif
+
+                call add(lines,line)
+
+                "in case special case happen(last parameter has been put in keep_io_list, there exist no last_para)
+                "same time last line is not a parameter type, must record last_para index here
+                let self_last_para_idx = index(lines,line) 
+
             endif
-
-            call add(lines,line)
-
         endif
     endfor
+
+    "special case: last parameter has been put in keep_para_list, there exist no last_para
+    if last_para_flag == 0
+        "set last item as last_para
+        let lines[self_last_para_idx] = substitute(lines[self_last_para_idx],',',' ','') 
+    endif
 
     if para_list == []
     "remain port in para_list
@@ -2622,10 +2942,6 @@ function s:DrawParaValue(para_seqs,para_list,config)
             endfor
         endif
     endif
-
-    "special case: last parameter has been put in keep_para_list, there exist no last_parameter
-    "set last item as last_port
-    let lines[-1] = substitute(lines[-1],',',' ','') 
 
     if lines == []
         echohl ErrorMsg | echo "Error para_seqs input for function DrawPara! para_seqs has no parameter definition!" | echohl None
@@ -2789,6 +3105,7 @@ function s:GetfReg(lines,mode)
         let idx = s:SkipCommentLine(0,idx,a:lines)
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         "find flip-flop reg
@@ -2800,6 +3117,7 @@ function s:GetfReg(lines,mode)
                 let idx_inblock = s:SkipCommentLine(0,idx_inblock,a:lines)
                 if idx_inblock == -1
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+                    echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
                 endif
                 let line = a:lines[idx_inblock-1]
                 "meet another always block, assign statement or instance, break
@@ -2874,6 +3192,7 @@ function s:GetcReg(lines,mode)
         let idx = s:SkipCommentLine(0,idx,a:lines)
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         "ignore flip-flop reg
@@ -2888,6 +3207,7 @@ function s:GetcReg(lines,mode)
                 let idx_inblock = s:SkipCommentLine(0,idx_inblock,a:lines)
                 if idx_inblock == -1
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+                    echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
                 endif
                 let line = a:lines[idx_inblock-1]
                 "meet another always block, assign statement or instance, break
@@ -3581,6 +3901,7 @@ function s:SkipCommentLine(mode,idx,lines)
 endfunction
 "}}}3
 
+"Str2Num 字符串转数字（用于sort函数排序）{{{3
 "--------------------------------------------------
 " Function: Str2Num
 " Input: 
@@ -3597,6 +3918,8 @@ function s:Str2Num(list)
     endfor
     return nr_list
 endfunction
+"}}}3
+
 "}}}2
 
 "}}}1
