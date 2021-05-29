@@ -52,11 +52,11 @@ All notable changes to this project will be documented in this file. The format 
 
 - Bug fixed for `AutoPara`
 
-  修复`AutoPara（）`最后的`parameter`判断异常`Bug`
+  修复`AutoPara()`最后的`parameter`判断异常`Bug`
 
 ## [1.0.5] - 2021-05-08
 ### Changed
-- Compatible with vim 7.4
+- Compatible with `vim 7.4`
 
   兼容旧版`vim v7.4`
 
@@ -82,7 +82,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
-- Add `,` feature for `AutoPara``
+- Add `,` feature for `AutoPara`
 
   `AutoPara` 添加支持`,`特性
 
