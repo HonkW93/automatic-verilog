@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/05/28 22:38
+" Last Modified:  2021/06/04 23:13
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -1254,7 +1254,6 @@ function s:GetIO(lines,mode)
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
 
@@ -1470,7 +1469,6 @@ function s:GetInstIO(lines)
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
@@ -1523,7 +1521,6 @@ function s:GetChangedInstIO(lines)
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
@@ -1578,7 +1575,6 @@ function s:GetInstModuleName()
         let idx = s:SkipCommentLine(1,idx,getline(1,line('$')))
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         "afer skip, still use current buffer
         let line = getline(idx)
@@ -1995,7 +1991,6 @@ function s:GetPara(lines,mode)
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         "delete comment line in the middle
@@ -2042,11 +2037,16 @@ function s:GetPara(lines,mode)
         endif
 
         "find )
-        if wait_port_para == 0 && line =~ ')'
-            let wait_right_braket = 0
+        if wait_port_para == 0 
+            if line =~ ')'
+                let wait_right_braket = 0
+                continue
+            endif
         "no #() parameter, skip
-        elseif wait_left_braket == 1 && line =~ 'parameter'
-            let wait_right_braket = 0
+        else        
+            if wait_left_braket == 1 && line =~ 'parameter'
+                let wait_right_braket = 0
+            endif
         endif
 
         "record single comment/ifdef line in declaration parameter 
@@ -2216,9 +2216,14 @@ function s:GetPara(lines,mode)
             call extend(para_seqs, {seq : value})
         elseif type == 'port'
             let port_para_list = []
-            "unify to use ',' as spliter,add spliter for last_para
-            let port_para = substitute(line,')',',','g')
-            call substitute(port_para,'\w\+\s*=\s*\S\+\ze\s*,','\=add(port_para_list,submatch(0))','g')
+
+            "unify to use ',' as spliter
+            for port_para in split(line,',',1)
+                if port_para =~ '\w\+\s*=\s*\S\+\ze\s*'
+                    call add(port_para_list,matchstr(port_para,'\w\+\s*=\s*\S\+\ze\s*'))
+                endif
+            endfor 
+
             for para in port_para_list
                 let seq = seq + 1
                 let p_name = matchstr(para,'\w\+\ze\s*=')
@@ -2343,7 +2348,6 @@ function s:GetInstPara(lines)
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
@@ -2386,7 +2390,6 @@ function s:GetChangedPara(lines)
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
@@ -2439,7 +2442,6 @@ function s:GetParaModuleName()
         let idx = s:SkipCommentLine(1,idx,getline(1,line('$')))
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         "afer skip, still use current buffer
         let line = getline(idx)
@@ -3105,7 +3107,6 @@ function s:GetfReg(lines,mode)
         let idx = s:SkipCommentLine(0,idx,a:lines)
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         "find flip-flop reg
@@ -3117,7 +3118,6 @@ function s:GetfReg(lines,mode)
                 let idx_inblock = s:SkipCommentLine(0,idx_inblock,a:lines)
                 if idx_inblock == -1
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-                    echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
                 endif
                 let line = a:lines[idx_inblock-1]
                 "meet another always block, assign statement or instance, break
@@ -3192,7 +3192,6 @@ function s:GetcReg(lines,mode)
         let idx = s:SkipCommentLine(0,idx,a:lines)
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-            echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
         endif
         let line = a:lines[idx-1]
         "ignore flip-flop reg
@@ -3207,7 +3206,6 @@ function s:GetcReg(lines,mode)
                 let idx_inblock = s:SkipCommentLine(0,idx_inblock,a:lines)
                 if idx_inblock == -1
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-                    echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
                 endif
                 let line = a:lines[idx_inblock-1]
                 "meet another always block, assign statement or instance, break
@@ -3897,7 +3895,9 @@ function s:SkipCommentLine(mode,idx,lines)
         endif
     endfor
 
+    echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
     return -1
+
 endfunction
 "}}}3
 
