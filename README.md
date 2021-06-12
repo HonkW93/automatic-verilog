@@ -29,7 +29,7 @@
 
 一款基于Vimscript的自动化verilog脚本。由[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)修改而来，原作者zhangguo。
 
-[![Release-Version](https://img.shields.io/badge/Release-1.1.1-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
+[![Release-Version](https://img.shields.io/badge/Release-1.1.2-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
 
 ## 安装
 
@@ -62,7 +62,7 @@
   - [ ] 进行中...
   
 - 自动reg（`AutoReg`）
-  - [ ] 支持端口`output reg`覆盖定义（参考`emacs verilog-mode`）
+  - [x] 支持端口`output reg`覆盖定义（参考`emacs verilog-mode`）
   - [ ] 支持`always`语句阻塞/非阻塞赋值`reg`获取（参考`vim automatic-verilog`）
     - [x] 支持左端`{}`写法，但不支持此写法获取位宽
     - [x] 支持左端`[WIDTH1:WIDTH2]`写法

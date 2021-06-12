@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/06/07 23:39
+" Last Modified:  2021/06/12 21:20
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -10,6 +10,7 @@
 " 2021/3/26     HonkW           1.0.0                   First copy from zhangguo's vimscript
 " 2021/4/5      HonkW           1.0.1                   Finish AutoInst & Autopara
 " 2021/5/28     HonkW           1.1.0                   Optimize AutoInst & AutoPara
+" 2021/6/12     HonkW           1.1.2                   First finish prototype of AutoReg
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
 "Update 记录脚本更新{{{1
@@ -34,7 +35,7 @@ let vlog_plugin = 1
 
 "Config 配置参数{{{1
 
-"Position 确定信号对齐位置{{{2
+"Align 确定信号对齐位置{{{2
 let s:name_pos_max = 32
 let s:symbol_pos_max = 64
 let s:start_pos  = 4
@@ -48,6 +49,8 @@ let s:AUTOINST_INST_DEL = 1          "add //INST_DEL if port has been deleted fr
 let s:AUTOINST_KEEP_CHANGED = 1      "keep changed inst io
 let s:AUTOINST_INCLUDE_COMMENT = 1   "include comment line of // (/*...*/ will always be ignored)
 let s:AUTOINST_INCLUDE_IFDEF = 1     "include ifdef like `ifdef `endif
+let s:AUTOINST_95_SUPPORT= 0         "Support Verilog-1995
+let s:AUTOINST_TAIL_NOT_ALIGN = 0    "don't do alignment in tail when autoinst
 "}}}2
 
 "AutoPara 自动参数配置{{{2
@@ -57,6 +60,14 @@ let s:AUTOPARA_PARA_DEL = 1          "add //PARA_DEL if parameter has been delet
 let s:AUTOPARA_KEEP_CHANGED = 1      "keep changed parameter
 let s:AUTOPARA_INCLUDE_COMMENT = 0   "include comment line of // (/*...*/ will always be ignored)
 let s:AUTOPARA_INCLUDE_IFDEF = 0     "include ifdef like `ifdef `endif
+let s:AUTOPARA_TAIL_NOT_ALIGN = 0    "don't do alignment in tail when autopara
+"}}}2
+
+"AutoReg 自动寄存器配置{{{2
+let s:AUTOREG_REG_NEW = 1          "add //PARA_NEW if parameter has been newly added to the module
+let s:AUTOREG_REG_DEL = 1          "add //PARA_DEL if parameter has been deleted from the module
+let s:AUTOREG_KEEP_CHANGED = 1     "keep changed parameter
+let s:AUTOREG_TAIL_NOT_ALIGN = 0   "don't do alignment in tail when autoreg
 "}}}2
 
 "Timing Wave 定义波形{{{2
@@ -905,14 +916,15 @@ function AutoInst(mode)
         "if io_seqs has same signal_name that's in upd_io_list, cover
         "if io_seqs doesn't have signal_name that's in upd_io_list, add //INST_DEL
         "if io_seqs connection has been changed, keep it
-        "config: [1,               1,                 1,                 
-        "        [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, 
-        "         1,                     1,                        1,] default
-        "         AUTOINST_KEEP_CHANGED, AUTOINST_INCLUDE_COMMENT, AUTOINST_INCLUDE_IFDEF]
+        "
+        " default:  [1,               1,                 1,                 1,                     1,                        1,
+        " config:   [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, AUTOINST_KEEP_CHANGED, AUTOINST_INCLUDE_COMMENT, AUTOINST_INCLUDE_IFDEF
+        "           0,                   0] 
+        "           AUTOINST_95_SUPPORT, AUTOINST_TAIL_NOT_ALIGN ]
         "
         "        0 for close, 1 for open
         "
-        let config = [s:AUTOINST_IO_DIR,s:AUTOINST_INST_NEW,s:AUTOINST_INST_DEL,s:AUTOINST_KEEP_CHANGED,s:AUTOINST_INCLUDE_COMMENT,s:AUTOINST_INCLUDE_IFDEF]
+        let config = [s:AUTOINST_IO_DIR,s:AUTOINST_INST_NEW,s:AUTOINST_INST_DEL,s:AUTOINST_KEEP_CHANGED,s:AUTOINST_INCLUDE_COMMENT,s:AUTOINST_INCLUDE_IFDEF,s:AUTOINST_95_SUPPORT,s:AUTOINST_TAIL_NOT_ALIGN]
         let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names,config)
         "delete current line );
         let line = substitute(getline(line('.')),')\s*;','','')
@@ -1043,12 +1055,12 @@ function AutoPara(mode)
         "if para_seqs connection has been changed, keep it
         "config: [1,                  1,                 1
         "        [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL
-        "         1,                     1,                        1,] default
-        "         AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT, AUTOPARA_INCLUDE_IFDEF]
+        "         1,                     1,                        1,                      1                      ] default
+        "         AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT, AUTOPARA_INCLUDE_IFDEF, AUTOPARA_TAIL_NOT_ALIGN]
         "
         "        0 for close, 1 for open
 
-        let config = [s:AUTOPARA_ONLY_PORT,s:AUTOPARA_PARA_NEW,s:AUTOPARA_PARA_DEL,s:AUTOPARA_KEEP_CHANGED,s:AUTOPARA_INCLUDE_COMMENT,s:AUTOPARA_INCLUDE_IFDEF]
+        let config = [s:AUTOPARA_ONLY_PORT,s:AUTOPARA_PARA_NEW,s:AUTOPARA_PARA_DEL,s:AUTOPARA_KEEP_CHANGED,s:AUTOPARA_INCLUDE_COMMENT,s:AUTOPARA_INCLUDE_IFDEF,s:AUTOPARA_TAIL_NOT_ALIGN]
         let lines = s:DrawPara(para_seqs,upd_para_list,chg_para_names,config)
 
         "delete current line )
@@ -1078,8 +1090,8 @@ endfunction
 " Input: 
 "   mode : mode for autoinstparam
 " Description:
-"   mode = 1, autoinstparam all parameter
-"   mode = 0, autoinstparam only one parameter
+"   mode = 1, autoinstparam_value all parameter
+"   mode = 0, autoinstparam_value only one parameter
 " Output:
 "   Formatted autoinstparam code
 " Note:
@@ -1176,10 +1188,14 @@ function AutoParaValue(mode)
         "if para_seqs has new parameter_name that's never in upd_para_list, add //PARA_NEW
         "if para_seqs has same parameter_name that's in upd_para_list, cover
         "if para_seqs doesn't have parameter_name that's in upd_para_list, add //PARA_DEL
-        "config: [1,     1,       1       ] default
-        "        [AUTOPARA_ONLY_PORT,AUTOPARA_PARA_NEW,AUTOPARA_PARA_DEL]
+        "config: [1,                  1,                 1
+        "        [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL
+        "         N/A,                   N/A,                      N/A,                    0                      ] default
+        "         AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT, AUTOPARA_INCLUDE_IFDEF, AUTOPARA_TAIL_NOT_ALIGN]
+        "
         "        0 for close, 1 for open
-        let config = [s:AUTOPARA_ONLY_PORT,s:AUTOPARA_PARA_NEW,s:AUTOPARA_PARA_DEL]
+        
+        let config = [s:AUTOPARA_ONLY_PORT,s:AUTOPARA_PARA_NEW,s:AUTOPARA_PARA_DEL,0,0,0,s:AUTOPARA_TAIL_NOT_ALIGN]
         let lines = s:DrawParaValue(para_seqs,upd_para_list,config)
 
         "delete current line )
@@ -1231,72 +1247,52 @@ function AutoReg()
         if search('\/\*autoreg\*\/','W') == 0
             break
         endif
-
-        "try
-        "    "get inst io list
-        "    let keep_io_list = s:GetInstIO(getline(idx1,line('.')))
-        "    let upd_io_list = s:GetInstIO(getline(line('.'),idx2))
-        "    "changed inst io names
-        "    let chg_io_names = s:GetChangedInstIO(getline(line('.'),idx2))
-        "endtry
+        
+        "read from current file
+        let lines = readfile(expand('%'))
 
         try
-            "get reg sequences {seq : value}
-            "read current file
-            let lines = readfile(expand('%'))
-            "reg sequences
-            let [freg_names,creg_names] = s:GetReg(lines)
-            "print for test
-            "for name in keys(freg_names)
-            "    let value = freg_names[name]
-            "    let name = value[4]
-            "    let type = value[0]
-            "    let seq = value[1]
-            "    let width1 = value[2]
-            "    let width2 = value[3]
-            "    echo name.'  type: '.type.'  seq :'.seq.'  ['.width1.':'.width2.']'
-            "endfor
+            "get declared register list
+            let [keep_reg_list,upd_reg_list] = s:GetDeclReg(lines)
         endtry
 
-        "remove io from io_seqs that want to be keep when autoinst
-        "   value = [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-        "   io_seqs = {seq : value }
-        "   io_names = {signal_name : value }
-        "for name in keep_io_list
-        "    if has_key(io_names,name)
-        "        let value = io_names[name]
-        "        let seq = value[1]
-        "        call remove(io_seqs,seq)
-        "    endif
-        "endfor
+        try
+            "get reg names {name : value}
+            let reg_names = s:GetReg(lines)
+        endtry
+
+        "remove reg from reg_names that want to be keep when autoreg
+        "   value = [type, sequence, width1, width2, signal_name, lines]
+        "   reg_names = {signal_name : value }
+        for name in keep_reg_list
+            if has_key(reg_names,name)
+                call remove(reg_names,name)
+            endif
+        endfor
 
         "note: current position must be at /*autoreg*/ line
-        "try
-        "    "kill all contents between //Start of automatic reg and //End of automatic reg
-        "    call s:KillAutoReg()
-        "endtry
+        try
+            "kill all contents between //Start of automatic reg and //End of automatic reg
+            call s:KillAutoReg()
+        endtry
 
-        "draw io port, use io_seqs to cover update io list
-        "if io_seqs has new signal_name that's never in upd_io_list, add //INST_NEW
-        "if io_seqs has same signal_name that's in upd_io_list, cover
-        "if io_seqs doesn't have signal_name that's in upd_io_list, add //INST_DEL
-        "if io_seqs connection has been changed, keep it
-        "config: [1,               1,                 1,                 
-        "        [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, 
-        "         1,                     1,                        1,] default
-        "         AUTOINST_KEEP_CHANGED, AUTOINST_INCLUDE_COMMENT, AUTOINST_INCLUDE_IFDEF]
+        "draw register, use reg_names to cover update register list
+        "if reg_names has new reg_name that's never in upd_reg_list, add //REG_NEW
+        "if reg_names has same reg_name that's in upd_reg_list, cover
+        "if reg_names doesn't have reg_name that's in upd_reg_list, add //REG_DEL
+        "if reg_names connection has been changed, keep it
+        "
+        " default:  [1,        1,               1,               1                     1                     ]                   
+        " config:   [RESERVED, AUTOREG_REG_NEW, AUTOREG_REG_DEL, AUTOREG_KEEP_CHANGED, AUTOREG_TAIL_NOT_ALIGN]
         "
         "        0 for close, 1 for open
-        "
-        "let config = [s:AUTOINST_IO_DIR,s:AUTOINST_INST_NEW,s:AUTOINST_INST_DEL,s:AUTOINST_KEEP_CHANGED,s:AUTOINST_INCLUDE_COMMENT,s:AUTOINST_INCLUDE_IFDEF]
-        "let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names,config)
-        ""delete current line );
-        "let line = substitute(getline(line('.')),')\s*;','','')
-        "call setline(line('.'),line)
-        ""append io port and );
-        "call add(lines,s:start_prefix.');')
-        "call append(line('.'),lines)
+        
+        let config = [0,s:AUTOREG_REG_NEW,s:AUTOREG_REG_DEL,s:AUTOREG_KEEP_CHANGED,s:AUTOREG_TAIL_NOT_ALIGN]
+        let lines = s:DrawReg(reg_names,upd_reg_list,config)
 
+        "append registers definition
+        call append(line('.'),lines)
+        
         "only autoreg once
         break
 
@@ -1354,6 +1350,8 @@ function s:GetIO(lines,mode)
     let wait_module = 1
     let wait_port = 1
     let io_seqs = {}
+
+    "get io seqs from line {{{4
     while idx < len(a:lines)
         let idx = idx + 1
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
@@ -1379,7 +1377,7 @@ function s:GetIO(lines,mode)
         endif
 
         if wait_module == 0
-            "null line
+            "null line{{{5
             if line =~ '^\s*$'
                 "if two adjacent lines are both null lines, delete last line
                 if has_key(io_seqs,seq)
@@ -1394,14 +1392,18 @@ function s:GetIO(lines,mode)
                 let value = ['keep',seq,     '',     'c0',   'c0',   'NULL',          0,         '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
-            " `ifdef `ifndef & single comment line
+            "}}}5
+
+            " `ifdef `ifndef & single comment line {{{5
             elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)' || (line =~ '^\s*\/\/' && line !~ '^\s*\/\/\s*{{{')
                 "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line ]
                 let value = ['keep',seq,     '',     'c0',   'c0',   line,        0,         line]
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
             "}}}
-            " input/output ports
+            "}}}5
+            
+            " input/output ports{{{5
             elseif line =~ '^\s*'. s:VlogTypePorts
                 let wait_port = 0
                 "delete abnormal
@@ -1442,27 +1444,34 @@ function s:GetIO(lines,mode)
                     let name = 'NULL'
                 endif
 
-                "dict           [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
+                "dict       [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
                 let value = [type,seq,     io_dir, width1, width2, name,        0,         '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
-            else
             endif
+            "}}}5
 
+            "break{{{5
             "abnormal break
             if line =~ '^\s*\<always\>' || line =~ '^\s*\<assign\>' || line =~ '^\s*\<endmodule\>' || line =~ '\<autodef\>'
                 break
             endif
             
-            "normal break, find end of port declaration
-            if line =~ ')\s*;\s*$'
-                break
+            "verilog-1995,input/output/inout may appear outside bracket
+            if s:AUTOINST_95_SUPPORT == 1
+            "verilog-2001 or above
+            else
+                if line =~ ')\s*;\s*$' "normal break, find end of port declaration
+                    break
+                endif
             endif
+            "}}}5
 
         endif
     endwhile
+    "}}}4
 
-    "find last_port
+    "find last_port{{{4
     let seq = len(io_seqs)
     while seq >= 0
         let seq = seq - 1
@@ -1476,8 +1485,9 @@ function s:GetIO(lines,mode)
             end
         endif
     endwhile
+    "}}}
 
-    "remove last useless line
+    "remove last useless line{{{4
     let seq = len(io_seqs)
     while seq >= 0
         let seq = seq - 1
@@ -1492,8 +1502,9 @@ function s:GetIO(lines,mode)
             end
         endif
     endwhile
+    "}}}4
 
-    "remove first useless line
+    "remove first useless line{{{4
     let seq = 0
     while seq <= len(io_seqs)
         let seq = seq + 1
@@ -1508,7 +1519,9 @@ function s:GetIO(lines,mode)
             end
         endif
     endwhile
+    "}}}4
 
+    "output by mode{{{4
     if a:mode == 'seq'
         return io_seqs
     elseif a:mode == 'name'
@@ -1516,14 +1529,13 @@ function s:GetIO(lines,mode)
         for seq in keys(io_seqs)
             let value = io_seqs[seq]
             let name = value[5]
-            if name !~ 'keep'
-                call extend(io_names,{name : value})
-            endif
+            call extend(io_names,{name : value})
         endfor
         return io_names
     else
         echohl ErrorMsg | echo "Error mode input for function GetIO! mode = ".a:mode| echohl None
     endif
+    "}}}4
 
 endfunction
 "}}}3
@@ -1839,10 +1851,10 @@ endfunction
 "   io_list : old inst io name list
 "   chg_io_names : old inst io names that has been changed
 "   config: configuration for output
-"   [1,               1,                 1,                 
-"   [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, 
-"    1,                     1,                        1,] default
-"    AUTOINST_KEEP_CHANGED, AUTOINST_INCLUDE_COMMENT, AUTOINST_INCLUDE_IFDEF]
+"   default:  [1,               1,                 1,                 1,                     1,                        1,
+"   config:   [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, AUTOINST_KEEP_CHANGED, AUTOINST_INCLUDE_COMMENT, AUTOINST_INCLUDE_IFDEF
+"              0,                   0] 
+"              AUTOINST_95_SUPPORT, AUTOINST_TAIL_NOT_ALIGN ]
 "   0 for close, 1 for open
 " Description:
 " e.g draw io port sequences
@@ -1865,7 +1877,8 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
     let io_list = copy(a:io_list)
     let chg_io_names = copy(a:chg_io_names)
     let config = copy(a:config)
-    "guarantee spaces width
+
+    "guarantee spaces width{{{4
     let max_lbracket_len = 0
     let max_rbracket_len = 0
     for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
@@ -1879,7 +1892,6 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             else
                 let width = '['.value[3].':'.value[4].']'
             endif
-
             "io that's changed will be keeped if config 
             let connect = name.width
             if config[3] == 1
@@ -1887,13 +1899,13 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
                     let connect = chg_io_names[name]
                 endif
             endif
-
             let max_lbracket_len = max([max_lbracket_len,len(prefix)+1+len(name)+4,s:name_pos_max])
             let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+1+len(connect)+4,s:symbol_pos_max])
         endif
     endfor
+    "}}}4
 
-    "Draw IO
+    "draw io{{{4
     let lines = []
     let last_port_flag = 0
 
@@ -1908,7 +1920,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
         let value = a:io_seqs[seq]
         let type = value[0]
         let line = value[7]
-        "add single comment/ifdef line 
+        "add single comment/ifdef line{{{5
         if type == 'keep' 
             if line =~ '^\s*\/\/'
                 if config[4] == 1
@@ -1925,9 +1937,9 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
                     "ignore ifdef line when not config
                 endif
             endif
+        "}}}5
+        "add io line{{{5
         else
-        "add io line
-        
             "Format IO sequences
             "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
             "name
@@ -1951,7 +1963,13 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             endif
             
             "width2bracket
-            let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(connect))
+            "don't align tail if config
+            if config[7] == 1
+                let width2bracket = ''
+            else
+                let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(connect))
+            endif
+
             "comma
             let last_port = value[6]
             if last_port == 1
@@ -2001,6 +2019,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             let self_last_port_idx = index(lines,line) 
 
         endif
+    "}}}5
     endfor
 
     "special case: last port has been put in keep_io_list, there exist no last_port
@@ -2019,6 +2038,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             endfor
         endif
     endif
+    "}}}4
 
     if lines == []
         echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition!" | echohl None
@@ -2091,6 +2111,7 @@ function s:GetPara(lines,mode)
     let line_idxs = {}
     let para_seqs = {}
 
+    "get parameter seqs from line {{{4
     while idx < len(a:lines)
         let idx = idx + 1
         let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
@@ -2185,8 +2206,9 @@ function s:GetPara(lines,mode)
         endif
 
     endwhile
+    "}}}4
 
-    "{{{4 Problem with `ifdef and //single comment line
+"    "{{{4 Problem with `ifdef and //single comment line
     let last_port_para_idx = 0
     let last_decl_para_idx = 0
 
@@ -2304,9 +2326,9 @@ function s:GetPara(lines,mode)
             endif
         endif
     endfor
-    "}}}4
+"    "}}}4
 
-    "generate parameter sequences
+    "generate parameter seqs{{{4
     let seq = 0
     for idx in sort(s:Str2Num(keys(line_idxs)),'n')
         let value = line_idxs[idx]
@@ -2321,7 +2343,6 @@ function s:GetPara(lines,mode)
             call extend(para_seqs, {seq : value})
         elseif type == 'port'
             let port_para_list = []
-
             "unify to use ',' as spliter
             for port_para in split(line,',',1)
                 if port_para =~ '\w\+\s*=\s*\S\+\ze\s*'
@@ -2353,7 +2374,11 @@ function s:GetPara(lines,mode)
         endif
 
     endfor
+    "}}}4
 
+    "find last_port{{{4
+    
+    "get last_port_seq and last_decl_seq
     if len(keys(para_seqs)) > 0
         "last parameter in port 
         let last_port_seq = 0
@@ -2392,8 +2417,9 @@ function s:GetPara(lines,mode)
         let value[6] = 1
         call extend(para_seqs,{last_decl_seq : value})
     endif
-
-    "output
+    "}}}4
+    
+    "output by mode{{{4
     if a:mode == 'seq'
         return para_seqs
     elseif a:mode == 'name'
@@ -2407,6 +2433,7 @@ function s:GetPara(lines,mode)
     else
         echohl ErrorMsg | echo "Error mode input for function GetPara! mode = ".a:mode| echohl None
     endif
+    "}}}4
 
 endfunction
 "}}}3
@@ -2702,8 +2729,8 @@ endfunction
 "   config: configuration for output
 "        [1,                  1,                 1
 "        [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL
-"         1,                     0,                         0,] default
-"         AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT,  AUTOPARA_INCLUDE_IFDEF]
+"         1,                     1,                        1,                      1                      ] default
+"         AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT, AUTOPARA_INCLUDE_IFDEF, AUTOPARA_TAIL_NOT_ALIGN]
 "
 " Description:
 " e.g draw parameter sequences as format of para-para
@@ -2743,26 +2770,25 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
     let config = copy(a:config)
     let chg_para_names = copy(a:chg_para_names)
 
-    "guarantee spaces width
+    "guarantee spaces width{{{4
     let max_lbracket_len = 0
     let max_rbracket_len = 0
     for seq in sort(s:Str2Num(keys(a:para_seqs)),'n')
         let value = a:para_seqs[seq]
         let p_name = value[2]
         let p_value = p_name
-
         "para that's changed will be keeped if config 
         if config[3] == 1
             if(has_key(chg_para_names,p_name))
                 let p_value = chg_para_names[p_name]
             endif
         endif
-
         let max_lbracket_len = max([max_lbracket_len,len(prefix)+1+len(p_name)+4,s:name_pos_max])
         let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+1+len(p_value)+4,s:symbol_pos_max])
     endfor
+    "}}}4
 
-    "Draw Para
+    "draw para{{{4
     let lines = []
     let last_para_flag = 0
 
@@ -2777,7 +2803,7 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
         let value = a:para_seqs[seq]
         let type = value[0]
         let line = value[5]
-        "add single comment/ifdef line 
+        "add single comment/ifdef line {{{5
         if type == 'keep' 
             if line =~ '^\s*\/\/'
                 if config[4] == 1
@@ -2794,9 +2820,9 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
                     "ignore ifdef line when not config
                 endif
             endif
+        "}}}5
+        "add parameter line{{{5
         else
-        "add parameter line
-
             "Format parameter sequences
             "    0     1         2               3                4                    5     6
             "   [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
@@ -2815,8 +2841,15 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
 
             "name2bracket
             let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(p_name)-1)
+
             "value2bracket
-            let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
+            "don't align tail if config
+            if config[6] == 1
+                let value2bracket = ''
+            else
+                let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
+            endif
+
             "comma
             if config[0] == 0   "use all parameter
                 let last_para = value[6]
@@ -2866,6 +2899,7 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
 
             endif
         endif
+    "}}}5
     endfor
 
     "special case: last parameter has been put in keep_para_list, there exist no last_para
@@ -2884,6 +2918,7 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
             endfor
         endif
     endif
+    "}}}4
 
     if lines == []
         echohl ErrorMsg | echo "Error para_seqs input for function DrawPara! para_seqs has no parameter definition!" | echohl None
@@ -2901,8 +2936,11 @@ endfunction
 "   para_seqs : new inst para sequences for align
 "   para_list : old inst para name list
 "   config: configuration for output
-"   config: [1,        1,       1       ] default
-"           [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL]
+"   config: [1,                  1,                 1
+"           [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL
+"            N/A,                   N/A,                      N/A,                    1                      ] default
+"            AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT, AUTOPARA_INCLUDE_IFDEF, AUTOPARA_TAIL_NOT_ALIGN]
+"
 "   0 for close, 1 for open
 " Description:
 " e.g draw parameter sequences as format of para-value
@@ -2940,7 +2978,7 @@ function s:DrawParaValue(para_seqs,para_list,config)
     let para_list = copy(a:para_list)
     let config = copy(a:config)
 
-    "guarantee spaces width
+    "guarantee spaces width{{{4
     let max_lbracket_len = 0
     let max_rbracket_len = 0
     for seq in sort(s:Str2Num(keys(a:para_seqs)),'n')
@@ -2950,8 +2988,9 @@ function s:DrawParaValue(para_seqs,para_list,config)
         let max_lbracket_len = max([max_lbracket_len,len(prefix)+1+len(p_name)+4,s:name_pos_max])
         let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+1+len(p_value)+4,s:symbol_pos_max])
     endfor
+    "}}}4
 
-    "Draw Para
+    "draw para{{{4
     let lines = []
     let last_para_flag = 0
 
@@ -2965,10 +3004,11 @@ function s:DrawParaValue(para_seqs,para_list,config)
     for seq in sort(s:Str2Num(keys(a:para_seqs)),'n')
         let value = a:para_seqs[seq]
         let type = value[0]
-        "ignore single comment/ifdef line 
+        "ignore single comment/ifdef line{{{5
         if type == 'keep' 
+        "}}}5
+        "add parameter line{{{5
         else
-        "add parameter line
             "Format parameter sequences
             "    0     1         2               3                4               5
             "   [type, sequence, parameter_name, parameter_value, last_parameter, line] 
@@ -2977,10 +3017,18 @@ function s:DrawParaValue(para_seqs,para_list,config)
             let p_name = value[2]
             "p_value
             let p_value = value[3]
+
             "name2bracket
             let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(p_name)-1)
+
             "value2bracket
-            let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
+            "don't align tail if config
+            if config[6] == 1
+                let value2bracket = ''
+            else
+                let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
+            endif
+
             "comma
             if config[0] == 0   "use all parameter
                 let last_para = value[6]
@@ -3031,6 +3079,7 @@ function s:DrawParaValue(para_seqs,para_list,config)
 
             endif
         endif
+    "}}}5
     endfor
 
     "special case: last parameter has been put in keep_para_list, there exist no last_para
@@ -3049,6 +3098,7 @@ function s:DrawParaValue(para_seqs,para_list,config)
             endfor
         endif
     endif
+    "}}}4
 
     if lines == []
         echohl ErrorMsg | echo "Error para_seqs input for function DrawPara! para_seqs has no parameter definition!" | echohl None
@@ -3116,6 +3166,7 @@ endfunction
 "---------------------------------------------------
 function s:GetReg(lines)
     let lines = copy(a:lines)
+    let reg_names = {}
 
     "io names
     let io_names = s:GetIO(lines,'name')
@@ -3140,6 +3191,9 @@ function s:GetReg(lines)
     for name in keys(freg_names)
         if has_key(ioreg_names,name)
             call remove(freg_names,name)
+            continue
+        else
+            call extend(reg_names,{name : freg_names[name]})
         endif
     endfor
 
@@ -3151,11 +3205,19 @@ function s:GetReg(lines)
     "remove reg exists in ioreg_names
     for name in keys(creg_names)
         if has_key(ioreg_names,name)
-            call remove(freg_names,name)
+            call remove(creg_names,name)
+            continue
+        else
+            if has_key(reg_names,name)
+                "duplicate reg in freg_names and creg_names,error
+                echohl ErrorMsg | echo "Exist Same Name of Flip-Flop Register and Combination Register. Error when GetReg!"| echohl None
+            else
+                call extend(reg_names,{name : creg_names[name]})
+            endif
         endif
     endfor
 
-    return [freg_names,creg_names]
+    return reg_names
 
 endfunction
 "}}}3
@@ -3369,11 +3431,433 @@ function s:GetcReg(lines,mode)
 endfunction
 "}}}3
 
-"AutoReg-Kill
+"GetDeclReg 获取已经声明的reg{{{3
+"--------------------------------------------------
+" Function: GetDeclReg
+" Input: 
+"   N/A
+" Description:
+"   lines : lines to get declared register
+"
+" e.g. get decl_reg and auto_reg
+"
+"    reg  [3:0]                  m                               ;
+"    reg  [4:0]                  n                               ;
+"    /*autoreg*/
+"    //Start of automatic reg
+"    //Define flip-flop registers here
+"    reg  [3:0]                  a                               ;
+"    reg  [WIDTH-1:0]            qqq                             ;
+"    //Define combination registers here
+"    reg  [5:0]                  creg;
+"    //End of automatic reg
+"
+" Output:
+"   decl_reg : register declared outside /*autoreg*/
+"   auto_reg : register declared inside /*autoreg*/
+" e.g.
+"   decl_reg = [m,n]
+"   auto_reg = [a,qqq,creg]
+"---------------------------------------------------
+function s:GetDeclReg(lines)
+    let get_busy = 0
+    let decl_reg = []
+    let auto_reg = []
+    let idx = 1
 
+    while idx < len(a:lines)
+        "skip comment line
+        let idx = s:SkipCommentLine(0,idx,a:lines)
+        if idx == -1
+            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+        endif
+        let line = a:lines[idx-1]
+
+        if line =~ '/\*\<autoreg\>'
+            "keep current line
+            while 1
+                let idx = idx + 1
+                let line = getline(idx)
+                "start of autoreg
+                if line =~ '//Start of automatic reg'
+                    let get_busy = 1
+                elseif get_busy == 1
+                    "end of autoreg
+                    if line =~ '//End of automatic reg'
+                        break
+                    "abnormal end
+                    elseif line =~ 'endmodule' || idx == line('$')
+                        echohl ErrorMsg | echo "Error running GetDeclReg! Get //Start of automatic reg but abonormally quit!"| echohl None
+                        break
+                    "middle
+                    else
+                        if line =~ '^\s*reg'
+                            let name = matchstr(line,'^\s*reg\s\+\(\[.*\]\)\?\s*\zs\w\+\ze')
+                            call add(auto_reg,name)
+                        endif 
+                    endif
+                else
+                    let idx = idx + 1
+                    "never start, normal end 
+                    if line =~ 'endmodule' || idx == line('$')
+                        break
+                    endif
+                endif 
+            endwhile
+        endif
+
+        if line =~ '^\s*reg\s\+'
+            let name = matchstr(line,'^\s*reg\s\+\(\[.*\]\)\?\s*\zs\w\+\ze')
+            call add(decl_reg,name)
+        endif 
+
+        let idx = idx + 1
+    endwhile
+
+    return [decl_reg,auto_reg] 
+endfunction
+"}}}3
+
+"AutoReg-Kill
+"KillAutoReg 删除所有自动寄存器声明"{{{3
+"--------------------------------------------------
+" Function: KillAutoReg
+" Input: 
+"   Must put cursor to /*autoreg*/ position
+" Description:
+" e.g kill all declaration after /*autoreg*/
+"    /*autoreg*/
+"    //Start of automatic reg
+"    //Define flip-flop registers here
+"    reg  [3:0]                  a                               ;
+"    reg  [WIDTH-1:0]            qqq                             ;
+"    //Define combination registers here
+"    reg  [5:0]                  creg;
+"    //End of automatic reg
+"
+"   --------------> after KillAutoReg
+"
+"    /*autoreg*/
+"
+" Output:
+"   line after kill
+"   kill all between //Start of automatic reg & //End of automatic reg
+"---------------------------------------------------
+function s:KillAutoReg() 
+    let orig_idx = line('.')
+    let orig_col = col('.')
+    let idx = line('.')
+    let line = getline(idx)
+    let kill_busy = 0
+    if line =~ '/\*\<autoreg\>'
+        "keep current line
+        let idx = idx + 1
+        while 1
+            let line = getline(idx)
+            "start of autoreg
+            if line =~ '//Start of automatic reg'
+                execute ':'.idx.'d'
+                let kill_busy = 1
+            elseif kill_busy == 1
+                "end of autoreg
+                if line =~ '//End of automatic reg'
+                    "call deletebufline('%',idx)
+                    execute ':'.idx.'d'
+                    break
+                "abnormal end
+                elseif line =~ 'endmodule' || idx == line('$')
+                    echohl ErrorMsg | echo "Error running KillAutoReg! Kill abnormally till the end!"| echohl None
+                    break
+                "middle
+                else
+                    "call deletebufline('%',idx)
+                    execute ':'.idx.'d'
+                endif
+            else
+                let idx = idx + 1
+                "never start, normal end 
+                if line =~ 'endmodule' || idx == line('$')
+                    break
+                endif
+            endif 
+        endwhile
+    else
+        echohl ErrorMsg | echo "Error running KillAutoReg! Kill line not match /*autoreg*/ !"| echohl None
+    endif
+
+    "cursor back
+    call cursor(orig_idx,orig_col)
+endfunction 
+"}}}3
 
 "AutoReg-Draw
+"DrawReg 按格式输出例化IO口{{{3
+"--------------------------------------------------
+" Function: DrawReg
+" Input: 
+"   reg_names : new reg names for align
+"   reg_list : old reg name list
+"   config: configuration for output
+"
+"   0 for close, 1 for open
+" Description:
+" e.g draw reg sequences
+"    0       1         2       3       4            5 
+"   [type, sequence, width1, width2, signal_name, lines]
+"   ['freg', seq, 'c0', 'c0', 'a', lines]
+"   ['creg', seq, 9,    0, 'b', lines]
+"       reg             a;
+"       reg  [10:0]     b;
+"
+" Output:
+"   line that's aligned
+"   e.g
+"       reg  [WIDTH1:WIDTH2]     reg_name;
+"---------------------------------------------------
+function s:DrawReg(reg_names,reg_list,config)
+    let prefix = s:start_prefix
+    let reg_list = copy(a:reg_list)
+    let config = copy(a:config)
 
+    "guarantee spaces width{{{4
+    let max_lname_len = 0
+    let max_rsemicol_len = 0
+    for name in keys(a:reg_names)
+        "    0       1         2       3       4            5 
+        "   [type, sequence, width1, width2, signal_name, lines]
+        let value = a:reg_names[name]
+        let type = value[0]
+        if type != 'keep' 
+            let name = value[4]
+            "calculate maximum len of position to Draw
+            if value[3] == 'c0' 
+                if value[2] == 'c0'
+                    let width = ''
+                else
+                    let width = '['.value[2].']'
+                endif 
+            else
+                let width = '['.value[2].':'.value[3].']'
+            endif
+
+            let max_lname_len = max([max_lname_len,len(prefix)+5+len(width)+4,s:name_pos_max])
+            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+1+len(name)+4,s:symbol_pos_max])
+        endif
+    endfor
+    "}}}4
+
+    "draw reg{{{4
+    let lines = []
+
+    "reg_list can be changed in function, therefore record if it's empty first
+    if reg_list == []
+        let reg_list_empty = 1
+    else
+        let reg_list_empty = 0
+    endif
+
+    "recover freg_seqs & creg_seqs{{{5
+    let freg_seqs = {}
+    let creg_seqs = {}
+    for name in keys(a:reg_names)
+        "Format reg sequences
+        "    0       1         2       3       4            5 
+        "   [type, sequence, width1, width2, signal_name, lines]
+        let value = a:reg_names[name]
+        let type = value[0]
+        let seq = value[1]
+        if type == 'freg'
+            call extend(freg_seqs,{seq : value})
+        endif
+        if type == 'creg'
+            call extend(creg_seqs,{seq : value})
+        endif
+    endfor
+    "}}}5
+
+    "darw //Start of automatic reg{{{5
+    call add(lines,prefix.'//Start of automatic reg')
+    "}}}5
+
+    "darw //Define flip-flop registers here{{{5
+    call add(lines,prefix.'//Define flip-flop registers here')
+    "}}}5
+
+    "draw freg{{{5
+    for seq in sort(s:Str2Num(keys(freg_seqs)),'n')
+        let value = freg_seqs[seq]
+        "Format reg sequences
+        "    0       1         2       3       4            5 
+        "   [type, sequence, width1, width2, signal_name, lines]
+
+        "width
+        "in case of 'c0' == 0, transform 0 into '0';
+        if type(value[3]) == 0 && value[3] == 0
+            let value[3] = '0'
+        endif
+        if type(value[2]) == 0 && value[2] == 0
+            let value[2] = '0'
+        endif
+
+        if value[3] == 'c0' 
+            if value[2] == 'c0'
+                let width = ''
+            else
+                let width = '['.value[2].']'
+            endif 
+        elseif value[3] == '0' && value[2] == '0'
+            let width = ''
+        else
+            let width = '['.value[2].':'.value[3].']'
+        endif
+
+        "width2name
+        let width2name = repeat(' ',max_lname_len-len(prefix)-len(width)-5)
+
+        "name
+        let name = value[4]
+
+        "name2semicol
+        "don't align tail if config
+        if config[3] == 1
+            let name2semicol = ''
+        else
+            let name2semicol = repeat(' ',max_rsemicol_len-max_lname_len-len(name))
+        endif
+
+        "semicol
+        let semicol = ';'
+
+        "Draw reg by Config
+        "empty list, default
+        if reg_list_empty == 1
+            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+        "update list,draw reg by config
+        else
+            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            "process //REG_NEW
+            let reg_idx = index(reg_list,name) 
+            "name not exist in old reg_list, add //REG_NEW
+            if reg_idx == -1
+                if config[1] == 1
+                    let line = line . ' // REG_NEW'
+                else
+                    let line = line
+                endif
+            "name already exist in old reg_list,cover
+            else
+                let line = line
+                call remove(reg_list,reg_idx)
+            endif
+        endif
+
+        call add(lines,line)
+
+    endfor
+    "}}}5
+
+    "darw //Define combination registers here{{{5
+    call add(lines,prefix.'//Define combination registers here')
+    "}}}5
+
+    "draw creg{{{5
+    for seq in sort(s:Str2Num(keys(creg_seqs)),'n')
+        let value = creg_seqs[seq]
+        "Format reg sequences
+        "    0       1         2       3       4            5 
+        "   [type, sequence, width1, width2, signal_name, lines]
+
+        "width
+        "in case of 'c0' == 0, transform 0 into '0';
+        if type(value[3]) == 0 && value[3] == 0
+            let value[3] = '0'
+        endif
+        if type(value[2]) == 0 && value[2] == 0
+            let value[2] = '0'
+        endif
+
+        if value[3] == 'c0' 
+            if value[2] == 'c0'
+                let width = ''
+            else
+                let width = '['.value[2].']'
+            endif 
+        elseif value[3] == '0' && value[2] == '0'
+            let width = ''
+        else
+            let width = '['.value[2].':'.value[3].']'
+        endif
+
+        "width2name
+        let width2name = repeat(' ',max_lname_len-len(prefix)-len(width)-5)
+
+        "name
+        let name = value[4]
+
+        "name2semicol
+        "don't align tail if config
+        if config[3] == 1
+            let name2semicol = ''
+        else
+            let name2semicol = repeat(' ',max_rsemicol_len-max_lname_len-len(name))
+        endif
+
+        "semicol
+        let semicol = ';'
+
+        "Draw reg by Config
+        "empty list, default
+        if reg_list_empty == 1
+            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+        "update list,draw reg by config
+        else
+            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            "process //REG_NEW
+            let reg_idx = index(reg_list,name) 
+            "name not exist in old reg_list, add //REG_NEW
+            if reg_idx == -1
+                if config[1] == 1
+                    let line = line . ' // REG_NEW'
+                else
+                    let line = line
+                endif
+            "name already exist in old reg_list,cover
+            else
+                let line = line
+                call remove(reg_list,reg_idx)
+            endif
+        endif
+
+        call add(lines,line)
+
+    endfor
+    "}}}5
+
+    if reg_list == []
+    "remain register in reg_list
+    else
+        if config[2] == 1
+            for name in reg_list
+                let line = prefix.'//REG_DEL: Register '.name.' has been deleted.'
+                call add(lines,line)
+            endfor
+        endif
+    endif
+
+    "draw //End of automatic reg{{{5
+    call add(lines,prefix.'//End of automatic reg')
+    "}}}5
+
+    "}}}4
+
+    if lines == []
+        echohl ErrorMsg | echo "Error reg_names input for function DrawReg! reg_names is empty!" | echohl None
+    endif
+
+    return lines
+
+endfunction
+"}}}3
 
 "-------------------------------------------------------------------
 "                             AutoWire
