@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/06/12 21:20
+" Last Modified:  2021/06/12 22:07
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -183,8 +183,9 @@ amenu &Verilog.Code.Comment.SingleLineComment<TAB><;//>                 :call Au
 amenu &Verilog.Code.Comment.MultiLineComment<TAB>Visual-Mode\ <;/*>     :call AutoComment2()<CR>
 amenu &Verilog.Code.Comment.CurLineAddComment<TAB><;/$>                 :call AddCurLineComment()<CR>
 amenu &Verilog.Code.Template.LoadTemplate<TAB>                          :call LoadTemplate()<CR>
+"}}}3
 
-"Auto
+"Auto 自动化{{{3
 amenu &Verilog.AutoInst.AutoInst(1)<TAB>All                             :call AutoInst(1)<CR>
 amenu &Verilog.AutoInst.AutoInst(0)<TAB>One                             :call AutoInst(0)<CR>
 
@@ -193,6 +194,8 @@ amenu &Verilog.AutoPara.AutoPara(0)<TAB>One                             :call Au
 
 amenu &Verilog.AutoPara.AutoParaValue(1)<TAB>All                        :call AutoParaValue(1)<CR>
 amenu &Verilog.AutoPara.AutoParaValue(0)<TAB>One                        :call AutoParaValue(0)<CR>
+
+amenu &Verilog.AutoReg.AutoReg()<TAB>                                   :call AutoReg()<CR>
 "}}}3
 
 "}}}2
@@ -211,6 +214,7 @@ map <C-F8>      :call Invert()<ESC>
 map <S-F3>      :call AutoInst(0)<ESC>
 map <S-F4>      :call AutoPara(0)<ESC>
 map <S-F5>      :call AutoParaValue(0)<ESC>
+map <S-F6>      :call AutoReg()<ESC>
 "}}}3
 
 "Code Snippet 代码段{{{3
@@ -3157,7 +3161,7 @@ endfunction
 "   e.g reg sequences
 "   ['freg', seq, 'c0', 'c0', 'a', lines]
 "   ['creg', seq, 9,    0, 'b', lines]
-"   reg c is ommited because it exises in port io
+"   reg c is ommited because it exists in port io
 "
 " Output:
 "   list of register sequences
