@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/06/12 22:07
+" Last Modified:  2021/06/12 23:17
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -1252,8 +1252,9 @@ function AutoReg()
             break
         endif
         
-        "read from current file
-        let lines = readfile(expand('%'))
+        "read from current buffer
+        "let lines = readfile(expand('%'))
+        let lines = getline(1,line('$'))
 
         try
             "get declared register list
