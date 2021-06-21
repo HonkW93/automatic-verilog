@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/06/12 23:17
+" Last Modified:  2021/06/21 23:20
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -10,28 +10,9 @@
 " 2021/3/26     HonkW           1.0.0                   First copy from zhangguo's vimscript
 " 2021/4/5      HonkW           1.0.1                   Finish AutoInst & Autopara
 " 2021/5/28     HonkW           1.1.0                   Optimize AutoInst & AutoPara
-" 2021/6/12     HonkW           1.1.2                   First finish prototype of AutoReg
+" 2021/6/12     HonkW           1.1.2                   Prototype of AutoReg
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
-"Update 记录脚本更新{{{1
-autocmd BufWrite automatic.vim call UpdateVimscriptLastModifyTime()
-function UpdateVimscriptLastModifyTime()
-    let line = getline(5)
-    if line =~ '\" Last Modified'
-        call setline(5,"\" Last Modified:  " . strftime("%Y/%m/%d %H:%M"))
-    endif
-endfunction
-"}}}1
-
-"Version 启动判断{{{1
-if version < 700        "如果vim版本低于7.0则无效,类似写法为 if v:version < 703,代表版本低于7.3
-   finish
-endif
-if exists("vlog_plugin")
-   finish
-endif
-let vlog_plugin = 1
-"}}}1
 
 "Config 配置参数{{{1
 
@@ -157,6 +138,26 @@ let s:not_keywords_pattern = s:VlogKeyWords . '\@!\(\<\w\+\>\)'
 
 "}}}1
 
+"Version 启动判断{{{1
+if version < 700        "如果vim版本低于7.0则无效,类似写法为 if v:version < 703,代表版本低于7.3
+   finish
+endif
+if exists("vlog_plugin")
+   finish
+endif
+let vlog_plugin = 1
+"}}}1
+
+"Update 记录脚本更新{{{1
+autocmd BufWrite automatic.vim call UpdateVimscriptLastModifyTime()
+function UpdateVimscriptLastModifyTime()
+    let line = getline(5)
+    if line =~ '\" Last Modified'
+        call setline(5,"\" Last Modified:  " . strftime("%Y/%m/%d %H:%M"))
+    endif
+endfunction
+"}}}1
+
 "Keys 快捷键{{{1
 
 "Menu 菜单栏{{{2
@@ -203,7 +204,7 @@ amenu &Verilog.AutoReg.AutoReg()<TAB>                                   :call Au
 "Keyboard 键盘快捷键{{{2
 
 "Insert Time 插入时间{{{3
-imap <F2> <C-R>=strftime("%x")<CR>
+imap <F2> <C-R>=strftime("%Y/%m/%d")<CR>
 "}}}3
 
 "Invert Wave 时序波形翻转{{{3
@@ -611,7 +612,7 @@ function AddHeader() "{{{3
     let website = g:vimrc_website
 
     let filename = expand("%")          "记录当前文件名
-    let timelen = strlen(strftime("%x"))
+    let timelen = strlen(strftime("%Y/%m/%d"))
     let authorlen = strlen(author)
 
     call append(0 , "// +FHDR----------------------------------------------------------------------------")
@@ -633,7 +634,7 @@ function AddHeader() "{{{3
     call append(16, "// Modification History:")
     call append(17, "// Date         By              Version                 Change Description")
     call append(18, "// ---------------------------------------------------------------------------------")
-    call append(19, "// ".strftime("%x").repeat(" ", 13-timelen).author.repeat(" ", 16-authorlen)."1.0                     Original")
+    call append(19, "// ".strftime("%Y/%m/%d").repeat(" ", 13-timelen).author.repeat(" ", 16-authorlen)."1.0                     Original")
     call append(20, "// ")
     call append(21, "// -FHDR----------------------------------------------------------------------------")
     call cursor(11,10)
@@ -4076,7 +4077,8 @@ function s:GetRightWidth(right,name,width_names)
 
     "match M'bN or M'hN or M'dN
     "M may be `define or parameter or number
-    if right =~ '^\(`\?\w\+\|\d\+\)' . "'" . '[bhd].*'
+    "Note: only match once, don't match pattern like 3'd3+4'd1
+    if right =~ '^\(`\?\w\+\|\d\+\)' . "'" . '[bhd].*;' && substitute(right,'^\(`\?\w\+\|\d\+\)'."'".'[bhd]\w*','','')==';'
         "pure number width e.g. 5'd0 -> signal_a[4:0]
         if right =~ '^\d\+' . "'" . '[bhd].*'
             let width = matchstr(right,'\d\+')   
@@ -4090,7 +4092,8 @@ function s:GetRightWidth(right,name,width_names)
         endif
 
     "match signal[N], N may be `define or parameter or number
-    elseif right =~ '^\~\?\w\+\[[^:]*\];'
+    "Note: only match once, don't match pattern like a[7]+b[17] && a[7:0]
+    elseif right =~ '^\~\?\w\+\[[^:]*\];' && substitute(right,'^\~\?\w\+\[[^:]\{-}\]','','') == ';'
         let width1 = matchstr(right,'\v\[\zs.*\ze\]')   
         let width2 = ''
         "pure number width e.g. signal_a[4]
@@ -4101,11 +4104,11 @@ function s:GetRightWidth(right,name,width_names)
             call add(right_widths,[width1,width2])
         endif
         
-        
     "match signal[M:N], M and N may be `define or parameter or number
-    elseif right =~ '^\~\?\w\+\[.*:.*\];'
-            let width1 = matchstr(right,'\v\[\zs\S+\ze:.*\]')   
-            let width2 = matchstr(right,'\v\[.*:\zs\S+\ze\]')
+    "Note: only match once, don't match pattern like a[7:0]+b[7:0]
+    elseif right =~ '^\~\?\w\+\[.\{-}:.\{-}\];' && substitute(right,'^\~\?\w\+\[.\{-}:.\{-}\]','','') == ';' 
+            let width1 = matchstr(right,'\v\[\zs.{-}\ze:.{-}\]')   
+            let width2 = matchstr(right,'\v\[.{-}:\zs.{-}\ze\]')
             "pure number width e.g. signal_a[3:0]
             if substitute(width1,'\d\+','','g') == '' && substitute(width2,'\d\+','','g') == ''
                 call add(right_width_nrs,str2nr(width1))
@@ -4173,6 +4176,8 @@ function s:GetRightWidth(right,name,width_names)
         endwhile
     else
     "can't recognize right side of 'd4
+    "
+    "Unresolved
 
     endif
 

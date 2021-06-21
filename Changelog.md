@@ -1,6 +1,18 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.3] - 2021-06-21
+
+### Fixed
+
+- Bug fixed for whole vim-scripts
+
+  修复无法`source` 配置的`Bug`
+
+- Bug fixed for `AutoReg`
+
+  修复`AutoReg()`对重复多次相同写法（例如'a[3:0]+b[4:0]'）解析错误而产生的异常`Bug`
+
 ## [1.1.2] - 2021-06-12
 
 ### Added
