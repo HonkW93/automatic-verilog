@@ -1,6 +1,46 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.3] - 2021-06-21
+
+### Fixed
+
+- Bug fixed for whole vim-scripts
+
+  修复无法`source` 配置的`Bug`
+
+- Bug fixed for `AutoReg`
+
+  修复`AutoReg()`对重复多次相同写法（例如'a[3:0]+b[4:0]'）解析错误而产生的异常`Bug`
+
+## [1.1.2] - 2021-06-12
+
+### Added
+
+- Add `AutoReg`
+
+  新增 `AutoReg`初版
+
+- Add`AUTOINST_TAIL_NOT_ALITN`, `AUTOPARA_TAIL_NOT_ALITN`, `AUTOREG_TAIL_NOT_ALITN`
+
+  新增 `TAIL_NOT_ALIGN`特性，各种声明尾部可不进行统一对齐  
+
+
+### Fixed
+
+- Bug fixed for `AutoInst`
+
+  添加`AutoInst()`对`verilog-1995`的支持，修复`AutoInst()`最后的因`)`而异常停止的`Bug`
+
+### Changed
+
+- Optimize `GetIO`, `GetPara`, `DrawIO`, `DrawPara`, `DrawVaraValue`
+
+  优化写法，`GetIO()`, `GetPara()`, `DrawIO()`, `DrawPara()`, `DrawVaraValue()`等函数添加注释及折叠，方便后续定位故障
+  
+  
+
+
 ## [1.1.1] - 2021-06-04
 
 ### Fixed
@@ -8,6 +48,8 @@ All notable changes to this project will be documented in this file. The format 
 - Bug fixed for `AutoPara`
 
   修复`AutoPara()`最后的`port parameter`异常覆盖的`Bug`
+
+
 
 ## [1.1.0] - 2021-05-28
 ### Changed
@@ -31,22 +73,28 @@ All notable changes to this project will be documented in this file. The format 
   1. 针对末尾行尾注释`//`行时报错的问题，添加更明显的报错提醒
 
 
+
+
 ## [1.0.8] - 2021-05-19
 ### Added
 - Add `ifdef` for `AutoInst`, add config for `ifdef` and single comment line`//`
 
-  新增 `AutoInst`对`ifdef`以及`//`注释的支持，添加对`//`注释以及`ifedf`的可配置项
+  新增 `AutoInst()`对`ifdef`以及`//`注释的支持，添加对`//`注释以及`ifedf`的可配置项
 
 ### Fixed
 - Bug fixed for `AutoInst`
 
   修复`AutoInst()`最后`port`判断异常`Bug`
 
+
+
 ## [1.0.7] - 2021-05-18
 ### Added
 - Add keep changed inst io name 
 
   新增修改后的端口不重刷功能
+
+
 
 ## [1.0.6] - 2021-05-15
 ### Added
@@ -59,6 +107,8 @@ All notable changes to this project will be documented in this file. The format 
 - Bug fixed for `AutoPara`
 
   修复`AutoPara()`最后的`parameter`判断异常`Bug`
+
+
 
 ## [1.0.5] - 2021-05-08
 ### Changed
@@ -84,38 +134,52 @@ All notable changes to this project will be documented in this file. The format 
      >
      > [vimrc - Get directory name from CWD (dirname without preceding path)? - Vi and Vim Stack Exchange](https://vi.stackexchange.com/questions/15046/get-directory-name-from-cwd-dirname-without-preceding-path)
 
+
+
 ## [1.0.4] - 2021-04-30
 
 ### Added
 
 - Add `,` feature for `AutoPara`
 
-  `AutoPara` 添加支持`,`特性
+  `AutoPara()` 添加支持`,`特性
 
 ### Fixed
 - Bug fixed for  `AutoPara`
 
-  修复`AutoPara`末尾丢失`,`的bug
+  修复`AutoPara()`末尾丢失`,`的bug
+
+
 
 ## [1.0.3] - 2021-04-24
+
 ### Changed
 - Add read `.sv` file 
 
   简单添加对`.sv`文件的支持，但仍然只支持`verilog`的写法
 
+
+
 ## [1.0.2] - 2021-04-19
+
 ### Added
 - Add `GetReg`
 
-  新增`GetReg`
+  新增`GetReg()`
+
+
 
 ## [1.0.1] - 2021-04-05
+
 ### Added
 - Add `AutoInst` & `Autopara`
 
-  新增 `AutoInst` 以及 `AutoPara` 初版
+  新增 `AutoInst()` 以及 `AutoPara()` 初版
+
+
 
 ## [1.0.0] - 2021-03-26
+
 ### Added
 - First copy from zhangguo's vimscript. See [automatic for Verilog & RtlTree - Automatic generator for Verilog HDL (upgraded) & RtlTree : vim online](https://www.vim.org/scripts/script.php?script_id=4067)
 

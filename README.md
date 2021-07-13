@@ -29,7 +29,7 @@
 
 一款基于Vimscript的自动化verilog脚本。由[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)修改而来，原作者zhangguo。
 
-[![Release-Version](https://img.shields.io/badge/Release-1.1.1-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
+[![Release-Version](https://img.shields.io/badge/Release-1.1.3-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
 
 ## 安装
 
@@ -48,7 +48,6 @@
   - [x] 支持例化文件名与模块名不同的模块
   - [x] 支持配置为修改端口自动不重刷
   - [x] 支持`` `ifdef``及`` `endif``
-  - [ ] 进行中...
   
 - 自动参数（`AutoPara`）
   - [x] 支持跨文件夹搜索.v文件进行例化，支持文件夹递归（参考`emacs verilog-mode`）
@@ -59,10 +58,9 @@
   - [x] 支持配置为.A(A)或者.A(5)的写法
   - [x] 支持配置为修改过的参数自动不重刷
   - [x] 支持`` `ifdef``及`` `endif``
-  - [ ] 进行中...
   
 - 自动reg（`AutoReg`）
-  - [ ] 支持端口`output reg`覆盖定义（参考`emacs verilog-mode`）
+  - [x] 支持端口`output reg`覆盖定义（参考`emacs verilog-mode`）
   - [ ] 支持`always`语句阻塞/非阻塞赋值`reg`获取（参考`vim automatic-verilog`）
     - [x] 支持左端`{}`写法，但不支持此写法获取位宽
     - [x] 支持左端`[WIDTH1:WIDTH2]`写法
