@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/07/21 20:17
+" Last Modified:  2021/07/21 23:01
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -936,7 +936,9 @@ function AutoInst(mode)
 
         "add instance directory before autoinst
         if s:AUTOINST_ADD_DIR == 1
-            call append(idx3-1,s:start_prefix.'//Instance: '.add_dir)
+            if getline(idx3-1) !~ '^\s*/\/\Instance'
+                call append(idx3-1,s:start_prefix.'//Instance: '.add_dir)
+            endif
         endif
         "delete current line );
         let line = substitute(getline(line('.')),')\s*;','','')
