@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.4] - 2021-07-21
+
+### Added
+
+- Add comment for `AutoInst()`
+
+  `AutoInst()`可配置添加注释例化模块所在位置`//Instance...<DIR>...`
+
+
 ## [1.1.3] - 2021-06-21
 
 ### Fixed

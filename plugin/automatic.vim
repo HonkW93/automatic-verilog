@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/07/21 19:59
+" Last Modified:  2021/07/21 20:17
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -32,7 +32,7 @@ let s:AUTOINST_INCLUDE_COMMENT = 1   "include comment line of // (/*...*/ will a
 let s:AUTOINST_INCLUDE_IFDEF = 1     "include ifdef like `ifdef `endif
 let s:AUTOINST_95_SUPPORT = 0        "Support Verilog-1995
 let s:AUTOINST_TAIL_NOT_ALIGN = 0    "don't do alignment in tail when autoinst
-let s:AUTOINST_ADD_DIR = 1           "add //Instance ...directory...
+let s:AUTOINST_ADD_DIR = 0           "add //Instance ...directory...
 "}}}2
 
 "AutoPara 自动参数配置{{{2
