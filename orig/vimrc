@@ -1,0 +1,199 @@
+" -------------------------------------------------------------
+" Maintainer: HonkW,Only for Personal Use
+" Date: 2021/07/17
+" -------------------------------------------------------------
+
+" -------------------------------------------------------------
+"                        Personal Basic
+" -------------------------------------------------------------
+set nocompatible                    "close vi compatible
+set mouse=nvi                       "enable mouse support
+behave mswin                        "mouse behavior
+source $VIMRUNTIME/mswin.vim        "remap a few keys for Windows
+inoremap <special> jk <Esc>
+set autochdir                       "automatic change directory based on the opened file
+let mapleader = ";"
+" restore your cursor position in a file over several editing sessions
+au BufReadPost * if line("'\"") > 0|if line("'\"") <= line("$")|exe("norm '\"")|else|exe "norm $"|endif|endif
+
+" -------------------------------------------------------------
+"                            GUI
+" -------------------------------------------------------------
+set guifont=consolas:b:h16          "character size & font
+set number                          "show line number
+set background=light                "light/dark
+colorscheme desert                  "colorscheme
+syntax on                           "highlight syntax
+set foldclose=all                   "close all fold
+set nowrap                          "line never wrap around
+set showcmd                         "show command history in the last line
+set guioptions=m                    "show menu bar for Gvim
+
+" -------------------------------------------------------------
+"                       Other Basic
+" -------------------------------------------------------------
+" tab
+set tabstop=4                       "set tab length as 4 spaces
+set expandtab                       "tab automatic change to spaces
+set softtabstop=4                   "backspace delete 4 spaces
+set shiftwidth=4                    "<< and >> move 4 spaces
+set backspace=indent,eol,start      "backspace and delete button to delete tab and eol 
+"set autoindent                     "
+
+" search
+set ignorecase                      "ignore case
+"set ignorecase  smartcase          "ignore case unless search pattern contains upper case
+
+" backup file
+set nowritebackup                   "never backup when write in
+set nobackup                        "never save backup file
+set noundofile                      "never save undo file
+
+" swap file
+set undodir=$VIMRUNTIME\swap
+
+" undo file
+set hidden                          "keep undo even when switch buffer
+set undofile
+set undodir=$VIMRUNTIME\undo
+set undolevels=1000
+set undoreload=10000
+
+" formats
+set fileformats=dos                             
+set termencoding=utf-8 
+set fileencodings=utf-8,chinese,latin-1 
+
+" -------------------------------------------------------------
+"                           Plugin
+" -------------------------------------------------------------
+" set runtime-path for plugin
+set rtp+=$VIMRUNTIME/autoload/plug.vim
+let path = '$VIMRUNTIME/../plugged'
+
+" call vim-plug
+call plug#begin(path)
+" basic
+Plug 'preservim/nerdtree'                           "file-tree
+Plug 'nelstrom/vim-visual-star-search'              "use * to search in visual mode
+Plug 'tpope/vim-surround'                           "surround
+Plug 'tpope/vim-commentary'                         "quick comment
+Plug 'tpope/vim-speeddating'                        "consolidate <C-A> and <C-X> for date
+Plug 'tpope/vim-repeat'                             "use . to repeat all tpop plug
+Plug 'easymotion/vim-easymotion'                    "fast move
+Plug 'HonkW93/automatic-verilog'                    "self-made automatic verilog plug
+" function
+Plug 'vim-scripts/AutoComplPop'                     "automatic completion
+Plug 'dense-analysis/ale'                           "ALE-Asynchronous Lint Engine for syntax check
+Plug 'vim-scripts/VisIncr'                          "visual increment for column
+Plug 'vim-scripts/load_template'                     
+Plug 'stormherz/tablify'                            "draw table
+Plug 'vim-scripts/DrawIt'                           "draw ASCII graph
+Plug 'skywind3000/vim-quickui'                      "popup Menu
+" beautify
+Plug 'vim-airline/vim-airline'                      "status line
+" doc
+Plug 'yianwillis/vimcdoc'                           "chinese vim help
+call plug#end()
+
+"---------------------------------
+" plugin - automatic verilog
+"---------------------------------
+let g:vimrc_author='HonkW'
+let g:vimrc_company='HonkW'
+let g:vimrc_prject='VIM'
+let g:vimrc_device=''
+let g:vimrc_email='contact@honk.wang'
+let g:vimrc_website='https://honk.wang'
+
+"---------------------------------
+" plugin - easymotion.vim
+"---------------------------------
+"<Leader>f{char} to move to {char}
+map  <Leader>f <Plug>(easymotion-bd-f)
+nmap <Leader>f <Plug>(easymotion-overwin-f)
+"s{char}{char} to move to {char}{char}
+"nmap s <Plug>(easymotion-overwin-f2)
+"Move to line
+map <Leader>L <Plug>(easymotion-bd-jk)
+nmap <Leader>L <Plug>(easymotion-overwin-line)
+"Move to word
+map  <Leader>w <Plug>(easymotion-bd-w)
+nmap <Leader>w <Plug>(easymotion-overwin-w)
+
+"---------------------------------
+" plugin - commentary
+"---------------------------------
+autocmd FileType verilog setlocal commentstring=//\ %s
+
+"---------------------------------
+" plugin - load_template
+"---------------------------------
+let g:template_path= ''
+
+"---------------------------------
+" plugin - ale
+"---------------------------------
+"keep the sign gutter open
+let g:ale_sign_column_always = 0
+"linter
+let g:ale_linters = {
+\   'verilog': ['iverilog'],
+\}
+let g:airline#extensions#ale#enabled = 1
+" use quickfix list instead of the loclist
+let g:ale_set_loclist = 0
+let g:ale_set_quickfix = 1
+
+"---------------------------------
+" plugin - AutoComplPop
+"---------------------------------
+filetype plugin on
+"modify color
+highlight Pmenu    guibg=darkgrey  guifg=white  
+highlight PmenuSel guibg=darkblue guifg=white
+
+"---------------------------------
+" automatic plugin - matchit
+"---------------------------------
+source $VIMRUNTIME/macros/matchit.vim
+let b:match_ignorecase=0
+let b:match_words=
+  \ '\<begin\>:\<end\>,' .
+  \ '\<if\>:\<else\>,' .
+  \ '\<module\>:\<endmodule\>,' .
+  \ '\<class\>:\<endclass\>,' .
+  \ '\<program\>:\<endprogram\>,' .
+  \ '\<clocking\>:\<endclocking\>,' .
+  \ '\<property\>:\<endproperty\>,' .
+  \ '\<sequence\>:\<endsequence\>,' .
+  \ '\<package\>:\<endpackage\>,' .
+  \ '\<covergroup\>:\<endgroup\>,' .
+  \ '\<primitive\>:\<endprimitive\>,' .
+  \ '\<specify\>:\<endspecify\>,' .
+  \ '\<generate\>:\<endgenerate\>,' .
+  \ '\<interface\>:\<endinterface\>,' .
+  \ '\<function\>:\<endfunction\>,' .
+  \ '\<task\>:\<endtask\>,' .
+  \ '\<for\>:\<endfor\>,' .
+  \ '\<while\>:\<endwhile\>,' .
+  \ '\<specify\>:\<endspecify\>,' .
+  \ '\<generate\>:\<endgenerate\>,' .
+  \ '\<case\>\|\<casex\>\|\<casez\>:\<endcase\>,' .
+  \ '\<fork\>:\<join\>\|\<join_any\>\|\<join_none\>,'
+  
+" -------------------------------------------------------------
+"                       miscellaneous 
+" -------------------------------------------------------------
+" tags
+set tags=tags;
+let Tlist_Show_One_File=1
+let Tlist_Exit_OnlyWindow=1
+
+" winmanager
+"let g:winManagerWindowLayout='FileExplorer|TagList'
+let g:winManagerWindowLayout='FileExplorer'
+nmap vp :WMToggle<cr>
+
+" Rtl Tree
+" let t:RtlTreeVlogDefine = 1
