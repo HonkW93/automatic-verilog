@@ -8,12 +8,14 @@
 " -------------------------------------------------------------
 set nocompatible                    "close vi compatible
 set mouse=nvi                       "enable mouse support
+set hlsearch                        "highlight search
+set incsearch                       "show match while searching
 behave mswin                        "mouse behavior
 source $VIMRUNTIME/mswin.vim        "remap a few keys for Windows
 inoremap <special> jk <Esc>
 set autochdir                       "automatic change directory based on the opened file
 let mapleader = ";"
-" restore your cursor position in a file over several editing sessions
+" restore cursor position in a file over several editing sessions
 au BufReadPost * if line("'\"") > 0|if line("'\"") <= line("$")|exe("norm '\"")|else|exe "norm $"|endif|endif
 
 " -------------------------------------------------------------
@@ -53,11 +55,11 @@ set noundofile                      "never save undo file
 set undodir=$VIMRUNTIME\swap
 
 " undo file
-set hidden                          "keep undo even when switch buffer
-set undofile
-set undodir=$VIMRUNTIME\undo
-set undolevels=1000
-set undoreload=10000
+"set hidden                          "keep undo even when switch buffer
+"set undofile
+"set undodir=$VIMRUNTIME\undo
+"set undolevels=1000
+"set undoreload=10000
 
 " formats
 set fileformats=dos                             
@@ -135,15 +137,32 @@ let g:template_path= ''
 " plugin - ale
 "---------------------------------
 "keep the sign gutter open
-let g:ale_sign_column_always = 0
-"linter
-let g:ale_linters = {
-\   'verilog': ['iverilog'],
-\}
+let g:ale_sign_column_always = 1
+let g:ale_sign_error = '>>'
+let g:ale_sign_warning = '--'
+
+" show errors or warnings in my statusline
 let g:airline#extensions#ale#enabled = 1
+
 " use quickfix list instead of the loclist
 let g:ale_set_loclist = 0
 let g:ale_set_quickfix = 1
+
+" only enable these linters
+let g:ale_linters = {
+\   'verilog': ['iverilog'],
+\}
+
+" never lint except for saving
+let g:ale_lint_on_text_changed = 'never'
+let g:ale_lint_on_insert_leave = 1
+let g:ale_lint_on_enter = 0         " if you don't want linters to run on opening a file
+
+"open error list when erorr exist
+let g:ale_open_list = 1
+
+nmap <silent> <C-k> <Plug>(ale_previous_wrap)
+nmap <silent> <C-J> <Plug>(ale_next_wrap)
 
 "---------------------------------
 " plugin - AutoComplPop

@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
-- Add comment for `AutoInst()`
+- Add comment for `AutoInst`
 
   `AutoInst()`可配置添加注释例化模块所在位置`//Instance...<DIR>...`
 
@@ -45,7 +45,7 @@ All notable changes to this project will be documented in this file. The format 
 
 - Optimize `GetIO`, `GetPara`, `DrawIO`, `DrawPara`, `DrawVaraValue`
 
-  优化写法，`GetIO()`, `GetPara()`, `DrawIO()`, `DrawPara()`, `DrawVaraValue()`等函数添加注释及折叠，方便后续定位故障
+  优化写法，`GetIO()`, `GetPara()`, `DrawIO()`, `DrawPara()`, `DrawParaValue()`等函数添加注释及折叠，方便后续定位故障
   
   
 
