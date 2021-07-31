@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.5] - 2021-08-01
+
+### Changed
+
+- Change configuration method for `AutoInst`, `AutoPara`, `AutoReg` & `AddHeader`
+
+  更改现有函数的配置方式，可通过`.vimrc`外部配置
+
 ## [1.1.4] - 2021-07-21
 
 ### Added

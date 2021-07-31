@@ -29,15 +29,31 @@
 
 一款基于Vimscript的自动化verilog脚本。由[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)修改而来，原作者zhangguo。
 
-[![Release-Version](https://img.shields.io/badge/Release-1.1.4-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
+[![Release-Version](https://img.shields.io/badge/Release-1.1.5-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
 
-## 安装
+[TOC]
 
-将automatic.vim放入vim根目录下的plugin文件夹即可。
+## 1. 安装
+
+### 1.1 简洁安装
+
+将`automatic.vim`放入`vim`根目录下的`plugin`文件夹即可。
+
+### 1.2  vim-plug
+
+```
+Plug 'HonkW93/automatic-verilog'
+```
+
+### 1.3  Vundle
+
+```
+Plugin 'HonkW93/automatic-verilog'
+```
 
 **提示：此脚本可能会修改文本数据，请在使用前备份数据，防止数据覆盖等情况发生。**
 
- ## 特性
+ ## 2. 特性
 
 - 自动例化（`AutoInst`）
   - [x] 支持跨文件夹搜索.v文件进行例化，支持文件夹递归（参考`emacs verilog-mode`）
@@ -90,16 +106,16 @@
  - [ ] 梳理`emacs verilog-mode`中其他`auto`函数...
  - [ ] 梳理中...
 
-## 文档
+## 3. 文档
 
 [Vimcript-AutoMatic | HonkW](https://blog.honk.wang/posts/AutoMatic/)
 
 
-## 更新
+## 4. 更新
 
 [Update](/Changelog.md)
 
 
-## 开源协议
+## 5. 开源协议
 
 [GPL V3.0](/LICENSE)
