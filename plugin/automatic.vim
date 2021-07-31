@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/07/21 23:01
+" Last Modified:  2021/08/01 00:15
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description")
@@ -24,41 +24,50 @@ let s:start_prefix = repeat(' ',s:start_pos)
 "}}}2
 
 "AutoInst 自动例化配置{{{2
-let s:AUTOINST_IO_DIR = 1            "add //input or //output in the end of instance
-let s:AUTOINST_INST_NEW = 1          "add //INST_NEW if port has been newly added to the module
-let s:AUTOINST_INST_DEL = 1          "add //INST_DEL if port has been deleted from the module
-let s:AUTOINST_KEEP_CHANGED = 1      "keep changed inst io
-let s:AUTOINST_INCLUDE_COMMENT = 1   "include comment line of // (/*...*/ will always be ignored)
-let s:AUTOINST_INCLUDE_IFDEF = 1     "include ifdef like `ifdef `endif
-let s:AUTOINST_95_SUPPORT = 0        "Support Verilog-1995
-let s:AUTOINST_TAIL_NOT_ALIGN = 0    "don't do alignment in tail when autoinst
-let s:AUTOINST_ADD_DIR = 0           "add //Instance ...directory...
+let s:ati_io_dir = get(g:,'ati_io_dir',1)                   "add //input or //output in the end of instance
+let s:ati_inst_new = get(g:,'ati_inst_new',1)               "add //INST_NEW if port has been newly added to the module
+let s:ati_inst_del = get(g:,'ati_inst_del',1)               "add //INST_DEL if port has been deleted from the module
+let s:ati_keep_chg = get(g:,'ati_keep_chg',1)               "keep changed inst io
+let s:ati_incl_cmnt = get(g:,'ati_incl_cmnt',1)             "include comment line of // (/*...*/ will always be ignored)
+let s:ati_incl_ifdef = get(g:,'ati_incl_ifdef',1)           "include ifdef like `ifdef `endif
+let s:ati_95_support = get(g:,'ati_95_support',0)           "Support Verilog-1995
+let s:ati_tail_not_align = get(g:,'ati_tail_not_align',0)   "don't do alignment in tail when autoinst
+let s:ati_add_dir = get(g:,'ati_add_dir',0)                 "add //Instance ...directory...
 "}}}2
 
 "AutoPara 自动参数配置{{{2
-let s:AUTOPARA_ONLY_PORT = 0         "add only port parameter definition,ignore parameter = value; definition
-let s:AUTOPARA_PARA_NEW = 1          "add //PARA_NEW if parameter has been newly added to the module
-let s:AUTOPARA_PARA_DEL = 1          "add //PARA_DEL if parameter has been deleted from the module
-let s:AUTOPARA_KEEP_CHANGED = 1      "keep changed parameter
-let s:AUTOPARA_INCLUDE_COMMENT = 0   "include comment line of // (/*...*/ will always be ignored)
-let s:AUTOPARA_INCLUDE_IFDEF = 0     "include ifdef like `ifdef `endif
-let s:AUTOPARA_TAIL_NOT_ALIGN = 0    "don't do alignment in tail when autopara
+let s:atp_only_port = get(g:,'atp_only_port',0)             "add only port parameter definition,ignore parameter = value; definition
+let s:atp_para_new = get(g:,'atp_para_new',1)               "add //PARA_NEW if parameter has been newly added to the module
+let s:atp_para_del = get(g:,'atp_para_del',1)               "add //PARA_DEL if parameter has been deleted from the module
+let s:atp_keep_chg = get(g:,'atp_keep_chg',1)               "keep changed parameter
+let s:atp_incl_cmnt = get(g:,'atp_incl_cmnt',0)             "include comment line of // (/*...*/ will always be ignored)
+let s:atp_incl_ifdef = get(g:,'atp_incl_ifdef',0)           "include ifdef like `ifdef `endif
+let s:atp_tail_not_align = get(g:,'atp_tail_not_align',0)   "don't do alignment in tail when autopara
 "}}}2
 
 "AutoReg 自动寄存器配置{{{2
-let s:AUTOREG_REG_NEW = 1          "add //PARA_NEW if parameter has been newly added to the module
-let s:AUTOREG_REG_DEL = 1          "add //PARA_DEL if parameter has been deleted from the module
-let s:AUTOREG_KEEP_CHANGED = 1     "keep changed parameter
-let s:AUTOREG_TAIL_NOT_ALIGN = 0   "don't do alignment in tail when autoreg
+let s:atr_reg_new = get(g:,'atr_reg_new',1)                 "add //PARA_NEW if parameter has been newly added to the module
+let s:atr_reg_del = get(g:,'atr_reg_del',1)                 "add //PARA_DEL if parameter has been deleted from the module
+let s:atr_keep_chg = get(g:,'atr_keep_chg',1)               "keep changed parameter
+let s:atr_tail_not_align = get(g:,'atr_tail_not_align',0)   "don't do alignment in tail when autoreg
 "}}}2
 
 "Timing Wave 定义波形{{{2
-let s:sig_offset = 13           "Signal offset 
-"let s:sig_offset = 13+4         "Signal offset (0 is clk posedge, 4 is clk negedge)
-let s:clk_period = 8            "Clock period
-let s:clk_num = 16              "Number of clocks generated
-let s:cq_trans = 1              "Signal transition started N spaces after clock transition
-let s:wave_max_wd = s:sig_offset + s:clk_num*s:clk_period       "Maximum Width
+let s:sig_offset = 13           "signal offset 
+"let s:sig_offset = 13+4         "signal offset (0 is clk posedge, 4 is clk negedge)
+let s:clk_period = 8            "clock period
+let s:clk_num = 16              "number of clocks generated
+let s:cq_trans = 1              "signal transition started n spaces after clock transition
+let s:wave_max_wd = s:sig_offset + s:clk_num*s:clk_period       "maximum width
+"}}}2
+
+"Header 定义头文件{{{2
+let s:author = get(g:,'atv_author','HonkW')
+let s:company = get(g:,'atv_company','')
+let s:project = get(g:,'atv_prject','IC_Design')
+let s:device = get(g:,'atv_device','Xilinx')
+let s:email = get(g:,'atv_email','contact@honk.wang')
+let s:website = get(g:,'atv_website','https://honk.wang')
 "}}}2
 
 " Verilog Type 定义Verilog变量类型{{{2
@@ -140,7 +149,8 @@ let s:not_keywords_pattern = s:VlogKeyWords . '\@!\(\<\w\+\>\)'
 "}}}1
 
 "Version 启动判断{{{1
-if version < 700        "如果vim版本低于7.0则无效,类似写法为 if v:version < 703,代表版本低于7.3
+if version < 704        "如果vim版本低于7.4则无效,写法为 if v:version < 704,代表版本低于7.4
+    echohl ErrorMsg | echo "automatic-verilog: this plugin requires vim >= 7.4. "| echohl None
    finish
 endif
 if exists("vlog_plugin")
@@ -605,12 +615,12 @@ function AddHeader() "{{{3
         return
     endif
     
-    let author = g:vimrc_author
-    let company = g:vimrc_company
-    let project = g:vimrc_prject
-    let device = g:vimrc_device
-    let email = g:vimrc_email
-    let website = g:vimrc_website
+    let author = s:author
+    let company = s:company
+    let project = s:project
+    let device = s:device
+    let email = s:email
+    let website = s:website
 
     let filename = expand("%")          "记录当前文件名
     let timelen = strlen(strftime("%Y/%m/%d"))
@@ -752,7 +762,7 @@ function AutoComment() "{{{3
     if line =~ '^\/\/ by .* \d\d\d\d-\d\d-\d\d'
         let tmp_line = substitute(line,'^\/\/ by .* \d\d\d\d-\d\d-\d\d | ','','')
     else
-        let tmp_line = '// by ' . g:vimrc_author . ' ' . strftime("%Y-%m-%d") . ' | ' . line
+        let tmp_line = '// by ' . s:author . ' ' . strftime("%Y-%m-%d") . ' | ' . line
     endif
     call setline(lnum,tmp_line)
 endfunction "}}}3
@@ -771,8 +781,8 @@ function AutoComment2() "{{{3
                 let lnum = line("'>")-1
             endif
         else
-            call append(line("'<")-1,'/*----------------  by '.g:vimrc_author.' '.strftime("%Y-%m-%d").'  ---------------------')
-            call append(line("'>")  ,'------------------  by '.g:vimrc_author.' '.strftime("%Y-%m-%d").'  -------------------*/')
+            call append(line("'<")-1,'/*----------------  by '.s:author.' '.strftime("%Y-%m-%d").'  ---------------------')
+            call append(line("'>")  ,'------------------  by '.s:author.' '.strftime("%Y-%m-%d").'  -------------------*/')
             let lnum = line(".")
         endif
     endif
@@ -784,7 +794,7 @@ endfunction "}}}3
 function AddCurLineComment() "{{{3
     let lnum = line(".")
     let line = getline(lnum)
-    let tmp_line = line . ' // ' . g:vimrc_author . ' ' . strftime("%Y-%m-%d") . ' |'
+    let tmp_line = line . ' // ' . g:atv_author . ' ' . strftime("%Y-%m-%d") . ' |'
     call setline(lnum,tmp_line)
     normal $
 endfunction "}}}3
@@ -923,19 +933,10 @@ function AutoInst(mode)
         "if io_seqs has same signal_name that's in upd_io_list, cover
         "if io_seqs doesn't have signal_name that's in upd_io_list, add //INST_DEL
         "if io_seqs connection has been changed, keep it
-        "
-        " default:  [1,               1,                 1,                 1,                     1,                        1,
-        " config:   [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, AUTOINST_KEEP_CHANGED, AUTOINST_INCLUDE_COMMENT, AUTOINST_INCLUDE_IFDEF
-        "           0,                   0] 
-        "           AUTOINST_95_SUPPORT, AUTOINST_TAIL_NOT_ALIGN ]
-        "
-        "        0 for close, 1 for open
-        "
-        let config = [s:AUTOINST_IO_DIR,s:AUTOINST_INST_NEW,s:AUTOINST_INST_DEL,s:AUTOINST_KEEP_CHANGED,s:AUTOINST_INCLUDE_COMMENT,s:AUTOINST_INCLUDE_IFDEF,s:AUTOINST_95_SUPPORT,s:AUTOINST_TAIL_NOT_ALIGN]
-        let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names,config)
+        let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names)
 
         "add instance directory before autoinst
-        if s:AUTOINST_ADD_DIR == 1
+        if s:ati_add_dir == 1
             if getline(idx3-1) !~ '^\s*/\/\Instance'
                 call append(idx3-1,s:start_prefix.'//Instance: '.add_dir)
             endif
@@ -1067,15 +1068,7 @@ function AutoPara(mode)
         "if para_seqs has same parameter_name that's in upd_para_list, cover
         "if para_seqs doesn't have parameter_name that's in upd_para_list, add //PARA_DEL
         "if para_seqs connection has been changed, keep it
-        "config: [1,                  1,                 1
-        "        [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL
-        "         1,                     1,                        1,                      1                      ] default
-        "         AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT, AUTOPARA_INCLUDE_IFDEF, AUTOPARA_TAIL_NOT_ALIGN]
-        "
-        "        0 for close, 1 for open
-
-        let config = [s:AUTOPARA_ONLY_PORT,s:AUTOPARA_PARA_NEW,s:AUTOPARA_PARA_DEL,s:AUTOPARA_KEEP_CHANGED,s:AUTOPARA_INCLUDE_COMMENT,s:AUTOPARA_INCLUDE_IFDEF,s:AUTOPARA_TAIL_NOT_ALIGN]
-        let lines = s:DrawPara(para_seqs,upd_para_list,chg_para_names,config)
+        let lines = s:DrawPara(para_seqs,upd_para_list,chg_para_names)
 
         "delete current line )
         let line = substitute(getline(line('.')),')\s*','','')
@@ -1202,15 +1195,7 @@ function AutoParaValue(mode)
         "if para_seqs has new parameter_name that's never in upd_para_list, add //PARA_NEW
         "if para_seqs has same parameter_name that's in upd_para_list, cover
         "if para_seqs doesn't have parameter_name that's in upd_para_list, add //PARA_DEL
-        "config: [1,                  1,                 1
-        "        [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL
-        "         N/A,                   N/A,                      N/A,                    0                      ] default
-        "         AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT, AUTOPARA_INCLUDE_IFDEF, AUTOPARA_TAIL_NOT_ALIGN]
-        "
-        "        0 for close, 1 for open
-        
-        let config = [s:AUTOPARA_ONLY_PORT,s:AUTOPARA_PARA_NEW,s:AUTOPARA_PARA_DEL,0,0,0,s:AUTOPARA_TAIL_NOT_ALIGN]
-        let lines = s:DrawParaValue(para_seqs,upd_para_list,config)
+        let lines = s:DrawParaValue(para_seqs,upd_para_list)
 
         "delete current line )
         let line = substitute(getline(line('.')),')\s*','','')
@@ -1296,14 +1281,7 @@ function AutoReg()
         "if reg_names has same reg_name that's in upd_reg_list, cover
         "if reg_names doesn't have reg_name that's in upd_reg_list, add //REG_DEL
         "if reg_names connection has been changed, keep it
-        "
-        " default:  [1,        1,               1,               1                     1                     ]                   
-        " config:   [RESERVED, AUTOREG_REG_NEW, AUTOREG_REG_DEL, AUTOREG_KEEP_CHANGED, AUTOREG_TAIL_NOT_ALIGN]
-        "
-        "        0 for close, 1 for open
-        
-        let config = [0,s:AUTOREG_REG_NEW,s:AUTOREG_REG_DEL,s:AUTOREG_KEEP_CHANGED,s:AUTOREG_TAIL_NOT_ALIGN]
-        let lines = s:DrawReg(reg_names,upd_reg_list,config)
+        let lines = s:DrawReg(reg_names,upd_reg_list)
 
         "append registers definition
         call append(line('.'),lines)
@@ -1473,7 +1451,7 @@ function s:GetIO(lines,mode)
             endif
             
             "verilog-1995,input/output/inout may appear outside bracket
-            if s:AUTOINST_95_SUPPORT == 1
+            if s:ati_95_support == 1
             "verilog-2001 or above
             else
                 if line =~ ')\s*;\s*$' "normal break, find end of port declaration
@@ -1869,12 +1847,7 @@ endfunction
 "   io_seqs : new inst io sequences for align
 "   io_list : old inst io name list
 "   chg_io_names : old inst io names that has been changed
-"   config: configuration for output
-"   default:  [1,               1,                 1,                 1,                     1,                        1,
-"   config:   [AUTOINST_IO_DIR, AUTOINST_INST_NEW, AUTOINST_INST_DEL, AUTOINST_KEEP_CHANGED, AUTOINST_INCLUDE_COMMENT, AUTOINST_INCLUDE_IFDEF
-"              0,                   0] 
-"              AUTOINST_95_SUPPORT, AUTOINST_TAIL_NOT_ALIGN ]
-"   0 for close, 1 for open
+"
 " Description:
 " e.g draw io port sequences
 "   [wire,1,input,'c0','c0',clk,0,'       input       clk,']
@@ -1891,11 +1864,10 @@ endfunction
 "   e.g
 "       .signal_name   (signal_name[width1:width2]      ), //io_dir
 "---------------------------------------------------
-function s:DrawIO(io_seqs,io_list,chg_io_names,config)
+function s:DrawIO(io_seqs,io_list,chg_io_names)
     let prefix = s:start_prefix.repeat(' ',4)
     let io_list = copy(a:io_list)
     let chg_io_names = copy(a:chg_io_names)
-    let config = copy(a:config)
 
     "guarantee spaces width{{{4
     let max_lbracket_len = 0
@@ -1913,7 +1885,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             endif
             "io that's changed will be keeped if config 
             let connect = name.width
-            if config[3] == 1
+            if s:ati_keep_chg == 1
                 if(has_key(chg_io_names,name))
                     let connect = chg_io_names[name]
                 endif
@@ -1942,14 +1914,14 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
         "add single comment/ifdef line{{{5
         if type == 'keep' 
             if line =~ '^\s*\/\/'
-                if config[4] == 1
+                if s:ati_incl_cmnt == 1
                     let line = prefix.substitute(line,'^\s*','','')
                     call add(lines,line)
                 else
                     "ignore comment line when not config
                 endif
             elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)'
-                if config[5] == 1
+                if s:ati_incl_ifdef == 1
                     let line = prefix.substitute(line,'^\s*','','')
                     call add(lines,line)
                 else
@@ -1975,7 +1947,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
 
             "io that's changed will be keeped if config 
             let connect = name.width
-            if config[3] == 1
+            if s:ati_keep_chg == 1
                 if(has_key(chg_io_names,name))
                     let connect = chg_io_names[name]
                 endif
@@ -1983,7 +1955,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             
             "width2bracket
             "don't align tail if config
-            if config[7] == 1
+            if s:ati_tail_not_align == 1
                 let width2bracket = ''
             else
                 let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(connect))
@@ -2000,17 +1972,17 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
             "io_dir
             let io_dir = value[2]
 
-            "Draw IO by Config
+            "Draw IO by config
             "empty list, default
             if io_list_empty == 1
-                if config[0] == 1
+                if s:ati_io_dir == 1
                     let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
                 else
                     let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
                 endif
             "update list,draw io by config
             else
-                if config[0] == 1
+                if s:ati_io_dir == 1
                     let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
                 else
                     let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
@@ -2019,7 +1991,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
                 let io_idx = index(io_list,name) 
                 "name not exist in old io_list, add //INST_NEW
                 if io_idx == -1
-                    if config[1] == 1
+                    if s:ati_inst_new == 1
                         let line = line . ' // INST_NEW'
                     else
                         let line = line
@@ -2050,7 +2022,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,config)
     if io_list == []
     "remain port in io_list
     else
-        if config[2] == 1
+        if s:ati_inst_del == 1
             for name in io_list
                 let line = prefix.'//INST_DEL: Port '.name.' has been deleted.'
                 call add(lines,line)
@@ -2745,11 +2717,6 @@ endfunction
 "   para_seqs : new inst para sequences for align
 "   para_list : old inst para name list
 "   chg_para_names : old parameter names that has been changed
-"   config: configuration for output
-"        [1,                  1,                 1
-"        [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL
-"         1,                     1,                        1,                      1                      ] default
-"         AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT, AUTOPARA_INCLUDE_IFDEF, AUTOPARA_TAIL_NOT_ALIGN]
 "
 " Description:
 " e.g draw parameter sequences as format of para-para
@@ -2782,11 +2749,10 @@ endfunction
 "       .parameter_name   (parameter_name       ),
 "       .parameter_name   (parameter_name       )  //last_parameter
 "---------------------------------------------------
-function s:DrawPara(para_seqs,para_list,chg_para_names,config)
+function s:DrawPara(para_seqs,para_list,chg_para_names)
     let prefix = s:start_prefix.repeat(' ',4)
 
     let para_list  = copy(a:para_list)
-    let config = copy(a:config)
     let chg_para_names = copy(a:chg_para_names)
 
     "guarantee spaces width{{{4
@@ -2797,7 +2763,7 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
         let p_name = value[2]
         let p_value = p_name
         "para that's changed will be keeped if config 
-        if config[3] == 1
+        if s:atp_keep_chg == 1
             if(has_key(chg_para_names,p_name))
                 let p_value = chg_para_names[p_name]
             endif
@@ -2825,14 +2791,14 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
         "add single comment/ifdef line {{{5
         if type == 'keep' 
             if line =~ '^\s*\/\/'
-                if config[4] == 1
+                if s:atp_incl_cmnt == 1
                     let line = prefix.substitute(line,'^\s*','','')
                     call add(lines,line)
                 else
                     "ignore comment line when not config
                 endif
             elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)'
-                if config[5] == 1
+                if s:atp_incl_ifdef == 1
                     let line = prefix.substitute(line,'^\s*','','')
                     call add(lines,line)
                 else
@@ -2852,7 +2818,7 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
             let p_value = p_name
 
             "para that's changed will be keeped if config 
-            if config[3] == 1
+            if s:atp_keep_chg == 1
                 if(has_key(chg_para_names,p_name))
                     let p_value = chg_para_names[p_name]
                 endif
@@ -2863,14 +2829,14 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
 
             "value2bracket
             "don't align tail if config
-            if config[6] == 1
+            if s:atp_tail_not_align == 1
                 let value2bracket = ''
             else
                 let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
             endif
 
             "comma
-            if config[0] == 0   "use all parameter
+            if s:atp_only_port == 0   "use all parameter
                 let last_para = value[6]
             else                "use only port parameter
                 let last_para = value[4]
@@ -2885,9 +2851,9 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
             "type
             let type = value[0]
 
-            "Draw para by Config
+            "Draw para by config
             "Only draw port or draw all
-            if (config[0] == 1 && type == 'port') || (config[0] == 0)
+            if (s:atp_only_port == 1 && type == 'port') || (s:atp_only_port == 0)
                 "empty list, default
                 if para_list_empty == 1
                     let line = prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'.comma
@@ -2898,7 +2864,7 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
                     let para_idx = index(para_list,p_name) 
                     "name not exist in old para_list, add //INST_NEW
                     if para_idx == -1
-                        if config[1] == 1
+                        if s:atp_para_new == 1
                             let line = line . ' // PARA_NEW'
                         else
                             let line = line
@@ -2930,7 +2896,7 @@ function s:DrawPara(para_seqs,para_list,chg_para_names,config)
     if para_list == []
     "remain port in para_list
     else
-        if config[2] == 1
+        if s:atp_para_del == 1
             for p_name in para_list
                 let line = prefix.'//PARA_DEL: Parameter '.p_name.' has been deleted.'
                 call add(lines,line)
@@ -2954,13 +2920,7 @@ endfunction
 " Input: 
 "   para_seqs : new inst para sequences for align
 "   para_list : old inst para name list
-"   config: configuration for output
-"   config: [1,                  1,                 1
-"           [AUTOPARA_ONLY_PORT, AUTOPARA_PARA_NEW, AUTOPARA_PARA_DEL
-"            N/A,                   N/A,                      N/A,                    1                      ] default
-"            AUTOPARA_KEEP_CHANGED, AUTOPARA_INCLUDE_COMMENT, AUTOPARA_INCLUDE_IFDEF, AUTOPARA_TAIL_NOT_ALIGN]
 "
-"   0 for close, 1 for open
 " Description:
 " e.g draw parameter sequences as format of para-value
 "    0     1         2               3                4                    5     6
@@ -2991,11 +2951,9 @@ endfunction
 "       .parameter_name   (parameter_value      ),
 "       .parameter_name   (parameter_value      )  //last_parameter
 "---------------------------------------------------
-function s:DrawParaValue(para_seqs,para_list,config)
+function s:DrawParaValue(para_seqs,para_list)
     let prefix = s:start_prefix.repeat(' ',4)
-
     let para_list = copy(a:para_list)
-    let config = copy(a:config)
 
     "guarantee spaces width{{{4
     let max_lbracket_len = 0
@@ -3042,14 +3000,14 @@ function s:DrawParaValue(para_seqs,para_list,config)
 
             "value2bracket
             "don't align tail if config
-            if config[6] == 1
+            if s:atp_tail_not_align == 1
                 let value2bracket = ''
             else
                 let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
             endif
 
             "comma
-            if config[0] == 0   "use all parameter
+            if s:atp_only_port == 0   "use all parameter
                 let last_para = value[6]
             else                "use only port parameter
                 let last_para = value[4]
@@ -3065,9 +3023,9 @@ function s:DrawParaValue(para_seqs,para_list,config)
             "type
             let type = value[0]
 
-            "Draw para by Config
+            "Draw para by config
             "Only draw port or draw all
-            if (config[0] == 1 && type == 'port') || (config[0] == 0)
+            if (s:atp_only_port == 1 && type == 'port') || (s:atp_only_port == 0)
                 "empty list, default
                 if para_list_empty == 1
                     let line = prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'.comma
@@ -3078,7 +3036,7 @@ function s:DrawParaValue(para_seqs,para_list,config)
                     let para_idx = index(para_list,p_name) 
                     "name not exist in old para_list, add //INST_NEW
                     if para_idx == -1
-                        if config[1] == 1
+                        if s:atp_para_new == 1
                             let line = line . ' // PARA_NEW'
                         else
                             let line = line
@@ -3110,7 +3068,7 @@ function s:DrawParaValue(para_seqs,para_list,config)
     if para_list == []
     "remain port in para_list
     else
-        if config[2] == 1
+        if s:atp_para_del == 1
             for p_name in para_list
                 let line = prefix.'//PARA_DEL: Parameter '.p_name.' has been deleted.'
                 call add(lines,line)
@@ -3591,9 +3549,7 @@ endfunction
 " Input: 
 "   reg_names : new reg names for align
 "   reg_list : old reg name list
-"   config: configuration for output
 "
-"   0 for close, 1 for open
 " Description:
 " e.g draw reg sequences
 "    0       1         2       3       4            5 
@@ -3608,10 +3564,9 @@ endfunction
 "   e.g
 "       reg  [WIDTH1:WIDTH2]     reg_name;
 "---------------------------------------------------
-function s:DrawReg(reg_names,reg_list,config)
+function s:DrawReg(reg_names,reg_list)
     let prefix = s:start_prefix
     let reg_list = copy(a:reg_list)
-    let config = copy(a:config)
 
     "guarantee spaces width{{{4
     let max_lname_len = 0
@@ -3713,7 +3668,7 @@ function s:DrawReg(reg_names,reg_list,config)
 
         "name2semicol
         "don't align tail if config
-        if config[3] == 1
+        if s:atr_tail_not_align == 1
             let name2semicol = ''
         else
             let name2semicol = repeat(' ',max_rsemicol_len-max_lname_len-len(name))
@@ -3722,7 +3677,7 @@ function s:DrawReg(reg_names,reg_list,config)
         "semicol
         let semicol = ';'
 
-        "Draw reg by Config
+        "Draw reg by config
         "empty list, default
         if reg_list_empty == 1
             let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
@@ -3733,7 +3688,7 @@ function s:DrawReg(reg_names,reg_list,config)
             let reg_idx = index(reg_list,name) 
             "name not exist in old reg_list, add //REG_NEW
             if reg_idx == -1
-                if config[1] == 1
+                if s:atr_reg_new == 1
                     let line = line . ' // REG_NEW'
                 else
                     let line = line
@@ -3790,7 +3745,7 @@ function s:DrawReg(reg_names,reg_list,config)
 
         "name2semicol
         "don't align tail if config
-        if config[3] == 1
+        if s:atr_tail_not_align == 1
             let name2semicol = ''
         else
             let name2semicol = repeat(' ',max_rsemicol_len-max_lname_len-len(name))
@@ -3799,7 +3754,7 @@ function s:DrawReg(reg_names,reg_list,config)
         "semicol
         let semicol = ';'
 
-        "Draw reg by Config
+        "Draw reg by config
         "empty list, default
         if reg_list_empty == 1
             let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
@@ -3810,7 +3765,7 @@ function s:DrawReg(reg_names,reg_list,config)
             let reg_idx = index(reg_list,name) 
             "name not exist in old reg_list, add //REG_NEW
             if reg_idx == -1
-                if config[1] == 1
+                if s:atr_reg_new == 1
                     let line = line . ' // REG_NEW'
                 else
                     let line = line
@@ -3830,7 +3785,7 @@ function s:DrawReg(reg_names,reg_list,config)
     if reg_list == []
     "remain register in reg_list
     else
-        if config[2] == 1
+        if s:atr_reg_del == 1
             for name in reg_list
                 let line = prefix.'//REG_DEL: Register '.name.' has been deleted.'
                 call add(lines,line)
