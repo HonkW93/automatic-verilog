@@ -31,8 +31,6 @@
 
 [![Release-Version](https://img.shields.io/badge/Release-1.1.5-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
 
-[TOC]
-
 ## 1. 安装
 
 ### 1.1 简洁安装
