@@ -1,6 +1,6 @@
 " -------------------------------------------------------------
 " Maintainer: HonkW,Only for Personal Use
-" Date: 2021/07/17
+" Date: 2021/07/31
 " -------------------------------------------------------------
 
 " -------------------------------------------------------------
@@ -12,6 +12,7 @@ set hlsearch                        "highlight search
 set incsearch                       "show match while searching
 behave mswin                        "mouse behavior
 source $VIMRUNTIME/mswin.vim        "remap a few keys for Windows
+source $VIMRUNTIME/vimrc_example.vim    "enhacement for Gvim use only
 inoremap <special> jk <Esc>
 set autochdir                       "automatic change directory based on the opened file
 let mapleader = ";"
@@ -91,9 +92,10 @@ Plug 'vim-scripts/VisIncr'                          "visual increment for column
 Plug 'vim-scripts/load_template'                     
 Plug 'stormherz/tablify'                            "draw table
 Plug 'vim-scripts/DrawIt'                           "draw ASCII graph
-Plug 'skywind3000/vim-quickui'                      "popup Menu
+"Plug 'skywind3000/vim-quickui'                      "popup Menu
 " beautify
 Plug 'vim-airline/vim-airline'                      "status line
+Plug 'vim-scripts/zoom.vim'                         "zoom in/out
 " doc
 Plug 'yianwillis/vimcdoc'                           "chinese vim help
 call plug#end()
@@ -101,12 +103,12 @@ call plug#end()
 "---------------------------------
 " plugin - automatic verilog
 "---------------------------------
-let g:vimrc_author='HonkW'
-let g:vimrc_company='HonkW'
-let g:vimrc_prject='VIM'
-let g:vimrc_device=''
-let g:vimrc_email='contact@honk.wang'
-let g:vimrc_website='https://honk.wang'
+let g:atv_author='HonkW'
+let g:atv_company='HonkW'
+let g:atv_prject='IC'
+let g:atv_device='Actel'
+let g:atv_email='contact@honk.wang'
+let g:atv_website='https://honk.wang'
 
 "---------------------------------
 " plugin - easymotion.vim
@@ -114,14 +116,20 @@ let g:vimrc_website='https://honk.wang'
 "<Leader>f{char} to move to {char}
 map  <Leader>f <Plug>(easymotion-bd-f)
 nmap <Leader>f <Plug>(easymotion-overwin-f)
-"s{char}{char} to move to {char}{char}
-"nmap s <Plug>(easymotion-overwin-f2)
+
 "Move to line
 map <Leader>L <Plug>(easymotion-bd-jk)
 nmap <Leader>L <Plug>(easymotion-overwin-line)
+
 "Move to word
 map  <Leader>w <Plug>(easymotion-bd-w)
 nmap <Leader>w <Plug>(easymotion-overwin-w)
+
+"<Leader>s{char} to move to {char}
+nmap <Leader>s <Plug>(easymotion-s2)
+
+"s{char}{char} to move to {char}{char}
+"nmap s <Plug>(easymotion-overwin-f2)
 
 "---------------------------------
 " plugin - commentary
@@ -137,7 +145,7 @@ let g:template_path= ''
 " plugin - ale
 "---------------------------------
 "keep the sign gutter open
-let g:ale_sign_column_always = 1
+let g:ale_sign_column_always = 0
 let g:ale_sign_error = '>>'
 let g:ale_sign_warning = '--'
 
@@ -155,7 +163,7 @@ let g:ale_linters = {
 
 " never lint except for saving
 let g:ale_lint_on_text_changed = 'never'
-let g:ale_lint_on_insert_leave = 1
+let g:ale_lint_on_insert_leave = 0
 let g:ale_lint_on_enter = 0         " if you don't want linters to run on opening a file
 
 "open error list when erorr exist
@@ -205,14 +213,14 @@ let b:match_words=
 "                       miscellaneous 
 " -------------------------------------------------------------
 " tags
-set tags=tags;
-let Tlist_Show_One_File=1
-let Tlist_Exit_OnlyWindow=1
+"set tags=tags;
+"let Tlist_Show_One_File=1
+"let Tlist_Exit_OnlyWindow=1
 
 " winmanager
 "let g:winManagerWindowLayout='FileExplorer|TagList'
-let g:winManagerWindowLayout='FileExplorer'
-nmap vp :WMToggle<cr>
+"let g:winManagerWindowLayout='FileExplorer'
+"nmap vp :WMToggle<cr>
 
 " Rtl Tree
 " let t:RtlTreeVlogDefine = 1
