@@ -107,9 +107,9 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [1.0.7] - 2021-05-18
 ### Added
-- Add keep changed inst io name 
+- Add keep changed inst io name for  `AutoInst`
 
-  新增修改后的端口不重刷功能
+   `AutoInst()`新增修改后的端口不重刷功能
 
 
 
