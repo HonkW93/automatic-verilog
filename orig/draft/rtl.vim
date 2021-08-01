@@ -1,7 +1,303 @@
 
+"Port 端口类型
+let s:VlogTypePort =                  '\<input\>\|'
+let s:VlogTypePort = s:VlogTypePort . '\<output\>\|'
+let s:VlogTypePort = s:VlogTypePort . '\<inout\>'
+
+"Data 数据类型
+let s:VlogTypeData =                  '\<wire\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<reg\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<parameter\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<localparam\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<genvar\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<integer\>'
+
+"Calculation 计算类型
+let s:VlogTypeCalc =                  '\<assign\>\|'
+let s:VlogTypeCalc = s:VlogTypeCalc . '\<always\>'
+
+"Structure 结构类型
+let s:VlogTypeStru =                  '\<module\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endmodule\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<function\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endfunction\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<task\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endtask\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<generate\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endgenerate\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<begin\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<end\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<case\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<casex\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<casez\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endcase\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<default\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<for\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<if\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<define\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<ifdef\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<ifndef\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<elsif\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<else\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endif\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<celldefine\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endcelldefine\>'
+
+"Others 其他类型
+let s:VlogTypeOthe =                  '\<posedge\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<negedge\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<timescale\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<initial\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<forever\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<specify\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<endspecify\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<include\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<or\>'
+
+"() 括号包含
+let s:VlogTypePre  = '\('
+let s:VlogTypePost = '\)'
+let s:VlogTypeConn = '\|'
+
+let s:VlogTypePorts = s:VlogTypePre . s:VlogTypePort . s:VlogTypePost
+let s:VlogTypeDatas = s:VlogTypePre . s:VlogTypeData . s:VlogTypePost
+let s:VlogTypeCalcs = s:VlogTypePre . s:VlogTypeCalc . s:VlogTypePost
+let s:VlogTypeStrus = s:VlogTypePre . s:VlogTypeStru . s:VlogTypePost
+let s:VlogTypeOthes = s:VlogTypePre . s:VlogTypeOthe . s:VlogTypePost
+
+"Keywords 关键词类型
+let s:VlogKeyWords  = s:VlogTypePre . s:VlogTypePort . s:VlogTypeConn .  s:VlogTypeData . s:VlogTypeConn. s:VlogTypeCalc . s:VlogTypeConn. s:VlogTypeStru . s:VlogTypeConn. s:VlogTypeOthe . s:VlogTypePost
+
+"Not Keywords 非关键词类型
+let s:not_keywords_pattern = s:VlogKeyWords . '\@!\(\<\w\+\>\)'
+
+"--------------------------------------------------
+" Function : GetModuleFileDict
+" Input: 
+"   files: file-dir dictionary
+"          e.g  ALU.v -> ./hdl/core
+" Description:
+"   get module-file dictionary from file-dir dictionary
+" Output:
+"   modules: module-file dictionary
+"          e.g  ALU -> ALU.v
+"---------------------------------------------------
+function s:GetModuleFileDict(files)
+    let modules = {}
+    for file in keys(a:files)
+        let dir = a:files[file]
+        "find module in ./hdl/core/ALU.v
+        let lines = readfile(dir.'/'.file)  
+        let module = ''
+        for line in lines
+            if line =~ '^\s*module\s*\w\+'
+                let module = matchstr(line,'^\s*module\s*\zs\w\+')
+                break
+            endif
+        endfor
+        if module == ''
+            call extend(modules,{'NULL' : file})
+        else
+            call extend(modules,{module : file})
+        endif
+    endfor
+    return modules
+endfunction
+
+"--------------------------------------------------
+" Function: SkipCommentLine
+" Input: 
+"   mode : mode for search up/down
+"          0 -> search down
+"          1 -> search up
+"          2 -> search down, but ignore //......
+"          3 -> search up, but ignore //......
+"   idx  : start line index of searching
+"   lines: content of lines for searching 
+" Description:
+"   Skip comment line of 
+"       1. //..........
+"       2. /*......
+"            ......
+"            ......*/
+"       3. ignore comment line of /*....*/
+"          since it might be /*autoinst*/
+" Output:
+"   next line index that's not a comment line
+"---------------------------------------------------
+function s:SkipCommentLine(mode,idx,lines)
+    let comment_pair = 0
+    if a:mode == 0
+        let start_pattern = '^\s*/\*'
+        let start_symbol = '\*/'
+        let end_pattern = '\*/\s*$'
+        let end_symbol = '/\*'
+        let single_pattern = '^\s*\/\/'
+        let end = len(a:lines)
+        let stride = 1
+    elseif a:mode == 1
+        let start_pattern = '\*/\s*$'
+        let start_symbol = '/\*'
+        let end_pattern = '^\s*/\*'
+        let end_symbol = '\*/'
+        let single_pattern = '^\s*\/\/'
+        let end = 1
+        let stride = -1
+    elseif a:mode == 2
+        let start_pattern = '^\s*/\*'
+        let start_symbol = '\*/'
+        let end_pattern = '\*/\s*$'
+        let end_symbol = '/\*'
+        let single_pattern = 'HonkW is always is most handsome man!'
+        let end = len(a:lines)
+        let stride = 1
+    elseif a:mode == 3
+        let start_pattern = '\*/\s*$'
+        let start_symbol = '/\*'
+        let end_pattern = '^\s*/\*'
+        let end_symbol = '\*/'
+        let single_pattern = 'HonkW is always is most handsome man!'
+        let end = 1
+        let stride = -1
+    else
+        echohl ErrorMsg | echo "Error mode input for function SkipCommentLine! mode = ".a:mode| echohl None
+    endif
+
+    for idx in range(a:idx,end,stride)
+        let line = a:lines[idx-1]
+        "/* symbol at top of the line
+        if line =~ start_pattern  && line !~ start_symbol
+            let comment_pair = 1
+            continue
+        "*/ symbol at end of the line
+        elseif line =~ end_pattern && line !~ end_symbol
+            let comment_pair = 0
+            continue
+        elseif comment_pair == 1        "comment pair /* ... */
+            continue
+        elseif line =~ single_pattern   "comment line //
+            continue
+        else                            "not comment, return
+            return idx
+        endif
+    endfor
+
+    echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
+    return -1
+
+endfunction
+
+"--------------------------------------------------
+" Function: GetDirList
+" Input: 
+"   Lines look like: 
+"   verilog-library-directories:()
+"   verilog-library-directories-recursive:0
+" Description:
+" e.g
+"   verilog-library-directories:("test" ".")
+"   verilog-library-directories-recursive:1
+" Output:
+"   dirlist and recursive flag
+"   e.g.
+"       dirlist = ['test','.']
+"       rec = 1
+"---------------------------------------------------
+function s:GetDirList()
+    let dirlist = [] 
+    let rec = 0
+    let lines = getline(1,line('$'))
+    for line in lines
+        "find directories
+        if line =~ 'verilog-library-directories:(.*)'
+            let dir = matchstr(line,'verilog-library-directories:(\zs.*\ze)')
+            call substitute(dir,'"\zs\S*\ze"','\=add(dirlist,submatch(0))','g')
+        endif
+        "find recursive
+        if line =~ 'verilog-library-directories-recursive:'
+            let rec = matchstr(line,'verilog-library-directories-recursive:\s*\zs\d\ze\s*$')
+            if rec != '0' && rec != '1'
+                echohl ErrorMsg | echo "Error input for verilog-library-directories-recursive = ".rec| echohl None
+            endif
+        endif
+    endfor
+    "default
+    let dir = '.'       
+    if dirlist == [] 
+        let dirlist = [dir]
+    endif
+
+    return [dirlist,str2nr(rec)]
+
+endfunction
+
+"--------------------------------------------------
+" Function : GetFileDirDicFromList
+" Input: 
+"   dirlist: directory list
+"   rec: recursively
+" Description:
+"   get file-dir dictionary from dirlist
+" Output:
+"   files  : file-dir dictionary(.v file)
+"          e.g  ALU.v -> ./hdl/core
+"---------------------------------------------------
+function s:GetFileDirDicFromList(dirlist,rec)
+    let files = {}
+    for dir in a:dirlist
+        let files = s:GetFileDirDic(dir,a:rec,files)
+    endfor
+    return files
+endfunction
+
+"--------------------------------------------------
+" Function: GetFileDirDic
+" Input: 
+"   dir : directory
+"   rec : recursive
+"   files : dictionary to store
+" Description:
+"   rec = 1, recursively get inst-file dictionary (.v or .sv file) 
+"   rec = 0, normally get inst-file dictionary (.v or .sv file)
+" Output:
+"   files : files-directory dictionary(.v or .sv file)
+"---------------------------------------------------
+function s:GetFileDirDic(dir,rec,files)
+    "let filelist = readdir(a:dir,{n -> n =~ '.v$\|.sv$'})
+    let filedirlist = glob(a:dir.'/'.'*',0,1)
+    let idx = 0
+    while idx <len(filedirlist)
+        let file = fnamemodify(filedirlist[idx],':t')
+        let filedirlist[idx] = file
+        let idx = idx + 1
+    endwhile
+
+    let filelist = filter(copy(filedirlist),'v:val =~ ".v$" || v:val =~ ".sv$"')
+
+    for file in filelist
+        if has_key(a:files,file)
+            echohl ErrorMsg | echo "Same file ".file." exist in both ".a:dir." and ".a:files[file]."! Only use one as directory"| echohl None
+        endif
+        call extend (a:files,{file : a:dir})
+    endfor
+
+    if a:rec
+        "for item in readdir(a:dir)
+        for item in filedirlist
+            if isdirectory(a:dir.'/'.item)
+                call s:GetFileDirDic(a:dir.'/'.item,1,a:files)
+            endif
+        endfor
+    endif
+    return a:files
+
+endfunction
+
+
 "RtlTree Rtl树{{{1
 command RtlTree :call RtlTree()
-let t:RtlTreeVlogDefine = 1              "Open RTLTree
+
+let t:RtlTreeVlogDefine = 0              "Open RTLTree
 let s:rtltree_init_max_display_layer = 7 "Set RTLTree Layer
 let s:oTreeNode = {}
 let s:tree_up_dir_line = 'rtl tree'
@@ -9,8 +305,12 @@ let s:rtl_tree_is_open = 0
 let s:rtl_tree_first_open = 1
 
 function s:GetInstFileName(inst)
-    let file = s:top_modules[a:inst]
-    let dir = s:top_files[file]
+    if has_key(s:top_modules,a:inst)
+        let file = s:top_modules[a:inst]
+        let dir = s:top_files[file]
+    else
+        return ''
+    endif
     return dir.'/'.file
 endfunction
 
@@ -268,7 +568,7 @@ function s:oTreeNode.CreateRtlTree(tree) "{{{2
     "endfor
         let l:line_index = l:line_index + 1
     endwhile
-    call s:oTreeNode.TreeLog("debug: CreateRtlTree done! -- " . a:tree.instname)
+    "call s:oTreeNode.TreeLog("debug: CreateRtlTree done! -- " . a:tree.instname)
     let a:tree.childrensolved = 1
 endfunction "}}}2
 function s:oTreeNode.DrawRtlTree(prefix,tree) "{{{2
@@ -456,7 +756,7 @@ function s:active(mode) "{{{2
     let t:RtlBufName = s:GetInstFileName(s:current_node.instname)
 
     let s:current_node = s:oTreeNode.SearchNodeByLnum(s:rtltree,lnum)
-    call s:oTreeNode.TreeLog("------------active--------------" . s:current_node.instname)
+    "call s:oTreeNode.TreeLog("------------active--------------" . s:current_node.instname)
 
     "wincmd p
     execute bufwinnr(t:RtlBufName) . " wincmd w"
@@ -465,8 +765,8 @@ function s:active(mode) "{{{2
 
         " mouse left-click or module is undefined
         if a:mode == 0 || s:current_node.unresolved == 1 || s:current_node.macro_type == 1
-            call s:oTreeNode.TreeLog("tag - 0 : -- " . s:current_node.parent.instname)
-            "echo "tag " . s:current_node.parent.instname
+            "call s:oTreeNode.TreeLog("tag - 0 : -- " . s:current_node.parent.instname)
+            "echo "tag s:current_node.parent.instname " . s:current_node.parent.instname
             execute "tag " . s:current_node.parent.instname
             call cursor(s:current_node.parent_inst_lnum,1)
             execute "normal zt"
@@ -476,7 +776,7 @@ function s:active(mode) "{{{2
             "call s:oTreeNode.TreeLog("active - 1")
             let inst = s:current_node.instname
             "call s:oTreeNode.TreeLog("tag - 1 : -- " . inst)
-            "echo "tag " . inst
+            "echo "tag inst " . inst
             execute "tag " . inst
             execute "normal zt"
         endif
@@ -489,6 +789,7 @@ function s:active(mode) "{{{2
     if s:current_node.unresolved == 0
         if s:current_node.childrensolved == 0 && a:mode == 1
             call s:oTreeNode.CreateRtlTree(s:current_node)
+            "echo "tag s:current_node.instname " . s:current_node.instname
             execute "tag " . s:current_node.instname
             execute "normal zt"
         endif
@@ -565,12 +866,22 @@ function s:OpenRtlTree() "{{{2
     call s:oTreeNode.CreateRtlTree(s:rtltree)
 
     "create the rtl tree window
-    let splitSize = 28
+    "let splitSize = 28
 
-    let t:NERDTreeBufName = localtime() . "_RtlTree_"
+    "let t:NERDTreeBufName = localtime() . "_RtlTree_"
+    "silent! execute 'aboveleft ' . 'vertical ' . splitSize . ' new'
+    "silent! execute "edit " . t:NERDTreeBufName
+
+    let splitSize = 28
+    let t:NERDTreeBufName = localtime() . "._RtlTree_"
     silent! execute 'aboveleft ' . 'vertical ' . splitSize . ' new'
     silent! execute "edit " . t:NERDTreeBufName
 
+    "autocmd QuitPre t:NERDTreeBufName echo 'leave!!!!!!'.t:NERDTreeBufName
+    "reset rtl_tree_is_open when :q
+    autocmd QuitPre *._RtlTree_ let s:rtl_tree_is_open = 0
+    autocmd QuitPre *._RtlTree_ call delete('tags')
+        
     setlocal winfixwidth
 
     "throwaway buffer options
@@ -626,70 +937,56 @@ function s:CloseRtlTreeLog() "{{{2
     let t:RtlBufName = s:GetInstFileName(s:current_node.instname)
     execute bufwinnr(t:RtlBufName) . " wincmd w"
 endfunction "}}}2
-"s:WriteRtlTags 写Rtl标签{{{2
+"s:GenRtlTags 写Rtl标签{{{2
 "--------------------------------------------------
-" Function: WriteRtlTags
+" Function: GenRtlTags
 " Input: 
 "   .v file
 "
 " Description:
-"   input .v file and output tag file for linked jump
+"   input .v file and generate tag file for linked jump
 "
 " Output:
-"   tags file for tag jump
+"   generate tags for tag jump
 "---------------------------------------------------
-function s:WriteRtlTags()
-
-    try
-        "Get directory list by scaning line
-        let [dirlist,rec] = s:GetDirList()
-    endtry
-
-    try
-        "Get file-dir dictionary & module-file dictionary ahead of all process
-        let files = s:GetFileDirDicFromList(dirlist,rec)
-        let modules = s:GetModuleFileDict(files)
-    endtry
-
-    try
-        "Write tags by module line
-        let tags = []
-        call add(tags,'!_TAG_PROGRAM_AUTHOR	HonkW	/contact@honk.wang/')
-        for file in sort(keys(files))
-            let dir = files[file]
-            let file = dir.'/'.file
-            if filereadable(file) == 1
-                let lines = readfile(file)
-                let module_line = ''
-                for line in lines
-                    if line =~ '^\s*module\s*\w\+.*$'
-                        let module_line = line
-                        let module = matchstr(line,'^\s*module\s*\zs\w\+\ze.*$')
-                        break
-                    endif
-                endfor
-                if module_line == ''
-                    echohl WarningMsg | echo "Error finding module for ".file | echohl None
-                else
-                    "write tag
-                    let tag = module . "\t" . file . "\t" . '/^' . module_line . '$'
-                    "reaplace // with \/\/
-                    let tag = substitute(tag,'\/\/','\\\/\\\/','g')                   
-                    call add(tags,tag)
+function s:WriteRtlTags(files,modules)
+    let files = a:files
+    let modules = a:modules
+    "Write tags by module line
+    let tags = []
+    call add(tags,'!_TAG_PROGRAM_AUTHOR	HonkW	/contact@honk.wang/')
+    for file in sort(keys(files))
+        let dir = files[file]
+        let file = dir.'/'.file
+        if filereadable(file) == 1
+            let lines = readfile(file)
+            let module_line = ''
+            for line in lines
+                if line =~ '^\s*module\s*\w\+.*$'
+                    let module_line = line
+                    let module = matchstr(line,'^\s*module\s*\zs\w\+\ze.*$')
+                    break
                 endif
+            endfor
+            if module_line == ''
+                echohl WarningMsg | echo "Error finding module for ".file | echohl None
+            else
+                "write tag
+                let tag = module . "\t" . file . "\t" . '/^' . module_line . '$'
+                "reaplace // with \/\/
+                let tag = substitute(tag,'\/\/','\\\/\\\/','g')                   
+                call add(tags,tag)
             endif
-        endfor
-        call writefile(tags,'tags')
-        echo 'Tags Write Finish!'
-    endtry
-
+        endif
+    endfor
+    return tags
 endfunction
 "}}}2
 function RtlTree() "{{{2
+
     if s:rtl_tree_is_open == 0
         let s:rtl_tree_is_open = 1
-
-        call s:WriteRtlTags()
+        "Get tags from top module and search down
         try
             "Get directory list by scaning line
             let [dirlist,rec] = s:GetDirList()
@@ -700,15 +997,24 @@ function RtlTree() "{{{2
             let s:top_modules = s:GetModuleFileDict(s:top_files)
         endtry
 
-        call s:OpenRtlTreeLog()
+        let tags = s:WriteRtlTags(s:top_files,s:top_modules)
+        call writefile(tags,'tags')
+        "echo 'Tags Write Finish!'
+
+        "call s:OpenRtlTreeLog()
         call s:OpenRtlTree()
         let s:rtl_tree_first_open = 0
     else
         let s:rtl_tree_is_open = 0
         call s:CloseRtlTree()
-        call s:CloseRtlTreeLog()
+        call delete('tags')
+        "call s:CloseRtlTreeLog()
         let s:rtl_tree_first_open = 1
     endif
+
+
 endfunction "}}}2
+
 "}}}1
+
 

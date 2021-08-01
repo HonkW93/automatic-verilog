@@ -14,7 +14,6 @@ behave mswin                        "mouse behavior
 source $VIMRUNTIME/mswin.vim        "remap a few keys for Windows
 source $VIMRUNTIME/vimrc_example.vim    "enhacement for Gvim use only
 inoremap <special> jk <Esc>
-set autochdir                       "automatic change directory based on the opened file
 let mapleader = ";"
 " restore cursor position in a file over several editing sessions
 au BufReadPost * if line("'\"") > 0|if line("'\"") <= line("$")|exe("norm '\"")|else|exe "norm $"|endif|endif
@@ -22,7 +21,11 @@ au BufReadPost * if line("'\"") > 0|if line("'\"") <= line("$")|exe("norm '\"")|
 " -------------------------------------------------------------
 "                            GUI
 " -------------------------------------------------------------
-set guifont=consolas:b:h16          "character size & font
+if has('win32') || has('win64')
+    set guifont=consolas:b:h16          "character size & font
+elseif has('unix')
+    set guifont=Monospace\ 24           "character size & font
+endif
 set number                          "show line number
 set background=light                "light/dark
 colorscheme desert                  "colorscheme
@@ -63,7 +66,11 @@ set undodir=$VIMRUNTIME\swap
 "set undoreload=10000
 
 " formats
-set fileformats=dos                             
+if has('win32') || has('win64')
+    set fileformats=dos
+elseif has('unix')
+    set fileformats=unix
+endif
 set termencoding=utf-8 
 set fileencodings=utf-8,chinese,latin-1 
 
@@ -72,7 +79,12 @@ set fileencodings=utf-8,chinese,latin-1
 " -------------------------------------------------------------
 " set runtime-path for plugin
 set rtp+=$VIMRUNTIME/autoload/plug.vim
-let path = '$VIMRUNTIME/../plugged'
+
+if has('win32') || has('win64')
+    let path = '$VIMRUNTIME/../plugged'
+elseif has('unix')
+    let path = '~/.vim/plugged'
+endif
 
 " call vim-plug
 call plug#begin(path)
@@ -213,7 +225,10 @@ let b:match_words=
 "                       miscellaneous 
 " -------------------------------------------------------------
 " tags
+" already included in automatic.vim, abadon here
 "set tags=tags;
+"set autochdir                       "automatic change directory based on the opened file
+
 "let Tlist_Show_One_File=1
 "let Tlist_Exit_OnlyWindow=1
 
@@ -223,4 +238,5 @@ let b:match_words=
 "nmap vp :WMToggle<cr>
 
 " Rtl Tree
-" let t:RtlTreeVlogDefine = 1
+let t:RtlTreeVlogDefine = 0
+
