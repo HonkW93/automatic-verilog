@@ -29,7 +29,7 @@
 
 一款基于Vimscript的自动化verilog脚本。由[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)修改而来，原作者zhangguo。
 
-[![Release-Version](https://img.shields.io/badge/Release-1.1.5-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
+[![Release-Version](https://img.shields.io/badge/Release-1.1.6-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
 
 ## 1. 安装
 
@@ -53,6 +53,8 @@ Plugin 'HonkW93/automatic-verilog'
 
  ## 2. 特性
 
+### 2.1 自动化
+
 - 自动例化（`AutoInst`）
   - [x] 支持跨文件夹搜索.v文件进行例化，支持文件夹递归（参考`emacs verilog-mode`）
   - [x] 支持端口重刷（参考`emacs verilog-mode`）
@@ -62,7 +64,6 @@ Plugin 'HonkW93/automatic-verilog'
   - [x] 支持例化文件名与模块名不同的模块
   - [x] 支持配置为修改端口自动不重刷
   - [x] 支持`` `ifdef``及`` `endif``
-  
 - 自动参数（`AutoPara`）
   - [x] 支持跨文件夹搜索.v文件进行例化，支持文件夹递归（参考`emacs verilog-mode`）
   - [x] 支持参数重刷（参考`emacs verilog-mode`）
@@ -72,7 +73,6 @@ Plugin 'HonkW93/automatic-verilog'
   - [x] 支持配置为.A(A)或者.A(5)的写法
   - [x] 支持配置为修改过的参数自动不重刷
   - [x] 支持`` `ifdef``及`` `endif``
-  
 - 自动reg（`AutoReg`）
   - [x] 支持端口`output reg`覆盖定义（参考`emacs verilog-mode`）
   - [ ] 支持`always`语句阻塞/非阻塞赋值`reg`获取（参考`vim automatic-verilog`）
@@ -85,24 +85,25 @@ Plugin 'HonkW93/automatic-verilog'
     - [ ] 支持右端`en ? signal_b : signal_c[2:0]`写法
     - [ ] 支持右端`{}`写法
     - [ ] 进行中...
-  
 - 自动wire（`AutoWire`）
   - [ ] 支持例化`inst_wire`自动获取
   - [ ] 支持`assign`语句`wire`自动获取
   - [ ] 进行中...
-
 - 自动定义（`AutoDef`） 
   - [ ] 支持`AutoWire`
   - [ ] 支持`AutoReg`
   - [ ] 进行中...
-
 - 自动接口（`AutoInterface`）
   - [ ] 梳理`sv`中`interface`的自动例化
   - [ ] 梳理中...
-
 - 其他（`Other`）
  - [ ] 梳理`emacs verilog-mode`中其他`auto`函数...
  - [ ] 梳理中...
+
+### 2.2 Rtl 树
+
+- 通过`RtlTree`浏览`Rtl`结构
+  - [x] 支持跨文件夹
 
 ## 3. 文档
 
