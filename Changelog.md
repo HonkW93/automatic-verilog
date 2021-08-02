@@ -1,6 +1,35 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.6] - 2021-08-02
+
+### Added
+
+- Add `RtlTree`
+
+  新增`RtlTree()`，在原脚本（zhangguo）基础上进行如下改动
+  
+  1. 新增`tags`内部集成，不再需要外部`ctag_gen`脚本即自动生成
+  2. 修复原脚本`:q`退出时无法再次进入的异常`Bug`
+  3. 实现跨文件夹`RtlTree`功能
+
+## [1.1.5] - 2021-08-01
+
+### Changed
+
+- Change configuration method for `AutoInst`, `AutoPara`, `AutoReg` & `AddHeader`
+
+  更改现有函数的配置方式，可通过`.vimrc`外部配置
+
+## [1.1.4] - 2021-07-21
+
+### Added
+
+- Add comment for `AutoInst`
+
+  `AutoInst()`可配置添加注释例化模块所在位置`//Instance...<DIR>...`
+
+
 ## [1.1.3] - 2021-06-21
 
 ### Fixed
@@ -36,7 +65,7 @@ All notable changes to this project will be documented in this file. The format 
 
 - Optimize `GetIO`, `GetPara`, `DrawIO`, `DrawPara`, `DrawVaraValue`
 
-  优化写法，`GetIO()`, `GetPara()`, `DrawIO()`, `DrawPara()`, `DrawVaraValue()`等函数添加注释及折叠，方便后续定位故障
+  优化写法，`GetIO()`, `GetPara()`, `DrawIO()`, `DrawPara()`, `DrawParaValue()`等函数添加注释及折叠，方便后续定位故障
   
   
 
@@ -90,9 +119,9 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [1.0.7] - 2021-05-18
 ### Added
-- Add keep changed inst io name 
+- Add keep changed inst io name for  `AutoInst`
 
-  新增修改后的端口不重刷功能
+   `AutoInst()`新增修改后的端口不重刷功能
 
 
 
