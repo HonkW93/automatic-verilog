@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.7] - 2021-08-13
+
+### Added
+
+- Add `GetaWire`，`GetiWire`
+
+  新增`GetaWire()`以及`GetiWire()`函数，为`autowire`以及`autodef`做准备
+
+### Fixed
+
+- Bug fixed for `GetRightWidth`
+
+  修复`GetRightWidth()`函数的部分遗留`bug`，完善其正则匹配机制
+
 ## [1.1.6] - 2021-08-02
 
 ### Added
