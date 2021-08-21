@@ -1,6 +1,49 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.8] - 2021-08-21
+
+### Fixed
+
+- Bug fixed for `GetiWire`,`GetaWire`&`GetReg`
+
+  修复完善部分`Get()`函数的正则匹配机制，避免错误匹配（例如`for(i=0;i<10;i=1+1)`,`wire a=1`等异常匹配）
+
+- Bug fixed for `GetiWire`
+
+  修复`GetiWire()`异常匹配`.a()`的问题
+
+- Bug fixed for `GetiWire`
+
+  修复`GetiWire()`在无法获取例化文件的情况下无法正常完成的问题
+
+- Bug fixed for `GetaWire`
+
+  修复`GetaWire()`多行无法获取的问题，例子如下
+
+  ```verilog
+  assign a = b | c | d |
+      	   e | f | g;
+  ```
+
+- Bug fixed for `GetiSig`
+
+  注释未完成的`GetSig()`，避免其异常问题
+
+- Bug fixed for `GetIO`
+
+  修复`GetIO()`在模块名或例化名后带注释(`//`)导致的获取模块名或例化名异常的问题
+
+- Bug fixed for `GetReg`
+
+  修复获取连续`reg`的异常问题（例如`reg a=1,b=3'd7;`）
+
+### Changed
+
+- Change keyboard click method for `RtlTree`
+
+  更改`RtlTree`的键盘操作方式，点击`+`,`-`,`~`为展开至例化模块，普通点击为跳转至例化位置。
+
 ## [1.1.7] - 2021-08-13
 
 ### Added
