@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/08/16 23:42
+" Last Modified:  2021/08/21 16:14
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description
@@ -1235,6 +1235,125 @@ endfunction
 "---------------------------------------------------
 function AutoReg()
 
+"    "test only {{{4
+"    "gather all signals together
+"    let lines = getline(1,line('$'))
+"    let io_names = s:GetIO(lines,'name')
+"    
+"    let reg_names = s:GetReg(lines)
+"    let [decl_reg,auto_reg] = s:GetDeclReg(lines)
+"
+"    "test reg {{{5
+"    let cnt0 = 0
+"    for name in keys(reg_names)
+"        let cnt0 += 1
+"    endfor
+"    "echo cnt0
+"
+"    let cnt1 = 0
+"    for line in lines
+"        if line =~ '^\s*reg.*;\s*.*$'
+"            let name = matchstr(line,'^\s*reg\s*\(\[.*\]\)\?\s*\zs\w\+\ze;\s*.*$')
+"            let cnt1 += 1
+"            "echo name
+"            if has_key(reg_names,name)
+"                call remove(reg_names,name)
+"            else
+"                "call append(line('$'),wire)
+"            endif
+"        endif
+"    endfor
+"    "echo cnt1
+"
+"    let err_flag = 0
+"    let err_regs = []
+"    if cnt0 != cnt1
+"        for reg in keys (reg_names)
+"            let err_flag = 1
+"            call add(err_regs,reg)
+"        endfor
+"        if err_flag == 1
+"            echo 'err!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"            echo cnt0
+"            echo cnt1
+"            call append(line('$'),'remain-----')
+"            call append(line('$'),err_regs)
+"        else
+"            echo 'right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"            echo cnt0
+"        endif
+"    else
+"        echo 'right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"        echo cnt0
+"    endif
+"    "}}}5
+"    
+"    "test iwire {{{5
+"    "io wire names
+"    let awire_width_names = s:GetaWire(lines)
+"    let iwire_width_names = s:GetiWire(lines)
+"    for name in keys(io_names)
+"        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+"        let value = io_names[name]
+"        let type = value[0]
+"        "remove wire exists in io
+"        if type == 'wire' || type == 'none'
+"            if has_key(iwire_width_names,name)
+"                call remove(iwire_width_names,name)
+"                continue
+"            endif
+"        endif
+"    endfor
+"
+"    let cnt0 = 0
+"    for wire in keys(iwire_width_names)
+"        let cnt0 += 1
+"    endfor
+"    "echo cnt0
+"
+"    let cnt1 = 0
+"    for line in lines
+"        if line =~ '^\s*wire.*;\s*.*$'
+"            let name = matchstr(line,'^\s*wire\s*\(\[.*\]\)\?\s*\zs\w\+\ze;\s*.*$')
+"            let cnt1 += 1
+"            "echo name
+"            if has_key(iwire_width_names,name)
+"                call remove(iwire_width_names,name)
+"            else
+"                "call append(line('$'),wire)
+"            endif
+"        endif
+"    endfor
+"    "echo cnt1
+"
+"    let err_flag = 0
+"    let err_wires = []
+"    if cnt0 != cnt1
+"        for wire in keys (iwire_width_names)
+"            if has_key(awire_width_names,wire)
+"                continue
+"            endif
+"            let err_flag = 1
+"            call add(err_wires,wire)
+"        endfor
+"        if err_flag == 1
+"            echo 'err!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"            echo cnt0
+"            echo cnt1
+"            call append(line('$'),'inst wire remain-----')
+"            call append(line('$'),err_wires)
+"        else
+"            echo 'right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"            echo cnt0
+"        endif
+"    else
+"        echo 'right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"        echo cnt0
+"    endif
+"    "}}}5
+"
+    "}}}4
+    
     "record current position
     let orig_idx = line('.')
     let orig_col = col('.')
@@ -1403,6 +1522,8 @@ function s:GetIO(lines,mode)
                 "delete abnormal
                 if line =~ '\<signed\>\|\<unsigned\>'
                     let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
+                elseif line =~ '\/\/.*$'
+                    let line = substitute(line,'\/\/.*$','','')
                 endif
 
                 "type reg/wire
@@ -1715,6 +1836,8 @@ function s:GetInstModuleName()
                 let index = line('.')
                 let col = col('.')
             else
+                let index = line('.')
+                let col = col('.')
                 echohl ErrorMsg | echo "() pair not-match in autoinst, line: ".index." colunm: ".col | echohl None
             endif
             "search for next none-blank character
@@ -1728,8 +1851,8 @@ function s:GetInstModuleName()
                 let idx2 = line('.')
 
                 call searchpair('(','',')','bW')
-                "find position of inst_name
-                call search('\w\+','b')
+                "find position of inst_name,skip comment
+                call search('\(\/\/.*\)\@<!\w\+','b')
                 "get inst_name
                 let inst_name = expand('<cword>')
 
@@ -1750,11 +1873,14 @@ function s:GetInstModuleName()
                     let index = line('.')
                     let col = col('.')
                 else
+                    let index = line('.')
+                    let col = col('.')
                     echohl ErrorMsg | echo "() pair not-match in parameter, line: ".index." colunm: ".col | echohl None
                 endif
-                call search('\w\+','bW')
+                call search('\(\/\/.*\)\@<!\w\+','bW')
+            "find position of module_name,skip comment
             else
-                call search('\w\+','bW')
+                call search('\(\/\/.*\)\@<!\w\+','bW')
             endif
             let module_name = expand('<cword>')
 
@@ -3149,50 +3275,8 @@ function s:GetReg(lines)
     let lines = copy(a:lines)
     let reg_names = {}
 
-    "gather all signals together
+    "io reg{{{4
     let io_names = s:GetIO(lines,'name')
-    let freg_width_names = s:GetfReg(lines)
-    let creg_width_names = s:GetcReg(lines)
-    let [decl_reg,auto_reg] = s:GetDeclReg(lines)
-    let awire_width_names = s:GetaWire(lines)
-    let iwire_width_names = s:GetiWire(lines)
-
-    "io wire names{{{4
-    let iowire_names = {}
-    for name in keys(io_names)
-        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-        let value = io_names[name]
-        let type = value[0]
-        "remove wire exists in io
-        if type == 'wire' || 'none'
-            if has_key(iwire_width_names,name)
-                call remove(iwire_width_names,name)
-                continue
-            endif
-        endif
-    endfor
-    "}}}4
-    
-    
-    "let cnt = 0
-    "for wire in keys(iwire_width_names)
-    "    echo wire
-    "    let cnt += 1
-    "endfor
-    "echo cnt
-    "for line in lines
-    "    if line =~ '^\s*wire.*;\s*$'
-    "        let name = matchstr(line,'^\s*wire\s*\(\[.*\]\)\?\s*\zs\w\+\ze;\s*$')
-    "        if has_key(iwire_width_names,name)
-    "        else
-    "            echo name
-    "        endif
-    "    endif
-    "endfor
-
-    let io_names = s:GetIO(lines,'name')
-
-    "io reg names{{{4
     let ioreg_names = {}
     for name in keys(io_names)
         "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
@@ -3204,28 +3288,22 @@ function s:GetReg(lines)
     endfor
     "}}}4
 
-    "flip-flop reg names{{{4
+    "normal reg{{{4
+    
+    "flip-flop reg{{{5
     "   width_names    
     "    0     1            2      3               4            5                6             7
     "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
     let freg_width_names = s:GetfReg(lines)
+
     "    0       1         2       3       4            5 
     "   ['freg', sequence, width1, width2, signal_name, lines]
     "GetSig
     let freg_names = s:GetSig('freg',freg_width_names,'name')
+    let reg_names = freg_names
+    "}}}5
 
-    "remove reg exists in ioreg_names
-    for name in keys(freg_names)
-        if has_key(ioreg_names,name)
-            call remove(freg_names,name)
-            continue
-        else
-            call extend(reg_names,{name : freg_names[name]})
-        endif
-    endfor
-    "}}}4
-
-    "combination logic reg names{{{4
+    "combination reg{{{5
     "   width_names    
     "    0     1            2      3               4            5                6             7
     "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
@@ -3234,19 +3312,22 @@ function s:GetReg(lines)
     "   ['creg', sequence, width1, width2, signal_name, lines]
     "GetSig
     let creg_names = s:GetSig('creg',creg_width_names,'name')
-
-    "remove reg exists in ioreg_names
     for name in keys(creg_names)
-        if has_key(ioreg_names,name)
-            call remove(creg_names,name)
-            continue
+        if has_key(reg_names,name)
+            "duplicate reg in freg_names and creg_names,error
+            echohl ErrorMsg | echo "Exist Same Name of Flip-Flop Register and Combination Register. Error when GetReg! reg = ".name| echohl None
         else
-            if has_key(reg_names,name)
-                "duplicate reg in freg_names and creg_names,error
-                echohl ErrorMsg | echo "Exist Same Name of Flip-Flop Register and Combination Register. Error when GetReg!"| echohl None
-            else
-                call extend(reg_names,{name : creg_names[name]})
-            endif
+            call extend(reg_names,{name : creg_names[name]})
+        endif
+    endfor
+    "}}}5
+
+    "}}}4
+
+    "remove reg exists in io{{{4
+    for name in keys(reg_names)
+        if has_key(ioreg_names,name)
+            call remove(reg_names,name)
         endif
     endfor
     "}}}4
@@ -3291,17 +3372,23 @@ function s:GetfReg(lines)
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
                 endif
                 let line = a:lines[idx_inblock-1]
-                "meet another always block, assign statement or instance, break
-                if line =~ '^\s*\<always\>' || line =~ '^\s*\<assign\>' || line =~ '^\s*\<endmodule\>' || line =~ '/\*\<autoinst\>\*/' || line =~ '\s*\.\w\+(.*)' || idx_inblock == len(a:lines)
+                "meet another always block, assign statement, wire/reg or instance, break
+                if line =~ '^\s*'.s:VlogTypeCalcs || line =~ '^\s*'.s:VlogTypeDatas
+\               || line =~ '/\*\<autoinst\>\*/' || line =~ '\s*\.\w\+(.*)' 
+\               || idx_inblock == len(a:lines) || line =~ '^\s*\<endmodule\>' 
                     break
                 else
-                    if line =~ '.*<=.*'
-                        let left = matchstr(line,'\s*\zs.*\ze\s*<=')
+                    "match a <= ...; or {a,b[1:0],c} <= ...;
+                    "exception:
+                    "1. case block 1 : a <= 1'b1;
+                    "2. for (i=0;i<30;i=i+1)
+                    if line =~ '\w\+\s*\(\[.*\]\)\?\s*<=.*' || line =~ '{.*}\s*<=.*'
+                        let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*<=')
                         let right = matchstr(line,'<=\s*\zs.*\ze\s*')
                         let match_flag = 1
-                    elseif line =~ '.*[^=]=[^=].*'
-                        let left = matchstr(line,'\s*\zs.*\ze\s*=')
-                        let right = matchstr(line,'=\s*\zs.*\ze\s*')
+                    elseif (line =~ '\w\+\s*\(\[.*\]\)\?[^=]=[^=].*' || line =~ '\s*{.*}[^=]=[^=].*') && line !~ 'for'
+                        let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*[^=]=')
+                        let right = matchstr(line,'[^=]=\s*\zs.*\ze\s*')
                         let match_flag = 1
                     else
                         let match_flag = 0
@@ -3376,17 +3463,19 @@ function s:GetcReg(lines)
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
                 endif
                 let line = a:lines[idx_inblock-1]
-                "meet another always block, assign statement or instance, break
-                if line =~ '^\s*\<always\>' || line =~ '^\s*\<assign\>' || line =~ '^\s*\<endmodule\>' || line =~ '/\*\<autoinst\>\*/' || line =~ '\s*\.\w\+(.*)' || idx_inblock == len(a:lines)
+                "meet another always block, assign statement, wire/reg or instance, break
+                if line =~ '^\s*'.s:VlogTypeCalcs || line =~ '^\s*'.s:VlogTypeDatas
+\               || line =~ '/\*\<autoinst\>\*/' || line =~ '\s*\.\w\+(.*)' 
+\               || idx_inblock == len(a:lines) || line =~ '^\s*\<endmodule\>' 
                     break
                 else
-                    if line =~ '.*<=.*'
-                        let left = matchstr(line,'\s*\zs.*\ze\s*<=')
+                    if line =~ '\w\+\s*\(\[.*\]\)\?\s*<=.*' || line =~ '{.*}\s*<=.*'
+                        let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*<=')
                         let right = matchstr(line,'<=\s*\zs.*\ze\s*')
                         let match_flag = 1
-                    elseif line =~ '.*[^=]=[^=].*'
-                        let left = matchstr(line,'\s*\zs.*\ze\s*=')
-                        let right = matchstr(line,'=\s*\zs.*\ze\s*')
+                    elseif (line =~ '\w\+\s*\(\[.*\]\)\?[^=]=[^=].*' || line =~ '\s*{.*}[^=]=[^=].*') && line !~ 'for'
+                        let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*=')
+                        let right = matchstr(line,'[^=]=\s*\zs.*\ze\s*')
                         let match_flag = 1
                     else
                         let match_flag = 0
@@ -3494,12 +3583,9 @@ function s:GetDeclReg(lines)
                             call add(auto_reg,name)
                         endif 
                     endif
+                "never start, break
                 else
-                    let idx = idx + 1
-                    "never start, normal end 
-                    if line =~ 'endmodule' || idx == line('$')
-                        break
-                    endif
+                    break
                 endif 
             endwhile
         endif
@@ -3509,9 +3595,9 @@ function s:GetDeclReg(lines)
             "in case style of reg [1:0] a,b,c;
             for name in split(names,',')
                 let name = matchstr(name,'\w\+')
+                call add(decl_reg,name)
             endfor
             let line = substitute(line,'^\s*reg\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*','','')
-            call add(decl_reg,name)
         endwhile
 
         let idx = idx + 1
@@ -3993,9 +4079,9 @@ function s:GetaWire(lines)
 
         let assign_flag = 0
         "find assign wire
-        if line =~ '^\s*\<assign\>\s*\w\+[^=]=[^=].*;$'
+        if line =~ '^\s*\<assign\>\s*.*[^=]=[^=].*;$'
             let assign_flag = 1
-        elseif line =~ '^\s*\<assign\>\s*\w\+[^=]=[^=][^;]*$'
+        elseif line =~ '^\s*\<assign\>\s*.*[^=]=[^=][^;]*$'
             let assign_flag = 1
             let idx_inblock = idx + 1
             let multi_line = line
@@ -4008,15 +4094,18 @@ function s:GetaWire(lines)
                 endif
                 let line = a:lines[idx_inblock-1]
                 "meet end break
-                if line =~ ';$'
+                if line =~ ';\s*$'
                     let multi_line = multi_line.line
                     break
-                "meet another always block, assign statement or instance, break
-                elseif line =~ '^\s*\<always\>' || line =~ '^\s*\<assign\>' || line =~ '^\s*\<endmodule\>' || line =~ '/\*\<autoinst\>\*/' || line =~ '\s*\.\w\+(.*)' || idx_inblock == len(a:lines)
+                "meet another always block, assign statement, wire/reg or instance, break
+                elseif line =~ '^\s*'.s:VlogTypeCalcs || line =~ '^\s*'.s:VlogTypeDatas
+\               || line =~ '/\*\<autoinst\>\*/' || line =~ '\s*\.\w\+(.*)' 
+\               || idx_inblock == len(a:lines) || line =~ '^\s*\<endmodule\>' 
                     break
                 else
                     let multi_line = multi_line.line
                 endif
+                let idx_inblock = idx_inblock + 1
             endwhile
             let line = multi_line
         else
@@ -4024,8 +4113,11 @@ function s:GetaWire(lines)
         endif
 
         if assign_flag == 1
-            if line =~ '^\s*\<assign\>\s*\w\+[^=]=[^=]'
-                let left = matchstr(line,'\<assign\>\s*\zs.*\ze\s*[^=]=[^=]')
+            "match assign a[2:0] = ...; or assign {a,b[1:0],c} = ...;
+            "exception:
+            "1. for (i=0;i<30;i=i+1)
+            if line =~ '^\s*\<assign\>\s*\w\+\s*\(\[.*\]\)\?\s*[^=]=[^=]' || line =~ '^\s*\<assign\>\s*{.*}'
+                let left = matchstr(line,'\<assign\>\s*\zs.*\ze\s*=')
                 let right = matchstr(line,'\<assign\>\s*.*\s*[^=]=[^=]\s*\zs.*\ze\s*')
 
                 "get name first
@@ -4191,16 +4283,16 @@ function s:GetiWire(lines)
                     let add_dir = dir.'/'.file
                     "io names
                     let io_names = s:GetIO(lines,'name')
+                    let module_flag = 1
                 else
                     echohl ErrorMsg | echo "file: ".module_name.".v does not exist in cur dir ".getcwd() | echohl None
                     let io_names = {}
+                    let module_flag = 0
                 endif
             endtry
 
             "cursor back
             call cursor(orig_idx,orig_col)
-
-            let module_flag = 1
 
         endif
         "}}}5
@@ -4222,8 +4314,8 @@ function s:GetiWire(lines)
                     let line = substitute(line,'\.\s*\w\+\s*(.\{-\})','','')
 
                     "only find wire,omit useless pattern 
-                    "e.g.   .wire_a(1'b1)
-                    if substitute(conn,'\w\+\s*\(\[.*\]\)\?\s*','','') != ''
+                    "e.g.   .wire_a(1'b1) .wire_b()
+                    if substitute(conn,'\w\+\s*\(\[.*\]\)\?\s*','','') != '' || conn == ''
                         continue
                     endif
 
@@ -4232,6 +4324,7 @@ function s:GetiWire(lines)
 
                     let wire_flag = 0
                     let input_flag = 0
+                    let inst_flag = 1
 
                     "if it's not input, it must be wire
                     if has_key(io_names,inst_name)
@@ -4246,6 +4339,9 @@ function s:GetiWire(lines)
                             let input_flag = 0
                         endif
                     else
+                        let wire_flag = 0
+                        let input_flag = 1
+                        let inst_flag = 0
                         echohl ErrorMsg | echo "Error when get ".inst_name." from ".module_name| echohl None
                     endif
 
@@ -4274,17 +4370,22 @@ function s:GetiWire(lines)
 
                     "if it's inst wire
                     if wire_flag == 1
-                        "if connection width not exist, use inst_width
-                        if conn_width == ''
-                            if value[3] == 'c0' || value[4] == 'c0'
-                                let inst_width = ''
-                            else
-                                let inst_width = '['.value[3].':'.value[4].']'
-                            endif
-                            let conn_width = inst_width
-                        "if exist, use connection width
-                        else
+                        "if error get inst wire from inst file, unresolved
+                        if inst_flag == 0
                             let conn_width = conn_width
+                        else
+                            "if connection width not exist, use inst_width
+                            if conn_width == '' 
+                                if value[3] == 'c0' || value[4] == 'c0'
+                                    let inst_width = ''
+                                else
+                                    let inst_width = '['.value[3].':'.value[4].']'
+                                endif
+                                let conn_width = inst_width
+                            "if conneciton width exist, use connection width
+                            else
+                                let conn_width = conn_width
+                            endif
                         endif
 
                         "inst wire
@@ -4306,9 +4407,15 @@ function s:GetiWire(lines)
                                 "    0     1            2      3             4          
                                 "   [seqs, signal_name, lines, module_names, conn_widths]
                         let value = [seqs, conn_name,   lines, module_names, conn_widths]
+                        
                         call extend(width_names,{conn_name : value})
                         "echo 'name = '.conn_name.join(conn_widths)
-                        "echo 'inst = '.inst_name.inst_width
+                        "if inst_flag == 1
+                        "    echo 'inst = '.inst_name.inst_width
+                        "else
+                        "    echo 'inst = '.inst_name.''
+                        "endif
+
                     endif
                 endwhile
             endfor
@@ -4757,24 +4864,23 @@ function s:GetSig(type,width_names,mode)
         elseif right_signal_link != {}
             "--------------------------------signal link------------------------------
             "--------------------------------to be modified------------------------------
+            "let left_name = name
 
-            let left_name = name
+            "let lines = getline(1,line('$'))
 
-            let lines = getline(1,line('$'))
+            ""Get IO first
+            ""   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+            "let io_names = s:GetIO(lines,'name')
 
-            "Get IO first
-            "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-            let io_names = s:GetIO(lines,'name')
+            ""io names appear
+            "for name in keys(io_names)
+            "    if has_key(right_signal_link,name)
+            "        "echo 'exist!!!!!!!!!!!!!'.name
+            "    endif
+            "endfor
 
-            "io names appear
-            for name in keys(io_names)
-                if has_key(right_signal_link,name)
-                    "echo 'exist!!!!!!!!!!!!!'.name
-                endif
-            endfor
-
-            let width1 = 'c0'
-            let width2 = 'c0'
+            "let width1 = 'c0'
+            "let width2 = 'c0'
         else
             "no width
             let width1 = 'c0'
@@ -5528,7 +5634,12 @@ function s:setupTreeSyntaxHighlighting() "{{{2
     hi def link vlogMacro Macro 
 endfunction "}}}2
 function s:bindMappings() "{{{2
-    nnoremap <buffer> <cr> :call <SID>active(1)<cr>
+    nnoremap <buffer><expr> <cr>    matchstr(getline('.'), '\%' . col('.') . 'c.') == '~'
+                                    \ ? ":call <SID>active(1)<cr>" :
+                                    \ matchstr(getline('.'), '\%' . col('.') . 'c.') == '-'
+                                    \ ? ":call <SID>active(1)<cr>" :
+                                    \ matchstr(getline('.'), '\%' . col('.') . 'c.') == '+'
+                                    \ ? ":call <SID>active(1)<cr>" : ":call <SID>active(0)<cr>"
     nnoremap <buffer> <leftrelease> :call <SID>active(0)<cr>
     nnoremap <buffer> <2-leftmouse> :call <SID>active(1)<cr>
 endfunction "}}}2
