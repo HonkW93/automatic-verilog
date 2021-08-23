@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/08/21 16:14
+" Last Modified:  2021/08/24 00:21
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description
@@ -1250,16 +1250,17 @@ function AutoReg()
 "    endfor
 "    "echo cnt0
 "
+"
 "    let cnt1 = 0
 "    for line in lines
-"        if line =~ '^\s*reg.*;\s*.*$'
+"        if line =~ '^\s*reg\s.*;\s*.*$'
 "            let name = matchstr(line,'^\s*reg\s*\(\[.*\]\)\?\s*\zs\w\+\ze;\s*.*$')
 "            let cnt1 += 1
 "            "echo name
 "            if has_key(reg_names,name)
 "                call remove(reg_names,name)
 "            else
-"                "call append(line('$'),wire)
+"                "call append(line('$'),name)
 "            endif
 "        endif
 "    endfor
@@ -1279,81 +1280,123 @@ function AutoReg()
 "            call append(line('$'),'remain-----')
 "            call append(line('$'),err_regs)
 "        else
-"            echo 'right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-"            echo cnt0
+"            echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
 "        endif
 "    else
-"        echo 'right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-"        echo cnt0
+"        echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
 "    endif
 "    "}}}5
 "    
 "    "test iwire {{{5
-"    "io wire names
+"    
+"    "io wire
+"    let iowire_names = {}
+"    for name in keys(io_names)
+"        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+"        let value = io_names[name]
+"        let type = value[0]
+"        if type == 'wire' || type == 'none'
+"            call extend(iowire_names, {name : value})
+"        endif
+"    endfor
+"
+"    "iwire and awire
 "    let awire_width_names = s:GetaWire(lines)
 "    let iwire_width_names = s:GetiWire(lines)
+"
+"    "iwire{{{6
+"    let cnt_iwire = 0
+"    for wire in keys(iwire_width_names)
+"        let cnt_iwire += 1
+"    endfor
+"    
+"    "io_wire in iwire
+"    let cnt_io_iwire = 0
+"    let cnt_io_wire = 0
 "    for name in keys(io_names)
 "        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
 "        let value = io_names[name]
 "        let type = value[0]
 "        "remove wire exists in io
 "        if type == 'wire' || type == 'none'
+"            let cnt_io_wire += 1
 "            if has_key(iwire_width_names,name)
+"                let cnt_io_iwire += 1
 "                call remove(iwire_width_names,name)
 "                continue
 "            endif
 "        endif
 "    endfor
 "
-"    let cnt0 = 0
-"    for wire in keys(iwire_width_names)
-"        let cnt0 += 1
+"    let cnt_assign_iwire = 0
+"    let cnt_assign_wire = 0
+"    for wire in keys (awire_width_names)
+"        let cnt_assign_wire += 1
+"        if has_key(iwire_width_names,wire)
+"            let cnt_assign_iwire += 1
+"            call remove(iwire_width_names,wire)
+"            continue
+"        endif
 "    endfor
-"    "echo cnt0
 "
-"    let cnt1 = 0
+"    "declared wire in iwire
+"    let cnt_decl_iwire = 0
+"    let decl_wire = {}
 "    for line in lines
 "        if line =~ '^\s*wire.*;\s*.*$'
-"            let name = matchstr(line,'^\s*wire\s*\(\[.*\]\)\?\s*\zs\w\+\ze;\s*.*$')
-"            let cnt1 += 1
-"            "echo name
+"            let name = matchstr(line,'^\s*wire\s*\(\[.*\]\)\?\s*\zs\w\+\ze.*;\s*\(\/\/.*\)\?\s*$')
+"            call extend(decl_wire,{name : ""})
 "            if has_key(iwire_width_names,name)
+"                let cnt_decl_iwire += 1
 "                call remove(iwire_width_names,name)
-"            else
-"                "call append(line('$'),wire)
 "            endif
 "        endif
 "    endfor
-"    "echo cnt1
 "
-"    let err_flag = 0
-"    let err_wires = []
-"    if cnt0 != cnt1
-"        for wire in keys (iwire_width_names)
-"            if has_key(awire_width_names,wire)
-"                continue
-"            endif
-"            let err_flag = 1
-"            call add(err_wires,wire)
-"        endfor
-"        if err_flag == 1
-"            echo 'err!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-"            echo cnt0
-"            echo cnt1
-"            call append(line('$'),'inst wire remain-----')
-"            call append(line('$'),err_wires)
-"        else
-"            echo 'right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-"            echo cnt0
-"        endif
+"    if len(iwire_width_names) == 0
+"        echo 'iwire match right!!!!!!!!!!!!!!!!!!!!!'
 "    else
-"        echo 'right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-"        echo cnt0
+"        echo 'iwire not all match'
+"        for name in keys ( iwire_width_names )
+"            call append(line('$'),name)
+"        endfor
+"    endif
+"    "}}}6
+"    
+"    let all_wire_names = {}
+"    let iwire_width_names = s:GetiWire(lines)
+"    let awire_width_names = s:GetaWire(lines)
+"
+"    for wire in keys(iwire_width_names)
+"        call extend(all_wire_names,{wire : ""})
+"    endfor
+"
+"    for wire in keys(awire_width_names)
+"        call extend(all_wire_names,{wire : ""})
+"    endfor
+"
+"    for wire in keys(iowire_names)
+"        call extend(all_wire_names,{wire : ""})
+"    endfor
+"
+"    for name in keys(decl_wire)
+"        if has_key(all_wire_names,name)
+"            call remove(decl_wire,name)
+"        endif
+"    endfor
+"
+"    if len(decl_wire) == 0
+"        echo 'decl wire match right!!!!!!!!!!!!!!!!!!!!!'
+"    else
+"        echo 'decl wire not all match'
+"        for name in keys ( decl_wire)
+"            call append(line('$'),name)
+"        endfor
 "    endif
 "    "}}}5
 "
-    "}}}4
-    
+"   "}}}4
+   
     "record current position
     let orig_idx = line('.')
     let orig_col = col('.')
@@ -3381,12 +3424,13 @@ function s:GetfReg(lines)
                     "match a <= ...; or {a,b[1:0],c} <= ...;
                     "exception:
                     "1. case block 1 : a <= 1'b1;
-                    "2. for (i=0;i<30;i=i+1)
-                    if line =~ '\w\+\s*\(\[.*\]\)\?\s*<=.*' || line =~ '{.*}\s*<=.*'
+                    "2. for (i=0;i<=30;i=i+1)
+                    "3. if(a<=30)begin
+                    if(line =~ '\w\+\s*\(\[.*\]\)\?\s*<=.*' || line =~ '{.*}\s*<=.*') && (line !~ 'for\s*(.*)' && line !~ '^\s*if\s*(.*<=.*)')
                         let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*<=')
                         let right = matchstr(line,'<=\s*\zs.*\ze\s*')
                         let match_flag = 1
-                    elseif (line =~ '\w\+\s*\(\[.*\]\)\?[^=]=[^=].*' || line =~ '\s*{.*}[^=]=[^=].*') && line !~ 'for'
+                    elseif (line =~ '\w\+\s*\(\[.*\]\)\?[^=]=[^=].*' || line =~ '\s*{.*}[^=]=[^=].*') && (line !~ 'for\s*(.*)' && line !~ '^\s*if\s*(.*=.*)')
                         let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*[^=]=')
                         let right = matchstr(line,'[^=]=\s*\zs.*\ze\s*')
                         let match_flag = 1
@@ -3469,11 +3513,16 @@ function s:GetcReg(lines)
 \               || idx_inblock == len(a:lines) || line =~ '^\s*\<endmodule\>' 
                     break
                 else
-                    if line =~ '\w\+\s*\(\[.*\]\)\?\s*<=.*' || line =~ '{.*}\s*<=.*'
+                    "match a <= ...; or {a,b[1:0],c} <= ...;
+                    "exception:
+                    "1. case block 1 : a <= 1'b1;
+                    "2. for (i=0;i<=30;i=i+1)
+                    "3. if(a<=30)begin
+                    if(line =~ '\w\+\s*\(\[.*\]\)\?\s*<=.*' || line =~ '{.*}\s*<=.*') && (line !~ 'for\s*(.*)' && line !~ '^\s*if\s*(.*<=.*)')
                         let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*<=')
                         let right = matchstr(line,'<=\s*\zs.*\ze\s*')
                         let match_flag = 1
-                    elseif (line =~ '\w\+\s*\(\[.*\]\)\?[^=]=[^=].*' || line =~ '\s*{.*}[^=]=[^=].*') && line !~ 'for'
+                    elseif (line =~ '\w\+\s*\(\[.*\]\)\?[^=]=[^=].*' || line =~ '\s*{.*}[^=]=[^=].*') && (line !~ 'for\s*(.*)' && line !~ '^\s*if\s*(.*=.*)')
                         let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*=')
                         let right = matchstr(line,'[^=]=\s*\zs.*\ze\s*')
                         let match_flag = 1
@@ -4076,10 +4125,12 @@ function s:GetaWire(lines)
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
         let line = a:lines[idx-1]
+        "delete // comment
+        let line = substitute(line,'\/\/.*$','','')
 
         let assign_flag = 0
         "find assign wire
-        if line =~ '^\s*\<assign\>\s*.*[^=]=[^=].*;$'
+        if line =~ '^\s*\<assign\>\s*.*[^=]=[^=].*;\s*$'
             let assign_flag = 1
         elseif line =~ '^\s*\<assign\>\s*.*[^=]=[^=][^;]*$'
             let assign_flag = 1
@@ -4093,6 +4144,7 @@ function s:GetaWire(lines)
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
                 endif
                 let line = a:lines[idx_inblock-1]
+                let line = substitute(line,'\/\/.*$','','')
                 "meet end break
                 if line =~ ';\s*$'
                     let multi_line = multi_line.line
@@ -4117,8 +4169,8 @@ function s:GetaWire(lines)
             "exception:
             "1. for (i=0;i<30;i=i+1)
             if line =~ '^\s*\<assign\>\s*\w\+\s*\(\[.*\]\)\?\s*[^=]=[^=]' || line =~ '^\s*\<assign\>\s*{.*}'
-                let left = matchstr(line,'\<assign\>\s*\zs.*\ze\s*=')
-                let right = matchstr(line,'\<assign\>\s*.*\s*[^=]=[^=]\s*\zs.*\ze\s*')
+                let left = matchstr(line,'\<assign\>\s*\zs.\{-\}\ze\s*[^=]=[^=]')
+                let right = matchstr(line,'\<assign\>\s*.\{-\}\s*[^=]=[^=]\s*\zs.*\ze\s*')
 
                 "get name first
                 let reg_name_list = s:GetSigName(left)
@@ -4209,31 +4261,46 @@ function s:GetiWire(lines)
     let flag_lbracket = 0
     let flag_rbracket = 0
     let pdel_lines = []
+    let multi_line = ''
     while idx < len(a:lines)
         let idx = idx + 1
-        let idx = s:SkipCommentLine(2,idx,a:lines)  "skip pair comment line
-        if idx == -1
-            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-        endif
         let line = a:lines[idx-1]
         "delete // comment
         let line = substitute(line,'\/\/.*$','','')
 
+        "delete #(.PARA_A(PARA_A))
+        "generate parameter delete lines
+        
+        "record #
         if line =~ '#'
+            let multi_line = ''
             let flag_num = 1
             let flag_rbracket = 0
             let flag_lbracket = 0
         endif
-        if line =~ '(' && flag_num == 1 
-            let flag_lbracket = 1
+
+        "find #(
+        if flag_num == 1 
+            let multi_line = multi_line.line
+            "still find
+            if multi_line =~ '#\s*$' 
+            "find line
+            elseif multi_line =~ '#\s*(' 
+                let flag_lbracket = 1
+            "abonormal end
+            else
+                let flag_num = 0
+            endif
         endif
-        if flag_lbracket == 1 && flag_rbracket == 0
+
+        if flag_num == 1 && flag_lbracket == 1 && flag_rbracket == 0 
             while line =~ '\.\s*\w\+\s*(.\{-\})'
                 let line = substitute(line,'\.\s*\w\+\s*(.\{-\})','','')
             endwhile
         endif
-        if line =~ ')' && flag_lbracket == 1 
+        if flag_num == 1 && flag_lbracket == 1 && line =~ ')' 
             let flag_rbracket = 1
+            let flag_lbracket = 0
             let flag_num = 0
         endif
         call add(pdel_lines,line)
@@ -4300,7 +4367,6 @@ function s:GetiWire(lines)
         "get inst wire{{{5
         if module_flag == 1
             "echo 'module_name = '.module_name
-            
             for idx in range(idx1,idx2)
                 let line = pdel_lines[idx-1]
                 "delete // comment
@@ -4310,7 +4376,10 @@ function s:GetiWire(lines)
                     let inst_name = matchstr(line,'\.\s*\zs\w\+\ze\s*(.\{-\})')
                     let conn = matchstr(line,'\.\s*\w\+\s*(\s*\zs.\{-\}\ze\s*)')    "connection
 
-                    "delete match pattern
+                    "delete match pattern for next loop
+                    "used for multi inst in the same line
+                    "e.g. .wire_a(wire_a), .wire_b(wire_b)
+                    let inst_line = line
                     let line = substitute(line,'\.\s*\w\+\s*(.\{-\})','','')
 
                     "only find wire,omit useless pattern 
@@ -4393,12 +4462,12 @@ function s:GetiWire(lines)
                         if has_key(width_names,conn_name)
                             let old_value = width_names[conn_name]
                             let seqs = add(old_value[0],seq)
-                            let lines = add(old_value[2],line)
+                            let lines = add(old_value[2],inst_line)
                             let module_names = add(old_value[3],module_name)
                             let conn_widths = add(old_value[4],conn_width)
                         else
                             let seqs = [seq]
-                            let lines = [line]
+                            let lines = [inst_line]
                             let module_names = [module_name]
                             let conn_widths = [conn_width]
                         endif
