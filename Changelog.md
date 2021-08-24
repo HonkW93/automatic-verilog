@@ -1,6 +1,28 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.9] - 2021-08-24
+
+### Fixed
+
+- Bug fixed for `GetiWire`
+
+  修复完善部分`GetiWire()`函数的正则匹配机制，避免错误匹配多重括号，同时保证单行多例化的情况，例子如下：
+
+  ```verilog
+  module test u_test ( .a(wire_a) .b(wire_b[(3+2*4):0]))
+  ```
+
+- Bug fixed for `GetIO`
+
+  修复`GetIO()`无法获取`IO`带`none`字眼的`bug`
+
+### Changed
+
+- Force jump for `RtlTree`
+
+  原`buffer`修改后未保存时允许`RtlTree`进行强制跳转，避免窗口异常`bug`。
+
 ## [1.1.8] - 2021-08-21
 
 ### Fixed
