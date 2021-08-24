@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/08/24 00:21
+" Last Modified:  2021/08/24 23:06
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description
@@ -1277,7 +1277,7 @@ function AutoReg()
 "            echo 'err!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
 "            echo cnt0
 "            echo cnt1
-"            call append(line('$'),'remain-----')
+"            call append(line('$'),'reg remain-----')
 "            call append(line('$'),err_regs)
 "        else
 "            echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
@@ -1357,6 +1357,7 @@ function AutoReg()
 "        echo 'iwire match right!!!!!!!!!!!!!!!!!!!!!'
 "    else
 "        echo 'iwire not all match'
+"        call append(line('$'),'iwire remain-----')
 "        for name in keys ( iwire_width_names )
 "            call append(line('$'),name)
 "        endfor
@@ -1389,6 +1390,7 @@ function AutoReg()
 "        echo 'decl wire match right!!!!!!!!!!!!!!!!!!!!!'
 "    else
 "        echo 'decl wire not all match'
+"        call append(line('$'),'decl wire remain-----')
 "        for name in keys ( decl_wire)
 "            call append(line('$'),name)
 "        endfor
@@ -1396,7 +1398,7 @@ function AutoReg()
 "    "}}}5
 "
 "   "}}}4
-   
+  
     "record current position
     let orig_idx = line('.')
     let orig_col = col('.')
@@ -1595,7 +1597,7 @@ function s:GetIO(lines,mode)
 
                 "name
                 let line = substitute(line,io_dir,'','')
-                let line = substitute(line,type,'','')
+                let line = substitute(line,'\<reg\>\|\<wire\>','','')
                 let line = substitute(line,'\[.*:.*\]','','')
                 let name = matchstr(line,'\w\+')
                 if name == ''
@@ -4371,16 +4373,25 @@ function s:GetiWire(lines)
                 let line = pdel_lines[idx-1]
                 "delete // comment
                 let line = substitute(line,'\/\/.*$','','')
-                while line =~ '\.\s*\w\+\s*(.\{-\})'
+                " [^.] is used to find only one inst
+                "used for multi inst in the same line
+                "e.g. .wire_a(wire_a), .wire_b(wire_b)
+                " * is used to avoid bracket inside braket
+                "e.g. .do(r_tx_data_12[(2+3-1:0)]));
+                while line =~ '\.\s*\w\+\s*([^.]*)'
                     let seq = seq + 1
-                    let inst_name = matchstr(line,'\.\s*\zs\w\+\ze\s*(.\{-\})')
-                    let conn = matchstr(line,'\.\s*\w\+\s*(\s*\zs.\{-\}\ze\s*)')    "connection
+                    let inst_name = matchstr(line,'\.\s*\zs\w\+\ze\s*([^.]*)')
+                    "match connection
+                    let conn = matchstr(line,'\.\s*\w\+\s*(\s*\zs[^.]*\ze\s*)')    "connection
+                    "there might exist double bracket for this kind of match,delete them
+                    "e.g. .do(r_tx_data_12)); match conn will be r_tx_data_12)
+                    while conn =~ ')\s*$'
+                        let conn = substitute(conn,')\s*$','','')
+                    endwhile
 
                     "delete match pattern for next loop
-                    "used for multi inst in the same line
-                    "e.g. .wire_a(wire_a), .wire_b(wire_b)
                     let inst_line = line
-                    let line = substitute(line,'\.\s*\w\+\s*(.\{-\})','','')
+                    let line = substitute(line,'\.\s*\w\+\s*([^.]*)','','')
 
                     "only find wire,omit useless pattern 
                     "e.g.   .wire_a(1'b1) .wire_b()
@@ -4948,8 +4959,8 @@ function s:GetSig(type,width_names,mode)
             "    endif
             "endfor
 
-            "let width1 = 'c0'
-            "let width2 = 'c0'
+            let width1 = 'c0'
+            let width2 = 'c0'
         else
             "no width
             let width1 = 'c0'
@@ -5736,7 +5747,7 @@ function s:active(mode) "{{{2
         if a:mode == 0 || s:current_node.unresolved == 1 || s:current_node.macro_type == 1
             "call s:oTreeNode.TreeLog("tag - 0 : -- " . s:current_node.parent.instname)
             "echo "tag s:current_node.parent.instname " . s:current_node.parent.instname
-            execute "tag " . s:current_node.parent.instname
+            execute "tag! " . s:current_node.parent.instname
             call cursor(s:current_node.parent_inst_lnum,1)
             execute "normal zt"
 
@@ -5746,7 +5757,7 @@ function s:active(mode) "{{{2
             let inst = s:current_node.instname
             "call s:oTreeNode.TreeLog("tag - 1 : -- " . inst)
             "echo "tag inst " . inst
-            execute "tag " . inst
+            execute "tag! " . inst
             execute "normal zt"
         endif
 
@@ -5759,7 +5770,7 @@ function s:active(mode) "{{{2
         if s:current_node.childrensolved == 0 && a:mode == 1
             call s:oTreeNode.CreateRtlTree(s:current_node)
             "echo "tag s:current_node.instname " . s:current_node.instname
-            execute "tag " . s:current_node.instname
+            execute "tag! " . s:current_node.instname
             execute "normal zt"
         endif
         execute bufwinnr(t:NERDTreeBufName) . " wincmd w"
