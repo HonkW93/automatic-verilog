@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/08/24 23:06
+" Last Modified:  2021/08/27 00:48
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description
@@ -1254,7 +1254,7 @@ function AutoReg()
 "    let cnt1 = 0
 "    for line in lines
 "        if line =~ '^\s*reg\s.*;\s*.*$'
-"            let name = matchstr(line,'^\s*reg\s*\(\[.*\]\)\?\s*\zs\w\+\ze;\s*.*$')
+"            let name = matchstr(line,'^\s*reg\s*\(\[.*\]\)\?\s*\zs\w\+\ze\s*;\s*.*$')
 "            let cnt1 += 1
 "            "echo name
 "            if has_key(reg_names,name)
@@ -1398,7 +1398,7 @@ function AutoReg()
 "    "}}}5
 "
 "   "}}}4
-  
+ 
     "record current position
     let orig_idx = line('.')
     let orig_col = col('.')
@@ -1885,8 +1885,8 @@ function s:GetInstModuleName()
                 let col = col('.')
                 echohl ErrorMsg | echo "() pair not-match in autoinst, line: ".index." colunm: ".col | echohl None
             endif
-            "search for next none-blank character
-            call search('\S')
+            "search for none-blank character,skip comment
+            call search('\(\/\/.*\)\@<![^ \/]')
             "if it is ';' then pair
             if getline('.')[col('.')-1] == ';'
                 "place cursor back to where ')' pair
@@ -1910,8 +1910,8 @@ function s:GetInstModuleName()
 
         "get module_name
         if wait_module_name == 1
-            "search for last none-blank character
-            call search('\S','bW')
+            "search for last none-blank character,skip comment
+            call search('\(\/\/.*\)\@<![^ \/]','bW')
             "parameter exists
             if getline('.')[col('.')-1] == ')'
                 if searchpair('(','',')','bW') > 0
@@ -3417,6 +3417,8 @@ function s:GetfReg(lines)
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
                 endif
                 let line = a:lines[idx_inblock-1]
+                "delete comment in line
+                let line = substitute(line,'\/\/.*$','','')
                 "meet another always block, assign statement, wire/reg or instance, break
                 if line =~ '^\s*'.s:VlogTypeCalcs || line =~ '^\s*'.s:VlogTypeDatas
 \               || line =~ '/\*\<autoinst\>\*/' || line =~ '\s*\.\w\+(.*)' 
@@ -3425,15 +3427,16 @@ function s:GetfReg(lines)
                 else
                     "match a <= ...; or {a,b[1:0],c} <= ...;
                     "exception:
-                    "1. case block 1 : a <= 1'b1;
-                    "2. for (i=0;i<=30;i=i+1)
-                    "3. if(a<=30)begin
-                    if(line =~ '\w\+\s*\(\[.*\]\)\?\s*<=.*' || line =~ '{.*}\s*<=.*') && (line !~ 'for\s*(.*)' && line !~ '^\s*if\s*(.*<=.*)')
-                        let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*<=')
+                    "1. for (i=0;i<=30;i=i+1)
+                    "2. if(a<=30)begin
+                    if (line =~ '\v((for\s*\(.*)|((else\s*)?if\s*\(.*))@<!\w+\s*(\[.*\])?\s*\<\=' ||
+                      \ line =~ '{.*}\s*<=')
+                        let left = matchstr(line,'\v\s*\zs((\w+\s*(\[.*\])?)|(\{.*\}))\ze\s*\<\=')
                         let right = matchstr(line,'<=\s*\zs.*\ze\s*')
                         let match_flag = 1
-                    elseif (line =~ '\w\+\s*\(\[.*\]\)\?[^=]=[^=].*' || line =~ '\s*{.*}[^=]=[^=].*') && (line !~ 'for\s*(.*)' && line !~ '^\s*if\s*(.*=.*)')
-                        let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*[^=]=')
+                    elseif (line =~ '\v((for\s*\(.*))@<!\w+\s*(\[.*\])?\s*\=[^=]' ||
+                          \ line =~ '{.*}\s*=[^=]')
+                        let left = matchstr(line,'\v\s*\zs((\w+\s*(\[.*\])?)|(\{.*\}))\ze\s*\=[^=]')
                         let right = matchstr(line,'[^=]=\s*\zs.*\ze\s*')
                         let match_flag = 1
                     else
@@ -3509,6 +3512,8 @@ function s:GetcReg(lines)
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
                 endif
                 let line = a:lines[idx_inblock-1]
+                "delete comment in line
+                let line = substitute(line,'\/\/.*$','','')
                 "meet another always block, assign statement, wire/reg or instance, break
                 if line =~ '^\s*'.s:VlogTypeCalcs || line =~ '^\s*'.s:VlogTypeDatas
 \               || line =~ '/\*\<autoinst\>\*/' || line =~ '\s*\.\w\+(.*)' 
@@ -3517,15 +3522,16 @@ function s:GetcReg(lines)
                 else
                     "match a <= ...; or {a,b[1:0],c} <= ...;
                     "exception:
-                    "1. case block 1 : a <= 1'b1;
-                    "2. for (i=0;i<=30;i=i+1)
-                    "3. if(a<=30)begin
-                    if(line =~ '\w\+\s*\(\[.*\]\)\?\s*<=.*' || line =~ '{.*}\s*<=.*') && (line !~ 'for\s*(.*)' && line !~ '^\s*if\s*(.*<=.*)')
-                        let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*<=')
+                    "1. for (i=0;i<=30;i=i+1)
+                    "2. if(a<=30)begin
+                    if (line =~ '\v((for\s*\(.*)|((else\s*)?if\s*\(.*))@<!\w+\s*(\[.*\])?\s*\<\=' ||
+                      \ line =~ '{.*}\s*<=')
+                        let left = matchstr(line,'\v\s*\zs((\w+\s*(\[.*\])?)|(\{.*\}))\ze\s*\<\=')
                         let right = matchstr(line,'<=\s*\zs.*\ze\s*')
                         let match_flag = 1
-                    elseif (line =~ '\w\+\s*\(\[.*\]\)\?[^=]=[^=].*' || line =~ '\s*{.*}[^=]=[^=].*') && (line !~ 'for\s*(.*)' && line !~ '^\s*if\s*(.*=.*)')
-                        let left = matchstr(line,'\s*\zs\(\w\+\s*\(\[.*\]\)\?\|{.*}\)\ze\s*=')
+                    elseif (line =~ '\v((for\s*\(.*))@<!\w+\s*(\[.*\])?\s*\=[^=]' ||
+                          \ line =~ '{.*}\s*=[^=]')
+                        let left = matchstr(line,'\v\s*\zs((\w+\s*(\[.*\])?)|(\{.*\}))\ze\s*\=[^=]')
                         let right = matchstr(line,'[^=]=\s*\zs.*\ze\s*')
                         let match_flag = 1
                     else
@@ -4171,8 +4177,8 @@ function s:GetaWire(lines)
             "exception:
             "1. for (i=0;i<30;i=i+1)
             if line =~ '^\s*\<assign\>\s*\w\+\s*\(\[.*\]\)\?\s*[^=]=[^=]' || line =~ '^\s*\<assign\>\s*{.*}'
-                let left = matchstr(line,'\<assign\>\s*\zs.\{-\}\ze\s*[^=]=[^=]')
-                let right = matchstr(line,'\<assign\>\s*.\{-\}\s*[^=]=[^=]\s*\zs.*\ze\s*')
+                let left = matchstr(line,'\<assign\>\s*\zs.\{-\}\ze\s*=[^=]')
+                let right = matchstr(line,'\<assign\>\s*.\{-\}\s*=\zs[^=].*\ze\s*')
 
                 "get name first
                 let reg_name_list = s:GetSigName(left)
@@ -4374,28 +4380,27 @@ function s:GetiWire(lines)
                 "delete // comment
                 let line = substitute(line,'\/\/.*$','','')
                 " [^.] is used to find only one inst
-                "used for multi inst in the same line
-                "e.g. .wire_a(wire_a), .wire_b(wire_b)
                 " * is used to avoid bracket inside braket
                 "e.g. .do(r_tx_data_12[(2+3-1:0)]));
                 while line =~ '\.\s*\w\+\s*([^.]*)'
                     let seq = seq + 1
                     let inst_name = matchstr(line,'\.\s*\zs\w\+\ze\s*([^.]*)')
-                    "match connection
                     let conn = matchstr(line,'\.\s*\w\+\s*(\s*\zs[^.]*\ze\s*)')    "connection
+                    "delete match pattern for next loop
+                    "used for multi inst in the same line
+                    "e.g. .wire_a(wire_a), .wire_b(wire_b)
+                    let inst_line = line
+                    let line = substitute(line,'\.\s*\w\+\s*([^.]*)','','')
+
                     "there might exist double bracket for this kind of match,delete them
                     "e.g. .do(r_tx_data_12)); match conn will be r_tx_data_12)
                     while conn =~ ')\s*$'
                         let conn = substitute(conn,')\s*$','','')
                     endwhile
 
-                    "delete match pattern for next loop
-                    let inst_line = line
-                    let line = substitute(line,'\.\s*\w\+\s*([^.]*)','','')
-
                     "only find wire,omit useless pattern 
-                    "e.g.   .wire_a(1'b1) .wire_b()
-                    if substitute(conn,'\w\+\s*\(\[.*\]\)\?\s*','','') != '' || conn == ''
+                    "e.g.   .wire_a(1'b1) .wire_b() .wire_c(0)
+                    if (substitute(conn,'\w\+\s*\(\[.*\]\)\?\s*','','') != '') || (substitute(conn,'\s*','','') == '') || (substitute(conn,'\s*\d\+\s*','','') == '')
                         continue
                     endif
 
@@ -5739,6 +5744,10 @@ function s:active(mode) "{{{2
     "call s:oTreeNode.TreeLog("------------active--------------" . s:current_node.instname)
 
     "wincmd p
+    if bufwinnr(t:RtlBufName) == -1
+        silent! execute 'belowright ' . 'vertical '. ' new'
+        silent! execute "edit " . t:RtlBufName
+    endif
     execute bufwinnr(t:RtlBufName) . " wincmd w"
 
     "let s:GotoInstFile_use = 1
