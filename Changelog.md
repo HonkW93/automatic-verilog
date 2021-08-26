@@ -1,6 +1,29 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.0] - 2021-08-27
+
+### Fixed
+
+- Bug fixed for `GetaWire`
+
+  修复完善部分`GetaWire()`函数的正则匹配机制
+
+- Bug fixed for`GetReg`
+
+  1. 修复完善部分`GetReg()`部分子函数的正则匹配机制，避免错误匹配
+  2. 子函数在匹配前自动跳过注释`//`，避免错误匹配
+
+- Bug fixed for `GetIO`
+
+  修复`GetIO()`在部分括号`(`匹配时因带注释(`//`)导致的获取模块名或例化名异常的问题
+
+### Changed
+
+- Force new buffer for `RtlTree`
+
+  意外关闭原`buffer`后允许`RtlTree`强制重新打开，避免窗口异常`bug`。
+
 ## [1.1.9] - 2021-08-24
 
 ### Fixed
