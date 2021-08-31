@@ -27,7 +27,7 @@
                                                                                                              
 ```
 
-一款基于Vimscript的自动化verilog脚本。由[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)修改而来，原作者zhangguo。
+一款基于vimscript的自动化verilog脚本。由[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)修改而来，原作者zhangguo。
 
 [![Release-Version](https://img.shields.io/badge/Release-1.2.0-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
 
@@ -70,7 +70,7 @@ Plugin 'HonkW93/automatic-verilog'
   - [x] 支持新增端口自动添加`//PARA_NEW`（参考`vim automatic-verilog`）
   - [x] 支持删除端口自动添加`//PARA_DEL`（参考`vim automatic-verilog`）
   - [x] 支持`parameter`连续多个的写法，例如`parameter A = 1, B = 5, C = 6`
-  - [x] 支持配置为.A(A)或者.A(5)的写法
+  - [x] 支持配置为`.A(A)`或者`.A(5)`的写法
   - [x] 支持配置为修改过的参数自动不重刷
   - [x] 支持`` `ifdef``及`` `endif``
 - 自动reg（`AutoReg`）

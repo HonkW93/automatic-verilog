@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/08/27 00:48
+" Last Modified:  2021/08/31 23:44
 "------------------------------------------------------------------------------
 " Modification History:
 " Date          By              Version                 Change Description
@@ -83,6 +83,7 @@ let s:VlogTypeData =                  '\<wire\>\|'
 let s:VlogTypeData = s:VlogTypeData . '\<reg\>\|'
 let s:VlogTypeData = s:VlogTypeData . '\<parameter\>\|'
 let s:VlogTypeData = s:VlogTypeData . '\<localparam\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<defparam\>\|'
 let s:VlogTypeData = s:VlogTypeData . '\<genvar\>\|'
 let s:VlogTypeData = s:VlogTypeData . '\<integer\>'
 
@@ -849,53 +850,48 @@ function AutoInst(mode)
     try
         "Get directory list by scaning line
         let [dirlist,rec] = s:GetDirList()
-    endtry
 
-    try
-        "Get file-dir dictionary & module-file dictionary ahead of all process
+        "Get file-dir dictionary 
         let files = s:GetFileDirDicFromList(dirlist,rec)
+
+        "Get module-file dictionary
         let modules = s:GetModuleFileDict(files)
-    endtry
 
-    "record current position
-    let orig_idx = line('.')
-    let orig_col = col('.')
+        "Record current position
+        let orig_idx = line('.')
+        let orig_col = col('.')
 
-    "AutoInst all start from top line, AutoInst once start from first /*autoinst*/ line
-    if a:mode == 1
-        call cursor(1,1)
-    elseif a:mode == 0
-        call cursor(line('.'),1)
-    else
-        echohl ErrorMsg | echo "Error input for AutoInst(),input mode = ".a:mode| echohl None
-        return
-    endif
-
-    while 1
-        "put cursor to /*autoinst*/ line
-        if search('\/\*autoinst\*\/','W') == 0
-            break
+        "AutoInst all start from top line, AutoInst once start from first /*autoinst*/ line
+        if a:mode == 1
+            call cursor(1,1)
+        elseif a:mode == 0
+            call cursor(line('.'),1)
+        else
+            echohl ErrorMsg | echo "Error input for AutoInst(),input mode = ".a:mode| echohl None
+            return
         endif
 
-        try
-            "get module_name & inst_name
-            let [module_name,inst_name,idx1,idx2,idx3] = s:GetInstModuleName()
-            if module_name == '' || inst_name == ''
-                echohl ErrorMsg | echo "Cannot find module_name or inst_name from line ".line('.') | echohl None
-                return
+        while 1
+            "Put cursor to /*autoinst*/ line
+            if search('\/\*autoinst\*\/','W') == 0
+                break
             endif
-        endtry
 
-        try
-            "get inst io list
+            "Skip comment line //
+            if getline('.') =~ '^\s*\/\/'
+                continue
+            endif
+
+            "Get module_name & inst_name
+            let [module_name,inst_name,idx1,idx2,idx3] = s:GetInstModuleName()
+
+            "Get keep inst io & update inst io list 
             let keep_io_list = s:GetInstIO(getline(idx1,line('.')))
             let upd_io_list = s:GetInstIO(getline(line('.'),idx2))
-            "changed inst io names
+            "Get changed inst io names
             let chg_io_names = s:GetChangedInstIO(getline(line('.'),idx2))
-        endtry
 
-        try
-            "get io sequences {seq : value}
+            "Get io sequences {sequence : value}
             if has_key(modules,module_name)
                 let file = modules[module_name]
                 let dir = files[file]
@@ -909,56 +905,56 @@ function AutoInst(mode)
                 echohl ErrorMsg | echo "file: ".module_name.".v does not exist in cur dir ".getcwd() | echohl None
                 return
             endif
-        endtry
 
-        "remove io from io_seqs that want to be keep when autoinst
-        "   value = [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-        "   io_seqs = {seq : value }
-        "   io_names = {signal_name : value }
-        for name in keep_io_list
-            if has_key(io_names,name)
-                let value = io_names[name]
-                let seq = value[1]
-                call remove(io_seqs,seq)
-            endif
-        endfor
+            "Remove io from io_seqs that want to be keep when autoinst
+            "   value = [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+            "   io_seqs = {sequence : value }
+            "   io_names = {signal_name : value }
+            for name in keep_io_list
+                if has_key(io_names,name)
+                    let value = io_names[name]
+                    let seq = value[1]
+                    call remove(io_seqs,seq)
+                endif
+            endfor
 
-        "note: current position must be at /*autoinst*/ line
-        try
-            "kill all contents under /*autoinst*/
+            "Kill all contents under /*autoinst*/
+            "Current position must be at /*autoinst*/ line
             call s:KillAutoInst()
-        endtry
 
-        "draw io port, use io_seqs to cover update io list
-        "if io_seqs has new signal_name that's never in upd_io_list, add //INST_NEW
-        "if io_seqs has same signal_name that's in upd_io_list, cover
-        "if io_seqs doesn't have signal_name that's in upd_io_list, add //INST_DEL
-        "if io_seqs connection has been changed, keep it
-        let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names)
+            "Draw io port, use io_seqs to cover update io list
+            "if io_seqs has new signal_name that's never in upd_io_list, add //INST_NEW
+            "if io_seqs has same signal_name that's in upd_io_list, cover
+            "if io_seqs doesn't have signal_name that's in upd_io_list, add //INST_DEL
+            "if io_seqs connection has been changed, keep it
+            let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names)
 
-        "add instance directory before autoinst
-        if s:ati_add_dir == 1
-            if getline(idx3-1) !~ '^\s*/\/\Instance'
-                call append(idx3-1,s:start_prefix.'//Instance: '.add_dir)
+            "Add instance directory before autoinst
+            if s:ati_add_dir == 1
+                if getline(idx3-1) !~ '^\s*/\/\Instance'
+                    call append(idx3-1,s:start_prefix.'//Instance: '.add_dir)
+                endif
             endif
-        endif
-        "delete current line );
-        let line = substitute(getline(line('.')),')\s*;','','')
-        call setline(line('.'),line)
-        "append io port and );
-        call add(lines,s:start_prefix.');')
-        call append(line('.'),lines)
 
-        "mode = 0, only autoinst once
-        if a:mode == 0
-            break
-        endif
+            "Delete current line );
+            let line = substitute(getline(line('.')),')\s*;','','')
+            call setline(line('.'),line)
+            "Append io port and );
+            call add(lines,s:start_prefix.');')
+            call append(line('.'),lines)
 
-    endwhile
+            "mode = 0, only autoinst once
+            if a:mode == 0
+                break
+            "mode = 1, autoinst all
+            else
+            endif
 
-    "put cursor back to original position
-    call cursor(orig_idx,orig_col)
+        endwhile
 
+        "Put cursor back to original position
+        call cursor(orig_idx,orig_col)
+    endtry
 endfunction
 "}}}3
 
@@ -980,58 +976,51 @@ endfunction
 "   para_names = {parameter_name : value }
 "---------------------------------------------------
 function AutoPara(mode)
-
     try
         "Get directory list by scaning line
         let [dirlist,rec] = s:GetDirList()
-    endtry
 
-    try
-        "Get file-dir dictionary & module-file dictionary ahead of all process
+        "Get file-dir dictionary 
         let files = s:GetFileDirDicFromList(dirlist,rec)
+
+        "Get module-file dictionary
         let modules = s:GetModuleFileDict(files)
-    endtry
 
-    "record current position
-    let orig_idx = line('.')
-    let orig_col = col('.')
+        "Record current position
+        let orig_idx = line('.')
+        let orig_col = col('.')
 
-    "AutoPara all start from top line, AutoPara once start from first /*autoinstparam*/ line
-    if a:mode == 1
-        call cursor(1,1)
-    elseif a:mode == 0
-        call cursor(line('.'),1)
-    else
-        echohl ErrorMsg | echo "Error input for AutoPara(),input mode = ".a:mode| echohl None
-        return
-    endif
-
-    while 1
-        "put cursor to /*autoinstparam*/ line
-        if search('\/\*autoinstparam\*\/','W') == 0
-            break
+        "AutoPara all start from top line, AutoPara once start from first /*autoinstparam*/ line
+        if a:mode == 1
+            call cursor(1,1)
+        elseif a:mode == 0
+            call cursor(line('.'),1)
+        else
+            echohl ErrorMsg | echo "Error input for AutoPara(),input mode = ".a:mode| echohl None
+            return
         endif
 
-        try
-            "get module_name
+        while 1
+            "Put cursor to /*autoinstparam*/ line
+            if search('\/\*autoinstparam\*\/','W') == 0
+                break
+            endif
+
+            "Skip comment line //
+            if getline('.') =~ '^\s*\/\/'
+                continue
+            endif
+
+            "Get module_name & inst_name
             let [module_name,inst_name,idx1,idx2] = s:GetParaModuleName()
 
-            if module_name == '' || inst_name == ''
-                echohl ErrorMsg | echo "Cannot find module_name or inst_name from line ".line('.') | echohl None
-                return
-            endif
-        endtry
-
-        try
-            "get inst parameter list
+            "Get keep inst parameter & update inst parameter list
             let keep_para_list = s:GetInstPara(getline(idx1,line('.')))
             let upd_para_list = s:GetInstPara(getline(line('.'),idx2))
-            "changed parameter names
+            "Get changed parameter names
             let chg_para_names = s:GetChangedPara(getline(line('.'),idx2))
-        endtry
 
-        try
-            "get para sequences {seq : value}
+            "Get parameter sequences {sequence : value}
             if has_key(modules,module_name)
                 let file = modules[module_name]
                 let dir = files[file]
@@ -1044,50 +1033,49 @@ function AutoPara(mode)
                 echohl ErrorMsg | echo "file: ".module_name.".v does not exist in cur dir ".getcwd() | echohl None
                 return
             endif
-        endtry
 
-        "remove parameter from para_seqs that want to be keep when autoinstparam
-        "   value = [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
-        "   para_seqs = {seq : value }
-        "   para_names = {parameter_name : value }
-        for name in keep_para_list
-            if has_key(para_names,name)
-                let value = para_names[name]
-                let seq = value[1]
-                call remove(para_seqs,seq)
-            endif
-        endfor
+            "Remove parameter from para_seqs that want to be keep when autoinstparam
+            "   value = [type, sequence, parameter_name, parameter_value, last_port_parameter, line, last_decl_parameter] 
+            "   para_seqs = {sequence : value }
+            "   para_names = {parameter_name : value }
+            for name in keep_para_list
+                if has_key(para_names,name)
+                    let value = para_names[name]
+                    let seq = value[1]
+                    call remove(para_seqs,seq)
+                endif
+            endfor
 
-        "note: current position must be at /*autoinstparam*/ line
-        try
-            "kill all contents under /*autoinstparam*/
+            "Kill all contents under /*autoinstparam*/ untill inst_name
+            "Current position must be at /*autoinstparam*/ line
             call s:KillAutoPara(inst_name)
-        endtry
 
-        "draw parameter, use para_seqs to cover update parameter list
-        "if para_seqs has new parameter_name that's never in upd_para_list, add //PARA_NEW
-        "if para_seqs has same parameter_name that's in upd_para_list, cover
-        "if para_seqs doesn't have parameter_name that's in upd_para_list, add //PARA_DEL
-        "if para_seqs connection has been changed, keep it
-        let lines = s:DrawPara(para_seqs,upd_para_list,chg_para_names)
+            "Draw parameter, use para_seqs to cover update parameter list
+            "if para_seqs has new parameter_name that's never in upd_para_list, add //PARA_NEW
+            "if para_seqs has same parameter_name that's in upd_para_list, cover
+            "if para_seqs doesn't have parameter_name that's in upd_para_list, add //PARA_DEL
+            "if para_seqs connection has been changed, keep it
+            let lines = s:DrawPara(para_seqs,upd_para_list,chg_para_names)
 
-        "delete current line )
-        let line = substitute(getline(line('.')),')\s*','','')
-        call setline(line('.'),line)
-        "append parameter and )
-        call add(lines,s:start_prefix.')')
-        call append(line('.'),lines)
+            "Delete current line )
+            let line = substitute(getline(line('.')),')\s*','','')
+            call setline(line('.'),line)
+            "Append parameter and )
+            call add(lines,s:start_prefix.')')
+            call append(line('.'),lines)
 
-        "mode = 0, only autoinst once
-        if a:mode == 0
-            break
-        endif
+            "mode = 0, only autopara once
+            if a:mode == 0
+                break
+            "mode = 1, autopara all
+            else
+            endif
 
-    endwhile
+        endwhile
 
-    "put cursor back to original position
-    call cursor(orig_idx,orig_col)
-
+        "Put cursor back to original position
+        call cursor(orig_idx,orig_col)
+    endtry
 endfunction
 
 "}}}3
@@ -1110,56 +1098,44 @@ endfunction
 "   para_names = {parameter_name : value }
 "---------------------------------------------------
 function AutoParaValue(mode)
-
     try
         "Get directory list by scaning line
         let [dirlist,rec] = s:GetDirList()
-    endtry
 
-    try
-        "Get file-dir dictionary & module-file dictionary ahead of all process
+        "Get file-dir dictionary 
         let files = s:GetFileDirDicFromList(dirlist,rec)
+
+        "Get module-file dictionary
         let modules = s:GetModuleFileDict(files)
-    endtry
 
-    "record current position
-    let orig_idx = line('.')
-    let orig_col = col('.')
+        "Record current position
+        let orig_idx = line('.')
+        let orig_col = col('.')
 
-    "AutoPara all start from top line, AutoPara once start from first /*autoinstparam*/ line
-    if a:mode == 1
-        call cursor(1,1)
-    elseif a:mode == 0
-        call cursor(line('.'),1)
-    else
-        echohl ErrorMsg | echo "Error input for AutoPara(),input mode = ".a:mode| echohl None
-        return
-    endif
-
-    while 1
-        "put cursor to /*autoinstparam*/ line
-        if search('\/\*autoinstparam_value\*\/','W') == 0
-            break
+        "AutoPara all start from top line, AutoPara once start from first /*autoinstparam_value*/ line
+        if a:mode == 1
+            call cursor(1,1)
+        elseif a:mode == 0
+            call cursor(line('.'),1)
+        else
+            echohl ErrorMsg | echo "Error input for AutoParaValue(),input mode = ".a:mode| echohl None
+            return
         endif
 
-        try
-            "get module_name
+        while 1
+            "Put cursor to /*autoinstparam*/ line
+            if search('\/\*autoinstparam_value\*\/','W') == 0
+                break
+            endif
+
+            "Get module_name & inst_name
             let [module_name,inst_name,idx1,idx2] = s:GetParaModuleName()
 
-            if module_name == '' || inst_name == ''
-                echohl ErrorMsg | echo "Cannot find module_name or inst_name from line ".line('.') | echohl None
-                return
-            endif
-        endtry
-
-        try
-            "get inst parameter list
+            "Get keep inst parameter & update inst parameter list
             let keep_para_list = s:GetInstPara(getline(idx1,line('.')))
             let upd_para_list = s:GetInstPara(getline(line('.'),idx2))
-        endtry
 
-        try
-            "get para sequences {seq : value}
+            "Get parameter sequences {sequence : value}
             if has_key(modules,module_name)
                 let file = modules[module_name]
                 let dir = files[file]
@@ -1172,49 +1148,48 @@ function AutoParaValue(mode)
                 echohl ErrorMsg | echo "file: ".module_name.".v does not exist in cur dir ".getcwd() | echohl None
                 return
             endif
-        endtry
 
-        "remove parameter from para_seqs that want to be keep when autoinstparam
-        "   value = [type, sequence, parameter_name, parameter_value ,last_parameter]
-        "   para_seqs = {seq : value }
-        "   para_names = {parameter_name : value }
-        for name in keep_para_list
-            if has_key(para_names,name)
-                let value = para_names[name]
-                let seq = value[1]
-                call remove(para_seqs,seq)
-            endif
-        endfor
+            "Remove parameter from para_seqs that want to be keep when autoinstparam
+            "   value = [type, sequence, parameter_name, parameter_value ,last_parameter]
+            "   para_seqs = {seq : value }
+            "   para_names = {parameter_name : value }
+            for name in keep_para_list
+                if has_key(para_names,name)
+                    let value = para_names[name]
+                    let seq = value[1]
+                    call remove(para_seqs,seq)
+                endif
+            endfor
 
-        "note: current position must be at /*autoinstparam_value*/ line
-        try
-            "kill all contents under /*autoinstparam_value*/
+            "Kill all contents under /*autoinstparam_value*/ untill inst_name
+            "Current position must be at /*autoinstparam_value*/ line
             call s:KillAutoPara(inst_name)
-        endtry
 
-        "draw parameter, use para_seqs to cover update parameter list
-        "if para_seqs has new parameter_name that's never in upd_para_list, add //PARA_NEW
-        "if para_seqs has same parameter_name that's in upd_para_list, cover
-        "if para_seqs doesn't have parameter_name that's in upd_para_list, add //PARA_DEL
-        let lines = s:DrawParaValue(para_seqs,upd_para_list)
+            "Draw parameter value, use para_seqs to cover update parameter list
+            "if para_seqs has new parameter_name that's never in upd_para_list, add //PARA_NEW
+            "if para_seqs has same parameter_name that's in upd_para_list, cover
+            "if para_seqs doesn't have parameter_name that's in upd_para_list, add //PARA_DEL
+            let lines = s:DrawParaValue(para_seqs,upd_para_list)
 
-        "delete current line )
-        let line = substitute(getline(line('.')),')\s*','','')
-        call setline(line('.'),line)
-        "append parameter and )
-        call add(lines,s:start_prefix.')')
-        call append(line('.'),lines)
+            "Delete current line )
+            let line = substitute(getline(line('.')),')\s*','','')
+            call setline(line('.'),line)
+            "Append parameter and )
+            call add(lines,s:start_prefix.')')
+            call append(line('.'),lines)
 
-        "mode = 0, only autoinst once
-        if a:mode == 0
-            break
-        endif
+            "mode = 0, only autopara once
+            if a:mode == 0
+                break
+            "mode = 1, autopara all
+            else
+            endif
 
-    endwhile
+        endwhile
 
-    "put cursor back to original position
-    call cursor(orig_idx,orig_col)
-
+        "Put cursor back to original position
+        call cursor(orig_idx,orig_col)
+    endtry
 endfunction
 
 "}}}3
@@ -1235,9 +1210,14 @@ endfunction
 "---------------------------------------------------
 function AutoReg()
 
+
 "    "test only {{{4
-"    "gather all signals together
+"
 "    let lines = getline(1,line('$'))
+"    let sig_names = s:GetAllSig(lines)
+"
+"    "gather all signals together
+"
 "    let io_names = s:GetIO(lines,'name')
 "    
 "    let reg_names = s:GetReg(lines)
@@ -1398,7 +1378,8 @@ function AutoReg()
 "    "}}}5
 "
 "   "}}}4
- 
+
+
     "record current position
     let orig_idx = line('.')
     let orig_col = col('.')
@@ -1562,7 +1543,7 @@ function s:GetIO(lines,mode)
             "}}}5
             
             " input/output ports{{{5
-            elseif line =~ '^\s*'. s:VlogTypePorts
+            elseif line =~ '^\s*'. s:VlogTypePorts || line =~ '^(\s*'.s:VlogTypePorts
                 let wait_port = 0
                 "delete abnormal
                 if line =~ '\<signed\>\|\<unsigned\>'
@@ -1884,6 +1865,7 @@ function s:GetInstModuleName()
                 let index = line('.')
                 let col = col('.')
                 echohl ErrorMsg | echo "() pair not-match in autoinst, line: ".index." colunm: ".col | echohl None
+                return
             endif
             "search for none-blank character,skip comment
             call search('\(\/\/.*\)\@<![^ \/]')
@@ -1940,6 +1922,12 @@ function s:GetInstModuleName()
 
     "cursor back
     call cursor(orig_idx,orig_col)
+
+    "erorr process
+    if module_name == '' || inst_name == ''
+        echohl ErrorMsg | echo "Cannot find module_name or inst_name from ".orig_idx.','.orig_col | echohl None
+        return ['','',0,0,0]
+    endif
 
     return [module_name,inst_name,idx1,idx2,idx3]
 
@@ -2748,59 +2736,76 @@ function s:GetParaModuleName()
         "abnormal break
         if wait_simicolon_pair == 1
             if idx == 0 || getline(idx) =~ '^\s*module' || getline(idx) =~ ');' || getline(idx) =~ '(.*)\s*;'
-                echohl ErrorMsg | echo "Abnormal break when GetInstModuleName, idx = ".idx| echohl None
+                echohl ErrorMsg | echo "Abnormal break when GetParaModuleName, idx = ".idx| echohl None
                 let [module_name,inst_name,idx1,idx2,idx3] = ['','',0,0,0]
                 break
             endif
         endif
 
-        "get module_name
-        if line =~ '#\s*('
-            let wait_simicolon_pair = 1
-            "find position of '#('
-            let col = match(line,'#\s*\zs(')
+        "find position of '#('
+        if line =~ '#'
+            let col = match(line,'#')
             call cursor(idx,col+1)
-            "search for pair ()
-            if searchpair('(','',')') > 0
-                let index = line('.')
-                let col = col('.')
-            else
-                echohl ErrorMsg | echo "() pair not-match in autopara, line: ".index." colunm: ".col | echohl None
-                return
+            "search for none-blank character,skip comment
+            call search('\(\/\/.*\)\@<![^ \/]')
+
+            "if it is '(' then pair
+            if getline('.')[col('.')-1] == '('
+                let wait_simicolon_pair = 1
             endif
 
-            "record ) position
-            let idx2 = line('.')
-            "get inst_name
-            call search('\w\+')
-            let inst_name = expand('<cword>')
+            if wait_simicolon_pair == 1
+                "search for pair ()
+                if searchpair('(','',')') > 0
+                    let index = line('.')
+                    let col = col('.')
+                else
+                    let index = line('.')
+                    let col = col('.')
+                    echohl ErrorMsg | echo "() pair not-match in autopara, line: ".index." colunm: ".col | echohl None
+                    return
+                endif
 
-            "find position of module_name
-            call cursor(index,col)
-            call searchpair('(','',')','bW')
-            call search('\w\+','b')
+                "record ) position
+                let idx2 = line('.')
 
-            "get module_name
-            let module_name = expand('<cword>')
+                "get inst_name
+                call search('\w\+')
+                let inst_name = expand('<cword>')
 
-            "record module_name position
-            let idx1 = line('.')
-            
-            break
+                "find position of module_name
+                call cursor(index,col)
+                call searchpair('(','',')','bW')
+                call search('\w\+','b')
+
+                "get module_name
+                let module_name = expand('<cword>')
+
+                "record module_name position
+                let idx1 = line('.')
+
+                break
+
+            endif
         endif
 
         let idx = idx -1
 
     endwhile
 
-    if wait_simicolon_pair == 0
-        let [module_name,inst_name,idx1,idx2] = ['','',0,0]
-        echohl ErrorMsg | echo "No parameter definition '#(' find here!"| echohl None
-        return
-    endif
-
     "cursor back
     call cursor(orig_idx,orig_col)
+
+    "erorr process
+    if wait_simicolon_pair == 0
+        echohl ErrorMsg | echo "No parameter definition '#(' find here!"| echohl None
+        return ['','',0,0]
+    endif
+
+    if module_name == '' || inst_name == ''
+        echohl ErrorMsg | echo "Cannot find module_name or inst_name from ".orig_idx.','.orig_col | echohl None
+        return ['','',0,0]
+    endif
 
     return [module_name,inst_name,idx1,idx2]
 
@@ -2868,7 +2873,7 @@ function s:KillAutoPara(inst_name)
                     break
                 "abnormal end
                 elseif line =~ 'endmodule' || idx == line('$')
-                    echohl ErrorMsg | echo "Error running KillAutoInst! Kill abnormally till the end!"| echohl None
+                    echohl ErrorMsg | echo "Error running KillAutoPara! Kill abnormally till the end!"| echohl None
                     break
                 "middle
                 else
@@ -3332,10 +3337,8 @@ function s:GetReg(lines)
         endif
     endfor
     "}}}4
-
-    "normal reg{{{4
     
-    "flip-flop reg{{{5
+    "flip-flop reg{{{4
     "   width_names    
     "    0     1            2      3               4            5                6             7
     "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
@@ -3346,9 +3349,9 @@ function s:GetReg(lines)
     "GetSig
     let freg_names = s:GetSig('freg',freg_width_names,'name')
     let reg_names = freg_names
-    "}}}5
+    "}}}4
 
-    "combination reg{{{5
+    "combination reg{{{4
     "   width_names    
     "    0     1            2      3               4            5                6             7
     "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
@@ -3365,8 +3368,6 @@ function s:GetReg(lines)
             call extend(reg_names,{name : creg_names[name]})
         endif
     endfor
-    "}}}5
-
     "}}}4
 
     "remove reg exists in io{{{4
@@ -3429,6 +3430,7 @@ function s:GetfReg(lines)
                     "exception:
                     "1. for (i=0;i<=30;i=i+1)
                     "2. if(a<=30)begin
+                    "3. defparam info_fifo.lpm_width = 4;
                     if (line =~ '\v((for\s*\(.*)|((else\s*)?if\s*\(.*))@<!\w+\s*(\[.*\])?\s*\<\=' ||
                       \ line =~ '{.*}\s*<=')
                         let left = matchstr(line,'\v\s*\zs((\w+\s*(\[.*\])?)|(\{.*\}))\ze\s*\<\=')
@@ -3737,7 +3739,7 @@ endfunction
 "}}}3
 
 "AutoReg-Draw
-"DrawReg 按格式输出例化IO口{{{3
+"DrawReg 按格式输出例化register{{{3
 "--------------------------------------------------
 " Function: DrawReg
 " Input: 
@@ -3770,7 +3772,7 @@ function s:DrawReg(reg_names,reg_list)
         "   [type, sequence, width1, width2, signal_name, lines]
         let value = a:reg_names[name]
         let type = value[0]
-        if type != 'keep' 
+        if type != 'keep'
             let name = value[4]
             "calculate maximum len of position to Draw
             if value[3] == 'c0' 
@@ -4038,7 +4040,7 @@ endfunction
 "---------------------------------------------------
 function s:GetWire(lines)
     let lines = copy(a:lines)
-    let reg_names = {}
+    let wire_names = {}
 
     let io_names = s:GetIO(lines,'name')
 
@@ -4055,55 +4057,7 @@ function s:GetWire(lines)
     "}}}4
 
 "---------------------------------------pause here----------------------
-    "assign wire names{{{4
-    "   width_names    
-    "    0     1            2      3               4            5                6             7
-    "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
-    let awire_width_names = s:GetaWire(lines)
-    "    0       1         2       3       4            5 
-    "   ['freg', sequence, width1, width2, signal_name, lines]
-    "GetSig
-    let awire_names = s:GetSig('awire',awire_width_names,'name')
-
-
-    "remove reg exists in ioreg_names
-    for name in keys(freg_names)
-        if has_key(ioreg_names,name)
-            call remove(freg_names,name)
-            continue
-        else
-            call extend(reg_names,{name : freg_names[name]})
-        endif
-    endfor
-    "}}}4
-
-    "combination logic reg names{{{4
-    "   width_names    
-    "    0     1            2      3               4            5                6             7
-    "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
-    let creg_width_names = s:GetcReg(lines)
-    "    0       1         2       3       4            5 
-    "   ['creg', sequence, width1, width2, signal_name, lines]
-    "GetSig
-    let creg_names = s:GetSig('creg',creg_width_names,'name')
-
-    "remove reg exists in ioreg_names
-    for name in keys(creg_names)
-        if has_key(ioreg_names,name)
-            call remove(creg_names,name)
-            continue
-        else
-            if has_key(reg_names,name)
-                "duplicate reg in freg_names and creg_names,error
-                echohl ErrorMsg | echo "Exist Same Name of Flip-Flop Register and Combination Register. Error when GetReg!"| echohl None
-            else
-                call extend(reg_names,{name : creg_names[name]})
-            endif
-        endif
-    endfor
-    "}}}4
-
-    return reg_names
+    return wire_names
 
 endfunction
 "}}}3
@@ -4248,15 +4202,9 @@ function s:GetiWire(lines)
     try
         "Get directory list by scaning line
         let [dirlist,rec] = s:GetDirList()
-    endtry
-
-    try
         "Get file-dir dictionary & module-file dictionary ahead of all process
         let files = s:GetFileDirDicFromList(dirlist,rec)
         let modules = s:GetModuleFileDict(files)
-    endtry
-
-    try
         "Get reg
         let freg_width_names = s:GetfReg(a:lines)
         let creg_width_names = s:GetcReg(a:lines)
@@ -4302,8 +4250,19 @@ function s:GetiWire(lines)
         endif
 
         if flag_num == 1 && flag_lbracket == 1 && flag_rbracket == 0 
-            while line =~ '\.\s*\w\+\s*(.\{-\})'
-                let line = substitute(line,'\.\s*\w\+\s*(.\{-\})','','')
+            "while line =~ '\.\s*\w\+\s*(.\{-\})'
+            "    let line = substitute(line,'\.\s*\w\+\s*(.\{-\})','','')
+            "endwhile
+            while line =~ '\.\s*\w\+\s*([^.]*)'
+                "when match, first delete multiple inner bracket
+                "e.g. .ADDR_CFG_LAST ( 32*(ROOT_CHN_NUM) )
+                let inner_bracket = matchstr(line,'([^()]*)')
+                if line =~ '\V'.matchstr(line,'\.s*\w\+\s*').inner_bracket
+                    let line = substitute(line,'\V'.matchstr(line,'\.s*\w\+\s*').inner_bracket,'','')
+                else
+                    let line = substitute(line,'([^()]*)','','')
+                    continue
+                endif
             endwhile
         endif
         if flag_num == 1 && flag_lbracket == 1 && line =~ ')' 
@@ -4345,6 +4304,9 @@ function s:GetiWire(lines)
                 let [module_name,inst_name,idx1,idx2,idx3] = s:GetInstModuleName()
                 if module_name == '' || inst_name == ''
                     echohl ErrorMsg | echo "Cannot find module_name or inst_name from line ".line('.') | echohl None
+                    let module_flag = 0
+                else
+                    let module_flag = 1
                 endif
             endtry
 
@@ -4358,11 +4320,9 @@ function s:GetiWire(lines)
                     let add_dir = dir.'/'.file
                     "io names
                     let io_names = s:GetIO(lines,'name')
-                    let module_flag = 1
                 else
                     echohl ErrorMsg | echo "file: ".module_name.".v does not exist in cur dir ".getcwd() | echohl None
                     let io_names = {}
-                    let module_flag = 0
                 endif
             endtry
 
@@ -4384,7 +4344,7 @@ function s:GetiWire(lines)
                 "e.g. .do(r_tx_data_12[(2+3-1:0)]));
                 while line =~ '\.\s*\w\+\s*([^.]*)'
                     let seq = seq + 1
-                    let inst_name = matchstr(line,'\.\s*\zs\w\+\ze\s*([^.]*)')
+                    let port = matchstr(line,'\.\s*\zs\w\+\ze\s*([^.]*)')
                     let conn = matchstr(line,'\.\s*\w\+\s*(\s*\zs[^.]*\ze\s*)')    "connection
                     "delete match pattern for next loop
                     "used for multi inst in the same line
@@ -4404,6 +4364,9 @@ function s:GetiWire(lines)
                         continue
                     endif
 
+                    "get name first
+                    "let reg_name_list = s:GetSigName(left)
+
                     let conn_name = matchstr(conn,'\w\+')                           "connection name
                     let conn_width = matchstr(conn,'\[.*\]')                        "connection width
 
@@ -4412,9 +4375,9 @@ function s:GetiWire(lines)
                     let inst_flag = 1
 
                     "if it's not input, it must be wire
-                    if has_key(io_names,inst_name)
+                    if has_key(io_names,port)
                         "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-                        let value = io_names[inst_name] 
+                        let value = io_names[port] 
                         let io_dir = value[2]
                         if io_dir == 'input'
                             let wire_flag = 0
@@ -4427,7 +4390,7 @@ function s:GetiWire(lines)
                         let wire_flag = 0
                         let input_flag = 1
                         let inst_flag = 0
-                        echohl ErrorMsg | echo "Error when get ".inst_name." from ".module_name| echohl None
+                        echohl ErrorMsg | echo "Error when get ".port." from ".module_name| echohl None
                     endif
 
                     "if it's input port, judge if it's reg, if it's reg, it can't be wire
@@ -4496,9 +4459,9 @@ function s:GetiWire(lines)
                         call extend(width_names,{conn_name : value})
                         "echo 'name = '.conn_name.join(conn_widths)
                         "if inst_flag == 1
-                        "    echo 'inst = '.inst_name.inst_width
+                        "    echo 'inst = '.port.inst_width
                         "else
-                        "    echo 'inst = '.inst_name.''
+                        "    echo 'inst = '.port.''
                         "endif
 
                     endif
@@ -5006,6 +4969,169 @@ function s:GetSig(type,width_names,mode)
     else
         echohl ErrorMsg | echo "Error mode input for function GetSig! mode = ".a:mode| echohl None
     endif
+    
+endfunction
+"}}}3
+
+"GetAllSig 获取所有信号{{{3
+"--------------------------------------------------
+" Function: GetAllSig
+" Input:
+"   lines : all lines to get IO port
+" Description:
+"   +------+--------------------+
+"   | type | specify type       |
+"   +------+--------------------+
+"   | io   | input output inout |
+"   +------+--------------------+
+"   | reg  | creg freg          |
+"   +------+--------------------+
+"   | wire | iwire awire        |
+"   +------+--------------------+
+"
+" Output:
+"   list of signal sequences
+"    0     1             2      3            4
+"   [type, specify type, width, signal_name, resolved]
+"---------------------------------------------------
+function s:GetAllSig(lines)
+    let sig_names = {}
+
+    "io{{{4
+    "   list of port sequences(including comment lines)
+    "    0     1         2       3       4       5            6          7
+    "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+    let io_names = s:GetIO(a:lines,'name')
+    for name in keys(io_names)
+        let value = io_names[name]
+        let type = value[0]
+        if type != 'keep'
+            let io_dir = value[2]
+            if value[3] == 'c0' || value[4] == 'c0'
+                let width = ''
+            else
+                let width = '['.value[3].':'.value[4].']'
+            endif
+            "   io always resolved
+            "   list of signal sequences
+            "    0     1             2      3            4
+            "   [type, specify type, width, signal_name, resolved]
+            let value = ['io',io_dir,width,name,1]
+            call extend(sig_names,{name : value})
+        endif
+    endfor
+    "}}}4
+
+    "reg{{{4
+    "   list of width_names    
+    "    0     1            2      3               4            5                6             7
+    "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
+    let freg_width_names = s:GetfReg(a:lines) 
+    let creg_width_names = s:GetcReg(a:lines) 
+    let reg_width_names = freg_width_names
+    for name in keys(creg_width_names)
+        if has_key(freg_width_names,name)
+            "duplicate reg in freg_names and creg_names,error
+            echohl ErrorMsg | echo "Exist Same Name of Flip-Flop Register and Combination Register. Error when GetReg! reg = ".name| echohl None
+        else
+            call extend(reg_width_names,{name : creg_width_names[name]})
+        endif
+    endfor
+    "remove reg exists in io
+    let ioreg_names = {}
+    for name in keys(io_names)
+        let value = io_names[name]
+        let type = value[0]
+        if type == 'reg'
+            call extend(ioreg_names, {name : value})
+        endif
+    endfor
+    for name in keys(reg_width_names)
+        if has_key(ioreg_names,name)
+            call remove(reg_width_names,name)
+        endif
+    endfor
+    "record reg
+    for name in keys(reg_width_names)
+        if has_key(freg_width_names,name)
+            let type = 'freg'
+        else
+            let type = 'creg'
+        endif
+        let value = reg_width_names[name]
+        let left_width_nrs = value[3]
+        let left_widths = value[4]
+        let right_width_nrs = value[5]
+        let right_widths = value[6]
+        let right_signal_link = value[7]
+        let resolved = 1
+        if left_widths != []
+            let [width1,width2] = left_widths[0]
+            if width1 != ''
+                if width2 != ''
+                    let width = '['.width1.':'.width2.']'
+                else
+                    let width = '['.width1.']'
+                endif
+            else
+                let width == ''
+            endif
+        elseif left_width_nrs != []
+            let width1 = max(left_width_nrs)
+            let width2 = min(left_width_nrs)
+            if width1 == 0 && width2 == 0
+                let width = ''
+            else
+                let width = '['.width1.':'.width2.']'
+            endif
+        elseif right_widths != []
+            let [width1,width2] = right_widths[0]
+            if width1 != ''
+                if width2 != ''
+                    let width = '['.width1.':'.width2.']'
+                else
+                    let width = '['.width1.']'
+                endif
+            else
+                let width = ''
+            endif
+        elseif right_width_nrs != []
+            let width1 = max(right_width_nrs)
+            let width2 = min(right_width_nrs)
+            if width1 == 0 && width2 == 0
+                let width = ''
+            else
+                let width = '['.width1.':'.width2.']'
+            endif
+        elseif right_signal_link != {}
+            let resolved = 0
+        else
+            let resolved = 0
+        endif
+
+        "   list of signal sequences
+        "    0     1             2      3            4
+        "   [type, specify type, width, signal_name, resolved]
+        let value = ['reg',type,width,name,resolved]
+        call extend(sig_names,{name : value})
+    endfor
+    "}}}4
+
+    "for name in keys(sig_names)
+    "    let value = sig_names[name]
+    "    let sig_type = value[0]
+    "    let width = value[2]
+    "    let resolved = value[4]
+    "    "let authorlen = strlen(author)
+    "    echo "type==". sig_type . repeat(" ", 8-strlen(sig_type)) . 
+    "                \" name==" . name . repeat(" ",32-strlen(name)).
+    "                \" width==" . width . repeat(" ",16-strlen(width)).
+    "                \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
+    "endfor
+
+    "wire
+    
+    return sig_names
     
 endfunction
 "}}}3
