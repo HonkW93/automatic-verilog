@@ -1,6 +1,41 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.1] - 2021-08-31
+
+### Fixed
+
+- Bug fixed for `GetReg,GetaWire`
+
+  `GetReg(),GetaWire(),`自动跳过`defparam`，避免异常
+
+- Bug fixed for`GetIO`
+
+  `GetIO()`修复注释类型`// ......  /*autoinst*/`产生的异常
+
+- Bug fixed for`GetiWire`
+
+  1. `GetiWire()`修复无法获取`IP`的输入输出端口导致`iwire`获取失败的异常
+
+  2. `GetiWire()`修复括号嵌套导致的获取失败异常，（例如`.ADDR_CFG_LAST ( 32*(ROOT_CHN_NUM) )`的异常匹配）
+
+- Bug fixed for`AutoPara`
+
+  `AutoPara()`修复`#`和`(`不在同一行的特殊写法导致的异常问题
+
+### Changed
+
+- Optimize `Auto`
+
+  优化各个`Auto()`函数写法，只使用单个的`try`及`endtry`
+
+### Added
+
+- Add `GetAllSig`
+
+  新增`GetAllSig()`函数，获取单文件内所有信号并去冗余（未完成），为`AutoDef`编写做准备。
+
+
 ## [1.2.0] - 2021-08-27
 
 ### Fixed
