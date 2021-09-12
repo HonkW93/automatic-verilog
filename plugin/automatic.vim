@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/09/04 23:14
+" Last Modified:  2021/09/13 00:47
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -3178,7 +3178,7 @@ endfunction
 "---------------------------------------------------
 function s:GetReg(lines)
     let lines = copy(a:lines)
-    let reg_names = {}
+    "let reg_names = s:GetAllSig(a:lines,'reg')
 
     "io reg{{{4
     let io_names = s:GetIO(lines,'name')
@@ -3505,7 +3505,15 @@ function s:GetDeclReg(lines)
         endif
 
         while line =~ '^\s*reg\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*'
+            "delete abnormal
+            if line =~ '\<signed\>\|\<unsigned\>'
+                let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
+            elseif line =~ '\/\/.*$'
+                let line = substitute(line,'\/\/.*$','','')
+            endif
             let names = matchstr(line,'^\s*reg\s\+\(\[.\{-\}\]\)\?\s*\zs.\{-\}\ze\s*;\s*')
+            "in case style of reg a = {b,c,d};
+            let names = substitute(names,'\(\/\/\)\@<!=.*$','','')
             "in case style of reg [1:0] a,b,c;
             for name in split(names,',')
                 let name = matchstr(name,'\w\+')
@@ -4367,168 +4375,177 @@ map <S-F8>      :call TestAutoVerilog()<ESC>
 function TestAutoVerilog() "{{{3
 
     let lines = getline(1,line('$'))
-    let [reg_width_names,awire_width_names,iwire_width_names] = s:GetAllSig(lines)
+    let [sig_names,io_names,reg_width_names,awire_width_names,iwire_width_names] = s:GetAllSig(lines,'all')
 
-    "test only {{{4
-
-    let lines = getline(1,line('$'))
-
-    "gather all signals together
-
-    let io_names = s:GetIO(lines,'name')
-    
-    let reg_names = reg_width_names
-
-    "test reg {{{5
-    let cnt0 = 0
-    for name in keys(reg_names)
-        let cnt0 += 1
-    endfor
-    "echo cnt0
-
-    let cnt1 = 0
-    for line in lines
-        if line =~ '^\s*reg\s.*;\s*.*$'
-            let name = matchstr(line,'^\s*reg\s*\(\[.*\]\)\?\s*\zs\w\+\ze\s*;\s*.*$')
-            let cnt1 += 1
-            "echo name
-            if has_key(reg_names,name)
-                call remove(reg_names,name)
-            else
-                "call append(line('$'),name)
-            endif
-        endif
-    endfor
-    "echo cnt1
-
-    let err_flag = 0
-    let err_regs = []
-    if cnt0 != cnt1
-        for reg in keys (reg_names)
-            let err_flag = 1
-            call add(err_regs,reg)
-        endfor
-        if err_flag == 1
-            echo 'err!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-            echo cnt0
-            echo cnt1
-            call append(line('$'),'reg remain-----')
-            call append(line('$'),err_regs)
-        else
-            echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-        endif
-    else
-        echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-    endif
-    "}}}5
-    
-    "test wire {{{5
-    
-    "io wire
-    let iowire_names = {}
-    for name in keys(io_names)
-        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-        let value = io_names[name]
-        let type = value[0]
-        if type == 'wire' || type == 'none'
-            call extend(iowire_names, {name : value})
-        endif
-    endfor
-
-    "iwire and awire
-    let awire_width_names = copy(awire_width_names)
-    let iwire_width_names = copy(iwire_width_names)
-    let orig_awire_width_names = copy(awire_width_names)
-    let orig_iwire_width_names = copy(iwire_width_names)
-
-    "iwire{{{6
-    let cnt_iwire = 0
-    for wire in keys(iwire_width_names)
-        let cnt_iwire += 1
-    endfor
-
-    let cnt_assign_iwire = 0
-    let cnt_assign_wire = 0
-    for wire in keys (awire_width_names)
-        let cnt_assign_wire += 1
-        if has_key(iwire_width_names,wire)
-            let cnt_assign_iwire += 1
-            call remove(iwire_width_names,wire)
-            continue
-        endif
-    endfor
-
-    "declared wire in iwire
-    let cnt_decl_iwire = 0
-    let decl_wire = {}
-    for line in lines
-        if line =~ '^\s*wire.*;\s*.*$'
-            "let name = matchstr(line,'^\s*wire\s*\(\[.*\]\)\?\s*\zs\w\+\ze.*;\s*\(\/\/.*\)\?\s*$')
-            while line =~ '^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*'
-                let names = matchstr(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*\zs.\{-\}\ze\s*;\s*')
-                "in case style of reg [1:0] a,b,c;
-                for name in split(names,',\|=')
-                    let name = matchstr(name,'\w\+')
-                    call extend(decl_wire,{name : ""})
-                    if has_key(iwire_width_names,name)
-                        let cnt_decl_iwire += 1
-                        call remove(iwire_width_names,name)
-                    endif
-                endfor
-                let line = substitute(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*','','')
-            endwhile
-        endif
-    endfor
-
-    if len(iwire_width_names) == 0
-        echo 'iwire match right!!!!!!!!!!!!!!!!!!!!!'
-    else
-        echo 'iwire not all match'
-        call append(line('$'),'iwire remain-----')
-        for name in keys ( iwire_width_names )
-            call append(line('$'),name)
-        endfor
-    endif
-    "}}}6
-    
-    "all wire {{{6
-    let all_wire_names = {}
-    let awire_width_names = orig_awire_width_names
-    let iwire_width_names = orig_iwire_width_names
-
-    for wire in keys(iwire_width_names)
-        call extend(all_wire_names,{wire : ""})
-    endfor
-
-    for wire in keys(awire_width_names)
-        call extend(all_wire_names,{wire : ""})
-    endfor
-
-    for wire in keys(iowire_names)
-        call extend(all_wire_names,{wire : ""})
-    endfor
-
-    for name in keys(decl_wire)
-        if has_key(all_wire_names,name)
-            call remove(decl_wire,name)
-        endif
-    endfor
-
-    if len(decl_wire) == 0
-        echo 'decl wire match right!!!!!!!!!!!!!!!!!!!!!'
-    else
-        echo 'decl wire not all match'
-        call append(line('$'),'decl wire remain-----')
-        for name in keys ( decl_wire)
-            call append(line('$'),name)
-        endfor
-    endif
-    "}}}6
-    
-    "}}}5
-
-   "}}}4
-
+"
+"    "test wire use {{{4
+"
+"    let lines = getline(1,line('$'))
+"
+"    "gather all signals together
+"
+"    let io_names = s:GetIO(lines,'name')
+"    
+"    let reg_names = reg_width_names
+"
+"    "test reg {{{5
+"    let cnt0 = 0
+"    for name in keys(reg_names)
+"        let cnt0 += 1
+"    endfor
+"    "echo cnt0
+"
+"    let cnt1 = 0
+"    for line in lines
+"        if line =~ '^\s*reg\s.*;\s*.*$'
+"            let name = matchstr(line,'^\s*reg\s*\(\[.*\]\)\?\s*\zs\w\+\ze\s*;\s*.*$')
+"            let cnt1 += 1
+"            "echo name
+"            if has_key(reg_names,name)
+"                call remove(reg_names,name)
+"            else
+"                "call append(line('$'),name)
+"            endif
+"        endif
+"    endfor
+"    "echo cnt1
+"
+"    let err_flag = 0
+"    let err_regs = []
+"    if cnt0 != cnt1
+"        for reg in keys (reg_names)
+"            let err_flag = 1
+"            call add(err_regs,reg)
+"        endfor
+"        if err_flag == 1
+"            echo 'err!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"            echo cnt0
+"            echo cnt1
+"            call append(line('$'),'reg remain-----')
+"            call append(line('$'),err_regs)
+"        else
+"            echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"        endif
+"    else
+"        echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"    endif
+"    "}}}5
+"    
+"    "test wire {{{5
+"    
+"    "io wire
+"    let iowire_names = {}
+"    for name in keys(io_names)
+"        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+"        let value = io_names[name]
+"        let type = value[0]
+"        if type == 'wire' || type == 'none'
+"            call extend(iowire_names, {name : value})
+"        endif
+"    endfor
+"
+"    "iwire and awire
+"    let awire_width_names = copy(awire_width_names)
+"    let iwire_width_names = copy(iwire_width_names)
+"    let orig_awire_width_names = copy(awire_width_names)
+"    let orig_iwire_width_names = copy(iwire_width_names)
+"
+"    "iwire{{{6
+"    let cnt_iwire = 0
+"    for wire in keys(iwire_width_names)
+"        let cnt_iwire += 1
+"    endfor
+"
+"    let cnt_assign_iwire = 0
+"    let cnt_assign_wire = 0
+"    for wire in keys (awire_width_names)
+"        let cnt_assign_wire += 1
+"        if has_key(iwire_width_names,wire)
+"            let cnt_assign_iwire += 1
+"            call remove(iwire_width_names,wire)
+"            continue
+"        endif
+"    endfor
+"
+"    "declared wire in iwire
+"    let cnt_decl_iwire = 0
+"    let decl_wire = {}
+"    for line in lines
+"        if line =~ '^\s*wire.*;\s*.*$'
+"            "let name = matchstr(line,'^\s*wire\s*\(\[.*\]\)\?\s*\zs\w\+\ze.*;\s*\(\/\/.*\)\?\s*$')
+"            while line =~ '^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*'
+"                "delete abnormal
+"                if line =~ '\<signed\>\|\<unsigned\>'
+"                    let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
+"                elseif line =~ '\/\/.*$'
+"                    let line = substitute(line,'\/\/.*$','','')
+"                endif
+"                let names = matchstr(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*\zs.\{-\}\ze\s*;\s*')
+"                "in case style of wire a = {b,c,d};
+"                let names = substitute(names,'\(\/\/\)\@<!=.*$','','')
+"                "in case style of wire [1:0] a,b,c;
+"                for name in split(names,',')
+"                    let name = matchstr(name,'\w\+')
+"                    call extend(decl_wire,{name : ""})
+"                    if has_key(iwire_width_names,name)
+"                        let cnt_decl_iwire += 1
+"                        call remove(iwire_width_names,name)
+"                    endif
+"                endfor
+"                let line = substitute(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*','','')
+"            endwhile
+"        endif
+"    endfor
+"
+"    if len(iwire_width_names) == 0
+"        echo 'iwire match right!!!!!!!!!!!!!!!!!!!!!'
+"    else
+"        echo 'iwire not all match'
+"        call append(line('$'),'iwire remain-----')
+"        for name in keys ( iwire_width_names )
+"            call append(line('$'),name)
+"        endfor
+"    endif
+"    "}}}6
+"    
+"    "all wire {{{6
+"    let all_wire_names = {}
+"    let awire_width_names = orig_awire_width_names
+"    let iwire_width_names = orig_iwire_width_names
+"
+"    for wire in keys(iwire_width_names)
+"        call extend(all_wire_names,{wire : ""})
+"    endfor
+"
+"    for wire in keys(awire_width_names)
+"        call extend(all_wire_names,{wire : ""})
+"    endfor
+"
+"    for wire in keys(iowire_names)
+"        call extend(all_wire_names,{wire : ""})
+"    endfor
+"
+"    for name in keys(decl_wire)
+"        if has_key(all_wire_names,name)
+"            call remove(decl_wire,name)
+"        endif
+"    endfor
+"
+"    if len(decl_wire) == 0
+"        echo 'decl wire match right!!!!!!!!!!!!!!!!!!!!!'
+"    else
+"        echo 'decl wire not all match'
+"        call append(line('$'),'decl wire remain-----')
+"        for name in keys ( decl_wire)
+"            call append(line('$'),name)
+"        endfor
+"    endif
+"    "}}}6
+"    
+"    "}}}5
+"
+"   "}}}4
+"
 endfunction "}}}3
 
 "-------------------------------------------------------------------
@@ -5025,10 +5042,9 @@ endfunction
 " Input:
 "   lines : all lines to get IO port
 "   mode : mode for signals getting
-"          0 -> mode for GetReg
-"          1 -> mode for GetaWire 
-"          2 -> mode for GetiWire 
-"          3 -> ......
+"          reg  -> mode for GetReg
+"          wire -> mode for GetWire 
+"           -> ......
 "           
 " Description:
 "   +------+--------------------+
@@ -5043,11 +5059,12 @@ endfunction
 "
 " Output:
 "   list of signal sequences
-"    0     1             2      3            4
-"   [type, specify type, width, signal_name, resolved]
+"    0     1             2      3            4         5
+"   [type, specify type, width, signal_name, resolved, seq]
 "---------------------------------------------------
-function s:GetAllSig(lines)
+function s:GetAllSig(lines,mode)
     let sig_names = {}
+    let reg_names = {}
 
     "io{{{4
     "   list of port sequences(including comment lines)
@@ -5057,6 +5074,7 @@ function s:GetAllSig(lines)
     for name in keys(io_names)
         let value = io_names[name]
         let type = value[0]
+        let seq = value[1]
         if type != 'keep'
             let io_dir = value[2]
             if value[3] == 'c0' || value[4] == 'c0'
@@ -5066,9 +5084,9 @@ function s:GetAllSig(lines)
             endif
             "   io always resolved
             "   list of signal sequences
-            "    0     1             2      3            4
-            "   [type, specify type, width, signal_name, resolved]
-            let value = ['io',io_dir,width,name,1]
+            "    0     1             2      3            4         5
+            "   [type, specify type, width, signal_name, resolved, seq]
+            let value = ['io',io_dir,width,name,1,seq]
             call extend(sig_names,{name : value})
         endif
     endfor
@@ -5095,6 +5113,7 @@ function s:GetAllSig(lines)
             let type = 'creg'
         endif
         let value = reg_width_names[name]
+        let seqs = value[0]
         let left_width_nrs = value[3]
         let left_widths = value[4]
         let right_width_nrs = value[5]
@@ -5148,34 +5167,97 @@ function s:GetAllSig(lines)
         endif
 
         "   list of signal sequences
-        "    0     1             2      3            4
-        "   [type, specify type, width, signal_name, resolved]
-        let value = ['reg',type,width,name,resolved]
+        "    0     1             2      3            4         5
+        "   [type, specify type, width, signal_name, resolved, seq]
+        let value = ['reg',type,width,name,resolved,seqs[0]]
+        call extend(reg_names,{name : value})
         call extend(sig_names,{name : value})
     endfor
     "Get declared register
     let [decl_reg,auto_reg] = s:GetDeclReg(a:lines)
     "}}}4
 
-    "for name in keys(sig_names)
-    "    let value = sig_names[name]
-    "    let sig_type = value[0]
-    "    let width = value[2]
-    "    let resolved = value[4]
-    "    "let authorlen = strlen(author)
-    "    echo "type==". sig_type . repeat(" ", 8-strlen(sig_type)) . 
-    "                \" name==" . name . repeat(" ",32-strlen(name)).
-    "                \" width==" . width . repeat(" ",16-strlen(width)).
-    "                \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
-    "endfor
+    if a:mode == 'reg'
+        return reg_names
+    endif
 
-    "awire
+    "awire{{{4
     "   list of width_names    
     "    0     1            2      3               4            5                6             7
     "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
     let awire_width_names = s:GetaWire(a:lines) 
+    "remove awire exists in io
+    for name in keys(awire_width_names)
+        if has_key(io_names,name)
+            call remove(awire_width_names,name)
+        endif
+    endfor
+    "record awire
+    for name in keys(awire_width_names)
+        let type = 'awire'
+        let value = awire_width_names[name]
+        let seqs = value[0]
+        let left_width_nrs = value[3]
+        let left_widths = value[4]
+        let right_width_nrs = value[5]
+        let right_widths = value[6]
+        let right_signal_link = value[7]
+        let resolved = 1
+        if left_widths != []
+            let [width1,width2] = left_widths[0]
+            if width1 != ''
+                if width2 != ''
+                    let width = '['.width1.':'.width2.']'
+                else
+                    let width = '['.width1.']'
+                endif
+            else
+                let width == ''
+            endif
+        elseif left_width_nrs != []
+            let width1 = max(left_width_nrs)
+            let width2 = min(left_width_nrs)
+            if width1 == 0 && width2 == 0
+                let width = ''
+            else
+                let width = '['.width1.':'.width2.']'
+            endif
+        elseif right_widths != []
+            let [width1,width2] = right_widths[0]
+            if width1 != ''
+                if width2 != ''
+                    let width = '['.width1.':'.width2.']'
+                else
+                    let width = '['.width1.']'
+                endif
+            else
+                let width = ''
+            endif
+        elseif right_width_nrs != []
+            let width1 = max(right_width_nrs)
+            let width2 = min(right_width_nrs)
+            if width1 == 0 && width2 == 0
+                let width = ''
+            else
+                let width = '['.width1.':'.width2.']'
+            endif
+        elseif right_signal_link != {}
+            let width = ''
+            let resolved = 0
+        else
+            let width = ''
+            let resolved = 0
+        endif
 
-    "iwire
+        "   list of signal sequences
+        "    0     1             2      3            4         5
+        "   [type, specify type, width, signal_name, resolved, seq]
+        let value = ['wire',type,width,name,resolved,seqs[0]]
+        call extend(sig_names,{name : value})
+    endfor
+    "}}}4
+
+    "iwire{{{4
     "   list of width_names
     "    0     1            2           3             4            5
     "   [seqs, signal_name, lines,      module_names, conn_widths, resolved]
@@ -5186,20 +5268,121 @@ function s:GetAllSig(lines)
     "Get module-file dictionary
     let modules = s:GetModuleFileDict(files)
     "Get iwire
+    "remove io, declared register and register from them
     let iwire_width_names = s:GetiWire(a:lines,files,modules,reg_width_names,decl_reg,io_names)
+    "}}}4
 
-    "for name in keys(iwire_width_names)
-    "    let value = iwire_width_names[name]
-    "    let widths = value[4]
-    "    let resolved = value[5]
-    "    echo " name==" . name . repeat(" ",32-strlen(name)).
-    "                \" width==" . widths[0] . repeat(" ",16-strlen(widths[0])).
-    "                \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
-    "endfor
+    "wire{{{4
+    for name in keys(iwire_width_names)
+        let iwire_value = iwire_width_names[name]
+        let iwire_resolved = iwire_value[5]
+        let iwire_seqs = iwire_value[0]
+        if has_key(sig_names,name)
+            let awire_value = sig_names[name]
+            let awire_resolved = awire_value[4] 
 
-    return [reg_width_names,awire_width_names,iwire_width_names]
-    "return sig_names
+            if awire_value[1] != 'awire'
+                echohl ErrorMsg | echo "Error signal in inst wire but not an assign wire."| echohl None
+            endif
+
+            "use awire
+            if awire_resolved == 1 && iwire_resolved == 0
+                let value = awire_value
+                call extend(sig_names,{name : value})
+            "use iwire
+            else
+                let conn_widths = iwire_value[4]
+                "   list of signal sequences
+                "    0     1             2      3            4         5
+                "   [type, specify type, width, signal_name, resolved, seq]
+                let value = ['wire','iwire',conn_widths[-1],name,0,iwire_seqs[0]]
+                call extend(sig_names,{name : value})
+            endif
+        else
+            "   list of signal sequences
+            "    0     1             2      3            4         5
+            "   [type, specify type, width, signal_name, resolved, seq]
+            let conn_widths = iwire_value[4]
+            let value = ['wire','iwire',conn_widths[-1],name,iwire_resolved,iwire_seqs[0]]
+            call extend(sig_names,{name : value})
+        endif
+    endfor
+    "}}}4
     
+
+"    "print iwire test {{{4
+"    for name in keys(iwire_width_names)
+"        let value = iwire_width_names[name]
+"        let widths = value[4]
+"        let resolved = value[5]
+"        echo " name==" . name . repeat(" ",32-strlen(name)).
+"                    \" width==" . widths[0] . repeat(" ",16-strlen(widths[0])).
+"                    \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
+"    endfor
+"    }}}4
+
+
+"    "print all signal test {{{4
+"    let io_sigs = {}
+"    let reg_sigs = {}
+"    let wire_sigs = {}
+"    for name in keys(sig_names)
+"        let value = sig_names[name]
+"        let sig_type = value[0]
+"        if sig_type == 'io'
+"            call extend(io_sigs,{name : value})
+"        endif
+"        if sig_type == 'reg'
+"            call extend(reg_sigs,{name : value})
+"        endif
+"        if sig_type == 'wire'
+"            call extend(wire_sigs,{name : value})
+"        endif
+"    endfor
+"
+"    for name in keys(io_sigs)
+"        let value = io_sigs[name]
+"        let sig_type = value[0]
+"        let type = value[1]
+"        let width = value[2]
+"        let resolved = value[4]
+"        echo "type==". sig_type . repeat(" ", 8-strlen(sig_type)) . 
+"                    \" name==" . name . repeat(" ",32-strlen(name)).
+"                    \" dtype==" . type . repeat(" ",8-strlen(type)).
+"                    \" width==" . width . repeat(" ",16-strlen(width)).
+"                    \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
+"    endfor
+"
+"    for name in keys(reg_sigs)
+"        let value = reg_sigs[name]
+"        let sig_type = value[0]
+"        let type = value[1]
+"        let width = value[2]
+"        let resolved = value[4]
+"        echo "type==". sig_type . repeat(" ", 8-strlen(sig_type)) . 
+"                    \" name==" . name . repeat(" ",32-strlen(name)).
+"                    \" dtype==" . type . repeat(" ",8-strlen(type)).
+"                    \" width==" . width . repeat(" ",16-strlen(width)).
+"                    \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
+"    endfor
+"
+"    for name in keys(wire_sigs)
+"        let value = wire_sigs[name]
+"        let sig_type = value[0]
+"        let type = value[1]
+"        let width = value[2]
+"        let resolved = value[4]
+"        echo "type==". sig_type . repeat(" ", 8-strlen(sig_type)) . 
+"                    \" name==" . name . repeat(" ",32-strlen(name)).
+"                    \" dtype==" . type . repeat(" ",8-strlen(type)).
+"                    \" width==" . width . repeat(" ",16-strlen(width)).
+"                    \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
+"    endfor
+"    "}}}4
+
+
+    return [sig_names,io_names,reg_width_names,awire_width_names,iwire_width_names]
+
 endfunction
 "}}}3
 
