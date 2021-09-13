@@ -29,7 +29,7 @@
 
 一款基于vimscript的自动化verilog脚本。由[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)修改而来，原作者zhangguo。
 
-[![Release-Version](https://img.shields.io/badge/Release-1.2.2-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
+[![Release-Version](https://img.shields.io/badge/Release-1.2.3-blue.svg)](https://github.com/HonkW93/automatic-verilog/releases)-[![Vim-Version](https://img.shields.io/badge/Vim-7.4-green.svg)](https://www.vim.org/download.php)
 
 ## 1. 安装
 
@@ -90,8 +90,9 @@ Plugin 'HonkW93/automatic-verilog'
   - [x] 支持`assign`语句`wire`自动获取
   - [ ] 进行中...
 - 自动定义（`AutoDef`） 
-  - [ ] 支持`AutoWire`
+  - [x] 支持`AutoWire`
   - [x] 支持`AutoReg`
+  - [ ] 支持多信号`merge`
   - [ ] 进行中...
 - 自动接口（`AutoInterface`）
   - [ ] 梳理`sv`中`interface`的自动例化
@@ -104,6 +105,7 @@ Plugin 'HonkW93/automatic-verilog'
 
 - 通过`RtlTree`浏览`Rtl`结构
   - [x] 支持跨文件夹
+  - [x] 内部集成`tag`
 
 ## 3. 文档
 

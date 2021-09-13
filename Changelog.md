@@ -1,6 +1,29 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.3] - 2021-09-14
+
+### Added
+
+- Add `AutoWire`
+
+  新增初版`AutoWire()`，待测试
+
+### Changed
+
+- Optimize `Draw`
+
+  优化所有`Draw`函数，包括`DrawIO`，`DrawPara`，`DrawParaValue`，`DrawReg`，`DrawWire`，使其对齐逻辑统一
+
+- Optimize `GetReg`& `GetWire`
+
+  优化 `GetReg()`及 `GetWire()`函数，均统一使用`GetAllSig()`函数作为获取接口，为以后`Merge()`函数作铺垫
+  
+- Optimize `GetDeclReg`& `GetDeclWire`
+
+  优化已自动例化的寄存器或线网的获取方式。只识别`//Start of ...`以及`//End of ...`
+
+
 ## [1.2.2] - 2021-09-04
 
 ### Fixed
