@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/09/13 00:47
+" Last Modified:  2021/09/14 01:13
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -53,10 +53,17 @@ let s:atp_tail_not_align = get(g:,'atp_tail_not_align',0)   "don't do alignment 
 "}}}2
 
 "AutoReg 自动寄存器配置{{{2
-let s:atr_reg_new = get(g:,'atr_reg_new',1)                 "add //PARA_NEW if parameter has been newly added to the module
-let s:atr_reg_del = get(g:,'atr_reg_del',1)                 "add //PARA_DEL if parameter has been deleted from the module
-let s:atr_keep_chg = get(g:,'atr_keep_chg',1)               "keep changed parameter
+let s:atr_reg_new = get(g:,'atr_reg_new',1)                 "add //REG_NEW if register has been newly added to the module
+let s:atr_reg_del = get(g:,'atr_reg_del',1)                 "add //REG_DEL if register has been deleted from the module
+"let s:atr_keep_chg = get(g:,'atr_keep_chg',1)              "keep changed register
 let s:atr_tail_not_align = get(g:,'atr_tail_not_align',0)   "don't do alignment in tail when autoreg
+"}}}2
+
+"AutoWire 自动线网配置{{{2
+let s:atw_wire_new = get(g:,'atw_wire_new',1)               "add //WIRE_NEW if wire has been newly added to the module
+let s:atw_wire_del = get(g:,'atw_wire_del',1)               "add //WIRE_DEL if wire has been deleted from the module
+"let s:atw_keep_chg = get(g:,'atw_keep_chg',1)              "keep changed wire
+let s:atw_tail_not_align = get(g:,'atw_tail_not_align',0)   "don't do alignment in tail when autowire
 "}}}2
 
 "Progressbar 进度条支持{{{2
@@ -239,6 +246,7 @@ map <S-F3>      :call AutoInst(0)<ESC>
 map <S-F4>      :call AutoPara(0)<ESC>
 map <S-F5>      :call AutoParaValue(0)<ESC>
 map <S-F6>      :call AutoReg()<ESC>
+map <S-F7>      :call AutoWire()<ESC>
 "}}}3
 
 "Code Snippet 代码段{{{3
@@ -1214,9 +1222,9 @@ endfunction
 " Output:
 "   Formatted autoreg code
 " Note:
-"   list of reg sequences
-"    0       1         2       3       4            5 
-"   [type, sequence, width1, width2, signal_name, lines]
+"   list of signal sequences
+"    0      1             2      3            4         5
+"   ['reg', specify type, width, signal_name, resolved, seq]
 "---------------------------------------------------
 function AutoReg()
     try
@@ -1234,7 +1242,6 @@ function AutoReg()
             endif
 
             "read from current buffer
-            "let lines = readfile(expand('%'))
             let lines = getline(1,line('$'))
 
             "Get keep register & update register list
@@ -1244,7 +1251,6 @@ function AutoReg()
             let reg_names = s:GetReg(lines)
 
             "Remove reg from reg_names that want to be keep when autoreg
-            "   value = [type, sequence, width1, width2, signal_name, lines]
             "   reg_names = {signal_name : value }
             for name in keep_reg_list
                 if has_key(reg_names,name)
@@ -1266,6 +1272,76 @@ function AutoReg()
             call append(line('.'),lines)
 
             "Only autoreg once
+            break
+
+        endwhile
+
+        "Put cursor back to original position
+        call cursor(orig_idx,orig_col)
+    endtry
+endfunction
+"}}}3
+
+"AutoWire 自动线网{{{3
+"--------------------------------------------------
+" Function: AutoWire
+" Input: 
+"   N/A
+" Description:
+"   autowire all wire
+" Output:
+"   Formatted autowire code
+" Note:
+"   list of signal sequences
+"    0      1             2      3            4         5
+"   ['wire', specify type, width, signal_name, resolved, seq]
+"---------------------------------------------------
+function AutoWire()
+    try
+        "Record current position
+        let orig_idx = line('.')
+        let orig_col = col('.')
+
+        "AutoWire all start from top line
+        call cursor(1,1)
+
+        while 1
+            "Put cursor to /*autowire*/ line
+            if search('\/\*autowire\*\/','W') == 0
+                break
+            endif
+
+            "read from current buffer
+            let lines = getline(1,line('$'))
+
+            "Get keep wire & update wire list
+            let [keep_wire_list,upd_wire_list] = s:GetDeclWire(lines)
+
+            "Get wire names {name : value}
+            let wire_names = s:GetWire(lines)
+
+            "Remove wire from wire_names that want to be keep when autowire
+            "   wire_names = {signal_name : value }
+            for name in keep_wire_list
+                if has_key(wire_names,name)
+                    call remove(wire_names,name)
+                endif
+            endfor
+
+            "Kill all contents between //Start of automatic wire and //End of automatic wire 
+            "Current position must be at /*autowire*/ line
+            call s:KillAutoWire()
+
+            "Draw wire, use wire_names to cover update wire list
+            "if wire_names has new wire_name that's never in upd_wire_list, add //WIRE_NEW
+            "if wire_names has same wire_name that's in upd_wire_list, cover
+            "if wire_names doesn't have wire_name that's in upd_wire_list, add //WIRE_DEL
+            let lines = s:DrawWire(wire_names,upd_wire_list)
+
+            "Append wires definition
+            call append(line('.'),lines)
+
+            "Only autowire once
             break
 
         endwhile
@@ -1909,8 +1985,9 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
                     let connect = chg_io_names[name]
                 endif
             endif
-            let max_lbracket_len = max([max_lbracket_len,len(prefix)+1+len(name)+4,s:name_pos_max])
-            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+1+len(connect)+4,s:symbol_pos_max])
+            "prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'
+            let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,s:name_pos_max])
+            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(connect)+4,s:symbol_pos_max])
         endif
     endfor
     "}}}4
@@ -1956,7 +2033,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             let name = value[5]
 
             "name2bracket
-            let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(name)-1)
+            let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(name)-len('.'))
             "width
             if value[3] == 'c0' || value[4] == 'c0'
                 let width = ''
@@ -1977,7 +2054,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             if s:ati_tail_not_align == 1
                 let width2bracket = ''
             else
-                let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(connect))
+                let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-len('(')-len(connect))
             endif
 
             "comma
@@ -2804,8 +2881,9 @@ function s:DrawPara(para_seqs,para_list,chg_para_names)
                 let p_value = chg_para_names[p_name]
             endif
         endif
-        let max_lbracket_len = max([max_lbracket_len,len(prefix)+1+len(p_name)+4,s:name_pos_max])
-        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+1+len(p_value)+4,s:symbol_pos_max])
+        "prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'
+        let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(p_name)+4,s:name_pos_max])
+        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(p_value)+4,s:symbol_pos_max])
     endfor
     "}}}4
 
@@ -2861,14 +2939,14 @@ function s:DrawPara(para_seqs,para_list,chg_para_names)
             endif
 
             "name2bracket
-            let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(p_name)-1)
+            let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(p_name)-len('.'))
 
             "value2bracket
             "don't align tail if config
             if s:atp_tail_not_align == 1
                 let value2bracket = ''
             else
-                let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
+                let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-len('(')-len(p_value))
             endif
 
             "comma
@@ -2998,8 +3076,9 @@ function s:DrawParaValue(para_seqs,para_list)
         let value = a:para_seqs[seq]
         let p_name = value[2]
         let p_value = value[3]
-        let max_lbracket_len = max([max_lbracket_len,len(prefix)+1+len(p_name)+4,s:name_pos_max])
-        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+1+len(p_value)+4,s:symbol_pos_max])
+        "prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'
+        let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(p_name)+4,s:name_pos_max])
+        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(p_value)+4,s:symbol_pos_max])
     endfor
     "}}}4
 
@@ -3032,14 +3111,14 @@ function s:DrawParaValue(para_seqs,para_list)
             let p_value = value[3]
 
             "name2bracket
-            let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(p_name)-1)
+            let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(p_name)-len('.'))
 
             "value2bracket
             "don't align tail if config
             if s:atp_tail_not_align == 1
                 let value2bracket = ''
             else
-                let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-1-len(p_value))
+                let value2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-len('(')-len(p_value))
             endif
 
             "comma
@@ -3167,74 +3246,19 @@ endfunction
 "   end
 "
 "   e.g reg sequences
-"   ['freg', seq, 'c0', 'c0', 'a', lines]
-"   ['creg', seq, 9,    0, 'b', lines]
+"   ['reg', 'freg', width, 'a', 1, sequence]
+"   ['reg', 'creg', width, 'b', 1, sequence]
 "   reg c is ommited because it exists in port io
 "
 " Output:
-"   list of register sequences
-"    0       1         2       3       4            5 
-"   [type, sequence, width1, width2, signal_name, lines]
+"   list of signal sequences
+"    0     1             2      3            4         5
+"   [type, specify type, width, signal_name, resolved, seq]
 "---------------------------------------------------
 function s:GetReg(lines)
     let lines = copy(a:lines)
-    "let reg_names = s:GetAllSig(a:lines,'reg')
-
-    "io reg{{{4
-    let io_names = s:GetIO(lines,'name')
-    let ioreg_names = {}
-    for name in keys(io_names)
-        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-        let value = io_names[name]
-        let type = value[0]
-        if type == 'reg'
-            call extend(ioreg_names, {name : value})
-        endif
-    endfor
-    "}}}4
-    
-    "flip-flop reg{{{4
-    "   width_names    
-    "    0     1            2      3               4            5                6             7
-    "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
-    let freg_width_names = s:GetfReg(lines)
-
-    "    0       1         2       3       4            5 
-    "   ['freg', sequence, width1, width2, signal_name, lines]
-    "GetSig
-    let freg_names = s:GetSig('freg',freg_width_names,'name')
-    let reg_names = freg_names
-    "}}}4
-
-    "combination reg{{{4
-    "   width_names    
-    "    0     1            2      3               4            5                6             7
-    "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
-    let creg_width_names = s:GetcReg(lines)
-    "    0       1         2       3       4            5 
-    "   ['creg', sequence, width1, width2, signal_name, lines]
-    "GetSig
-    let creg_names = s:GetSig('creg',creg_width_names,'name')
-    for name in keys(creg_names)
-        if has_key(reg_names,name)
-            "duplicate reg in freg_names and creg_names,error
-            echohl ErrorMsg | echo "Exist Same Name of Flip-Flop Register and Combination Register. Error when GetReg! reg = ".name| echohl None
-        else
-            call extend(reg_names,{name : creg_names[name]})
-        endif
-    endfor
-    "}}}4
-
-    "remove reg exists in io{{{4
-    for name in keys(reg_names)
-        if has_key(ioreg_names,name)
-            call remove(reg_names,name)
-        endif
-    endfor
-    "}}}4
-
+    let reg_names = s:GetAllSig(a:lines,'reg')
     return reg_names
-
 endfunction
 "}}}3
 
@@ -3461,55 +3485,48 @@ endfunction
 "   auto_reg = [a,qqq,creg]
 "---------------------------------------------------
 function s:GetDeclReg(lines)
-    let get_busy = 0
     let decl_reg = []
     let auto_reg = []
     let idx = 1
 
     while idx < len(a:lines)
         "skip comment line
-        let idx = s:SkipCommentLine(0,idx,a:lines)
+        let idx = s:SkipCommentLine(2,idx,a:lines)
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
         let line = a:lines[idx-1]
 
-        if line =~ '/\*\<autoreg\>'
-            "keep current line
-            while 1
-                let idx = idx + 1
-                let line = getline(idx)
+        "comment detect,judege if it's start
+        if line =~ '\/\/.*$'
+            if line =~ '\/\/Start of automatic reg'
                 "start of autoreg
-                if line =~ '//Start of automatic reg'
-                    let get_busy = 1
-                elseif get_busy == 1
+                while 1
+                    let idx = idx + 1
+                    let line = getline(idx)
                     "end of autoreg
-                    if line =~ '//End of automatic reg'
+                    if line =~ '\/\/End of automatic reg'
                         break
                     "abnormal end
                     elseif line =~ 'endmodule' || idx == line('$')
                         echohl ErrorMsg | echo "Error running GetDeclReg! Get //Start of automatic reg but abonormally quit!"| echohl None
                         break
                     "middle
-                    else
-                        if line =~ '^\s*reg'
-                            let name = matchstr(line,'^\s*reg\s\+\(\[.*\]\)\?\s*\zs\w\+\ze')
-                            call add(auto_reg,name)
-                        endif 
+                    elseif line =~ '^\s*reg'
+                        let name = matchstr(line,'^\s*reg\s\+\(\[.*\]\)\?\s*\zs\w\+\ze')
+                        call add(auto_reg,name)
                     endif
-                "never start, break
-                else
-                    break
-                endif 
-            endwhile
+                endwhile
+            else
+                "delete comment
+                let line = substitute(line,'\/\/.*$','','')
+            endif
         endif
 
         while line =~ '^\s*reg\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*'
             "delete abnormal
             if line =~ '\<signed\>\|\<unsigned\>'
                 let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
-            elseif line =~ '\/\/.*$'
-                let line = substitute(line,'\/\/.*$','','')
             endif
             let names = matchstr(line,'^\s*reg\s\+\(\[.\{-\}\]\)\?\s*\zs.\{-\}\ze\s*;\s*')
             "in case style of reg a = {b,c,d};
@@ -3611,10 +3628,10 @@ endfunction
 "
 " Description:
 " e.g draw reg sequences
-"    0       1         2       3       4            5 
-"   [type, sequence, width1, width2, signal_name, lines]
-"   ['freg', seq, 'c0', 'c0', 'a', lines]
-"   ['creg', seq, 9,    0, 'b', lines]
+"    0     1             2      3            4         5
+"   [type, specify type, width, signal_name, resolved, seq]
+"   ['reg', 'freg', '', 'a', 1, sequence]
+"   ['reg', 'creg', '[10:0]', 'b', 1, sequence]
 "       reg             a;
 "       reg  [10:0]     b;
 "
@@ -3631,25 +3648,17 @@ function s:DrawReg(reg_names,reg_list)
     let max_lname_len = 0
     let max_rsemicol_len = 0
     for name in keys(a:reg_names)
-        "    0       1         2       3       4            5 
-        "   [type, sequence, width1, width2, signal_name, lines]
+        "    0     1             2      3            4         5
+        "   [type, specify type, width, signal_name, resolved, seq]
         let value = a:reg_names[name]
         let type = value[0]
-        if type != 'keep'
-            let name = value[4]
+        if type == 'reg'
+            let name = value[3]
+            let width = value[2]
             "calculate maximum len of position to Draw
-            if value[3] == 'c0' 
-                if value[2] == 'c0'
-                    let width = ''
-                else
-                    let width = '['.value[2].']'
-                endif 
-            else
-                let width = '['.value[2].':'.value[3].']'
-            endif
-
-            let max_lname_len = max([max_lname_len,len(prefix)+5+len(width)+4,s:name_pos_max])
-            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+1+len(name)+4,s:symbol_pos_max])
+            "let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            let max_lname_len = max([max_lname_len,len(prefix)+len('reg  ')+len(width)+4,s:name_pos_max])
+            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,s:symbol_pos_max])
         endif
     endfor
     "}}}4
@@ -3669,15 +3678,15 @@ function s:DrawReg(reg_names,reg_list)
     let creg_seqs = {}
     for name in keys(a:reg_names)
         "Format reg sequences
-        "    0       1         2       3       4            5 
-        "   [type, sequence, width1, width2, signal_name, lines]
+        "    0     1             2      3            4         5
+        "   [type, specify type, width, signal_name, resolved, seq]
         let value = a:reg_names[name]
-        let type = value[0]
-        let seq = value[1]
-        if type == 'freg'
+        let stype = value[1]
+        let seq = value[5]
+        if stype == 'freg'
             call extend(freg_seqs,{seq : value})
         endif
-        if type == 'creg'
+        if stype == 'creg'
             call extend(creg_seqs,{seq : value})
         endif
     endfor
@@ -3695,35 +3704,17 @@ function s:DrawReg(reg_names,reg_list)
     for seq in sort(s:Str2Num(keys(freg_seqs)),'n')
         let value = freg_seqs[seq]
         "Format reg sequences
-        "    0       1         2       3       4            5 
-        "   [type, sequence, width1, width2, signal_name, lines]
+        "    0     1             2      3            4         5
+        "   [type, specify type, width, signal_name, resolved, seq]
 
         "width
-        "in case of 'c0' == 0, transform 0 into '0';
-        if type(value[3]) == 0 && value[3] == 0
-            let value[3] = '0'
-        endif
-        if type(value[2]) == 0 && value[2] == 0
-            let value[2] = '0'
-        endif
-
-        if value[3] == 'c0' 
-            if value[2] == 'c0'
-                let width = ''
-            else
-                let width = '['.value[2].']'
-            endif 
-        elseif value[3] == '0' && value[2] == '0'
-            let width = ''
-        else
-            let width = '['.value[2].':'.value[3].']'
-        endif
+        let width = value[2]
 
         "width2name
-        let width2name = repeat(' ',max_lname_len-len(prefix)-len(width)-5)
+        let width2name = repeat(' ',max_lname_len-len(prefix)-len(width)-len('reg  '))
 
         "name
-        let name = value[4]
+        let name = value[3]
 
         "name2semicol
         "don't align tail if config
@@ -3776,31 +3767,13 @@ function s:DrawReg(reg_names,reg_list)
         "   [type, sequence, width1, width2, signal_name, lines]
 
         "width
-        "in case of 'c0' == 0, transform 0 into '0';
-        if type(value[3]) == 0 && value[3] == 0
-            let value[3] = '0'
-        endif
-        if type(value[2]) == 0 && value[2] == 0
-            let value[2] = '0'
-        endif
-
-        if value[3] == 'c0' 
-            if value[2] == 'c0'
-                let width = ''
-            else
-                let width = '['.value[2].']'
-            endif 
-        elseif value[3] == '0' && value[2] == '0'
-            let width = ''
-        else
-            let width = '['.value[2].':'.value[3].']'
-        endif
+        let width = value[2]
 
         "width2name
-        let width2name = repeat(' ',max_lname_len-len(prefix)-len(width)-5)
+        let width2name = repeat(' ',max_lname_len-len(prefix)-len(width)-len('reg  '))
 
         "name
-        let name = value[4]
+        let name = value[3]
 
         "name2semicol
         "don't align tail if config
@@ -3903,25 +3876,8 @@ endfunction
 "---------------------------------------------------
 function s:GetWire(lines)
     let lines = copy(a:lines)
-    let wire_names = {}
-
-    let io_names = s:GetIO(lines,'name')
-
-    "io wire names{{{4
-    let iowire_names = {}
-    for name in keys(io_names)
-        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-        let value = io_names[name]
-        let type = value[0]
-        if type == 'wire' || type == 'none'
-            call extend(iowire_names, {name : value})
-        endif
-    endfor
-    "}}}4
-
-"---------------------------------------pause here----------------------
+    let wire_names = s:GetAllSig(a:lines,'wire')
     return wire_names
-
 endfunction
 "}}}3
 
@@ -4363,6 +4319,390 @@ function s:GetiWire_DelPara(lines)
         call add(pdel_lines,line)
     endwhile
     return pdel_lines
+endfunction
+"}}}3
+
+"GetDeclWire 获取已经声明的wire{{{3
+"--------------------------------------------------
+" Function: GetDeclWire
+" Input: 
+"   N/A
+" Description:
+"   lines : lines to get declared wire
+"
+" e.g. get decl_wire and auto_wire
+"
+"    wire [3:0]                  m                               ;
+"    wire [4:0]                  n                               ;
+"    /*autowire*/
+"    //Start of automatic wire
+"    //Define assign wires here
+"    wire [3:0]                  a                               ;
+"    wire [WIDTH-1:0]            qqq                             ;
+"    //Define instance wires here
+"    wire [5:0]                  iwire;
+"    //End of automatic wire
+"
+" Output:
+"   decl_wire : wire declared outside /*autowire*/
+"   auto_wire : wire declared inside /*autowire*/
+" e.g.
+"   decl_wire = [m,n]
+"   auto_wire = [a,qqq,iwire]
+"---------------------------------------------------
+function s:GetDeclWire(lines)
+    let decl_wire = []
+    let auto_wire = []
+    let idx = 1
+
+    while idx < len(a:lines)
+        "skip comment line
+        let idx = s:SkipCommentLine(2,idx,a:lines)
+        if idx == -1
+            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+        endif
+        let line = a:lines[idx-1]
+
+        "comment detect,judege if it's start
+        if line =~ '\/\/.*$'
+            if line =~ '\/\/Start of automatic wire'
+                "start of autowire
+                while 1
+                    let idx = idx + 1
+                    let line = getline(idx)
+                    "end of autowire
+                    if line =~ '\/\/End of automatic wire'
+                        break
+                    "abnormal end
+                    elseif line =~ 'endmodule' || idx == line('$')
+                        echohl ErrorMsg | echo "Error running GetDeclWire! Get //Start of automatic wire but abonormally quit!"| echohl None
+                        break
+                    "middle
+                    elseif line =~ '^\s*wire'
+                        let name = matchstr(line,'^\s*wire\s\+\(\[.*\]\)\?\s*\zs\w\+\ze')
+                        call add(auto_wire,name)
+                    endif
+                endwhile
+            else
+                "delete comment
+                let line = substitute(line,'\/\/.*$','','')
+            endif
+        endif
+
+        while line =~ '^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*'
+            "delete abnormal
+            if line =~ '\<signed\>\|\<unsigned\>'
+                let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
+            endif
+            let names = matchstr(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*\zs.\{-\}\ze\s*;\s*')
+            "in case style of wire a = {b,c,d};
+            let names = substitute(names,'\(\/\/\)\@<!=.*$','','')
+            "in case style of wire [1:0] a,b,c;
+            for name in split(names,',')
+                let name = matchstr(name,'\w\+')
+                call add(decl_wire,name)
+            endfor
+            let line = substitute(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*','','')
+        endwhile
+
+        let idx = idx + 1
+    endwhile
+
+    return [decl_wire,auto_wire] 
+endfunction
+"}}}3
+
+"AutoWire-Kill
+"KillAutoWire 删除所有自动线网声明"{{{3
+"--------------------------------------------------
+" Function: KillAutoWire
+" Input: 
+"   Must put cursor to /*autowire*/ position
+" Description:
+" e.g kill all declaration after /*autowire*/
+"    /*autowire*/
+"    //Start of automatic wire
+"    //Define assign wires here
+"    wire [3:0]                  a                               ;
+"    wire [WIDTH-1:0]            qqq                             ;
+"    //Define instance wires here
+"    wire [5:0]                  iwire;
+"    //End of automatic wire
+"
+"   --------------> after KillAutoWire
+"
+"    /*autowire*/
+"
+" Output:
+"   line after kill
+"   kill all between //Start of automatic wire & //End of automatic wire
+"---------------------------------------------------
+function s:KillAutoWire() 
+    let orig_idx = line('.')
+    let orig_col = col('.')
+    let idx = line('.')
+    let line = getline(idx)
+    let kill_busy = 0
+    if line =~ '/\*\<autowire\>'
+        "keep current line
+        let idx = idx + 1
+        while 1
+            let line = getline(idx)
+            "start of autowire
+            if line =~ '//Start of automatic wire'
+                execute ':'.idx.'d'
+                let kill_busy = 1
+            elseif kill_busy == 1
+                "end of autowire
+                if line =~ '//End of automatic wire'
+                    "call deletebufline('%',idx)
+                    execute ':'.idx.'d'
+                    break
+                "abnormal end
+                elseif line =~ 'endmodule' || idx == line('$')
+                    echohl ErrorMsg | echo "Error running KillAutoWire! Kill abnormally till the end!"| echohl None
+                    break
+                "middle
+                else
+                    "call deletebufline('%',idx)
+                    execute ':'.idx.'d'
+                endif
+            else
+                let idx = idx + 1
+                "never start, normal end 
+                if line =~ 'endmodule' || idx == line('$')
+                    break
+                endif
+            endif 
+        endwhile
+    else
+        echohl ErrorMsg | echo "Error running KillAutoWire! Kill line not match /*autowire*/ !"| echohl None
+    endif
+
+    "cursor back
+    call cursor(orig_idx,orig_col)
+endfunction 
+"}}}3
+
+"AutoWire-Draw
+"DrawWire 按格式输出例化wire{{{3
+"--------------------------------------------------
+" Function: DrawWire
+" Input: 
+"   wire_names : new wire names for align
+"   wire_list : old wire name list
+"
+" Description:
+" e.g draw wire sequences
+"    0     1             2      3            4         5
+"   [type, specify type, width, signal_name, resolved, seq]
+"   ['wire', 'awire', '', 'a', 1, sequence]
+"   ['wire', 'iwire', '[10:0]', 'b', 1, sequence]
+"       wire            a;
+"       wire [10:0]     b;
+"
+" Output:
+"   line that's aligned
+"   e.g
+"       wire  [WIDTH1:WIDTH2]     wire_name;
+"---------------------------------------------------
+function s:DrawWire(wire_names,wire_list)
+    let prefix = s:start_prefix
+    let wire_list = copy(a:wire_list)
+
+    "guarantee spaces width{{{4
+    let max_lname_len = 0
+    let max_rsemicol_len = 0
+    for name in keys(a:wire_names)
+        "    0     1             2      3            4         5
+        "   [type, specify type, width, signal_name, resolved, seq]
+        let value = a:wire_names[name]
+        let type = value[0]
+        if type == 'wire'
+            let name = value[3]
+            let width = value[2]
+            "calculate maximum len of position to Draw
+            "let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            let max_lname_len = max([max_lname_len,len(prefix)+len('wire ')+len(width)+4,s:name_pos_max])
+            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,s:symbol_pos_max])
+        endif
+    endfor
+    "}}}4
+
+    "draw wire{{{4
+    let lines = []
+
+    "wire_list can be changed in function, therefore record if it's empty first
+    if wire_list == []
+        let wire_list_empty = 1
+    else
+        let wire_list_empty = 0
+    endif
+
+    "recover awire_seqs & iwire_seqs{{{5
+    let awire_seqs = {}
+    let iwire_seqs = {}
+    for name in keys(a:wire_names)
+        "Format wire sequences
+        "    0     1             2      3            4         5
+        "   [type, specify type, width, signal_name, resolved, seq]
+        let value = a:wire_names[name]
+        let stype = value[1]
+        let seq = value[5]
+        if stype == 'awire'
+            call extend(awire_seqs,{seq : value})
+        endif
+        if stype == 'iwire'
+            call extend(iwire_seqs,{seq : value})
+        endif
+    endfor
+    "}}}5
+
+    "darw //Start of automatic wire{{{5
+    call add(lines,prefix.'//Start of automatic wire')
+    "}}}5
+
+    "darw //Define assign wires here{{{5
+    call add(lines,prefix.'//Define assign wires here')
+    "}}}5
+
+    "draw awire{{{5
+    for seq in sort(s:Str2Num(keys(awire_seqs)),'n')
+        let value = awire_seqs[seq]
+        "Format wire sequences
+        "    0     1             2      3            4         5
+        "   [type, specify type, width, signal_name, resolved, seq]
+
+        "width
+        let width = value[2]
+
+        "width2name
+        let width2name = repeat(' ',max_lname_len-len(prefix)-len(width)-len('wire '))
+
+        "name
+        let name = value[3]
+
+        "name2semicol
+        "don't align tail if config
+        if s:atw_tail_not_align == 1
+            let name2semicol = ''
+        else
+            let name2semicol = repeat(' ',max_rsemicol_len-max_lname_len-len(name))
+        endif
+
+        "semicol
+        let semicol = ';'
+
+        "Draw wire by config
+        "empty list, default
+        if wire_list_empty == 1
+            let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+        "update list,draw wire by config
+        else
+            let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            "process //WIRE_NEW
+            let wire_idx = index(wire_list,name) 
+            "name not exist in old wire_list, add //WIRE_NEW
+            if wire_idx == -1
+                if s:atw_wire_new == 1
+                    let line = line . ' // WIRE_NEW'
+                else
+                    let line = line
+                endif
+            "name already exist in old wire_list,cover
+            else
+                let line = line
+                call remove(wire_list,wire_idx)
+            endif
+        endif
+
+        call add(lines,line)
+
+    endfor
+    "}}}5
+
+    "darw //Define instance wires here{{{5
+    call add(lines,prefix.'//Define instance wires here')
+    "}}}5
+
+    "draw iwire{{{5
+    for seq in sort(s:Str2Num(keys(iwire_seqs)),'n')
+        let value = iwire_seqs[seq]
+        "Format wire sequences
+        "    0       1         2       3       4            5 
+        "   [type, sequence, width1, width2, signal_name, lines]
+
+        "width
+        let width = value[2]
+
+        "width2name
+        let width2name = repeat(' ',max_lname_len-len(prefix)-len(width)-len('wire '))
+
+        "name
+        let name = value[3]
+
+        "name2semicol
+        "don't align tail if config
+        if s:atw_tail_not_align == 1
+            let name2semicol = ''
+        else
+            let name2semicol = repeat(' ',max_rsemicol_len-max_lname_len-len(name))
+        endif
+
+        "semicol
+        let semicol = ';'
+
+        "Draw wire by config
+        "empty list, default
+        if wire_list_empty == 1
+            let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+        "update list,draw wire by config
+        else
+            let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            "process //WIRE_NEW
+            let wire_idx = index(wire_list,name) 
+            "name not exist in old wire_list, add //WIRE_NEW
+            if wire_idx == -1
+                if s:atw_wire_new == 1
+                    let line = line . ' // WIRE_NEW'
+                else
+                    let line = line
+                endif
+            "name already exist in old wire_list,cover
+            else
+                let line = line
+                call remove(wire_list,wire_idx)
+            endif
+        endif
+
+        call add(lines,line)
+
+    endfor
+    "}}}5
+
+    if wire_list == []
+    "remain wire in wire_list
+    else
+        if s:atw_wire_del == 1
+            for name in wire_list
+                let line = prefix.'//WIRE_DEL: Wire '.name.' has been deleted.'
+                call add(lines,line)
+            endfor
+        endif
+    endif
+
+    "draw //End of automatic wire{{{5
+    call add(lines,prefix.'//End of automatic wire')
+    "}}}5
+
+    "}}}4
+
+    if lines == []
+        echohl ErrorMsg | echo "Error wire_names input for function DrawWire! wire_names is empty!" | echohl None
+    endif
+
+    return lines
+
 endfunction
 "}}}3
 
@@ -4905,136 +5245,136 @@ endfunction
 "}}}3
 
 "Universal-GetSig
-"GetSig 获取信号列表{{{3
-"--------------------------------------------------
-" Function: GetSig
-" Input:
-"   type : signal type
-"   list of signal widths
-"   value = 
-"    0     1            2      3               4            5                6             7
-"   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
-"   mode : different use of keys
-"          seq -> use seq as key
-"          name -> use signal_name as key
-" Description:
-"   seqs : record sequence list
-"   lines : record orginal line list
-"   left_width_nrs : record left-width list that's pure number
-"   left_widths : record left-width list that's not a pure number, like WIDTH-1 or 2*3-1
-"   right_width_nrs : record right-width list that's pure number
-"   right_widths : record right-width list that's not a pure number, like WIDTH-1 or 2*3-1
-"   right_signal_link : record right-width that's link to a signal or a few signals
-" Output:
-"   list of signal sequences
-"    0     1         2       3       4            5 
-"   [type, sequence, width1, width2, signal_name, lines]
-"---------------------------------------------------
-function s:GetSig(type,width_names,mode)
-
-    let sig_names = {}
-
-    "left_width_nrs & left_widths & right_width_nrs & right_widths 
-    "process and add width1 & width2
-    for name in keys(a:width_names)
-
-        let value = a:width_names[name]
-        let seqs = value[0]
-        let lines = value[2]
-        let left_width_nrs = value[3]
-        let left_widths = value[4]
-        let right_width_nrs = value[5]
-        let right_widths = value[6]
-        let right_signal_link = value[7]
-
-        "1. exist width that is not a number type, use first width declaration of this signal
-        "e.g.
-        "parameter type input width e.g. reg_a[WIDTH-1:0]
-        "calculation type e.g. reg_a[2*3-1:0] reg_b[4/2-1:0]
-        "2. only exist width that is a number type, use maximum & minimum number as width. 
-        "e.g. 
-        "reg_t[2:1] reg_t[0] -> width1 = 2, width2 = 0
-        
-        "first judge left width
-        if left_widths != []
-            let [width1,width2] = left_widths[0]
-            if width2 == ''
-                let width2 = 'c0'
-            endif
-        elseif left_width_nrs != []
-            let width1 = max(left_width_nrs)
-            let width2 = min(left_width_nrs)
-        elseif right_widths != []
-            let [width1,width2] = right_widths[0]
-            if width2 == ''
-                let width2 = 'c0'
-            endif
-        elseif right_width_nrs != []
-            let width1 = max(right_width_nrs)
-            let width2 = min(right_width_nrs)
-        elseif right_signal_link != {}
-            "--------------------------------signal link------------------------------
-            "--------------------------------to be modified------------------------------
-            "let left_name = name
-
-            "let lines = getline(1,line('$'))
-
-            ""Get IO first
-            ""   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-            "let io_names = s:GetIO(lines,'name')
-
-            ""io names appear
-            "for name in keys(io_names)
-            "    if has_key(right_signal_link,name)
-            "        "echo 'exist!!!!!!!!!!!!!'.name
-            "    endif
-            "endfor
-
-            let width1 = 'c0'
-            let width2 = 'c0'
-        else
-            "no width
-            let width1 = 'c0'
-            let width2 = 'c0'
-        endif
-
-        "use first sequence as signal sequence
-        "   [type, sequence, width1, width2, signal_name, line]
-        let sig_value = [a:type,seqs[0],width1,width2,name,lines]
-        call extend(sig_names,{name : sig_value})
-    endfor
-
+""GetSig 获取信号列表{{{3
+""--------------------------------------------------
+"" Function: GetSig
+"" Input:
+""   type : signal type
+""   list of signal widths
+""   value = 
+""    0     1            2      3               4            5                6             7
+""   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
+""   mode : different use of keys
+""          seq -> use seq as key
+""          name -> use signal_name as key
+"" Description:
+""   seqs : record sequence list
+""   lines : record orginal line list
+""   left_width_nrs : record left-width list that's pure number
+""   left_widths : record left-width list that's not a pure number, like WIDTH-1 or 2*3-1
+""   right_width_nrs : record right-width list that's pure number
+""   right_widths : record right-width list that's not a pure number, like WIDTH-1 or 2*3-1
+""   right_signal_link : record right-width that's link to a signal or a few signals
+"" Output:
+""   list of signal sequences
+""    0     1         2       3       4            5 
+""   [type, sequence, width1, width2, signal_name, lines]
+""---------------------------------------------------
+"function s:GetSig(type,width_names,mode)
+"
+"    let sig_names = {}
+"
+"    "left_width_nrs & left_widths & right_width_nrs & right_widths 
+"    "process and add width1 & width2
+"    for name in keys(a:width_names)
+"
+"        let value = a:width_names[name]
+"        let seqs = value[0]
+"        let lines = value[2]
+"        let left_width_nrs = value[3]
+"        let left_widths = value[4]
+"        let right_width_nrs = value[5]
+"        let right_widths = value[6]
+"        let right_signal_link = value[7]
+"
+"        "1. exist width that is not a number type, use first width declaration of this signal
+"        "e.g.
+"        "parameter type input width e.g. reg_a[WIDTH-1:0]
+"        "calculation type e.g. reg_a[2*3-1:0] reg_b[4/2-1:0]
+"        "2. only exist width that is a number type, use maximum & minimum number as width. 
+"        "e.g. 
+"        "reg_t[2:1] reg_t[0] -> width1 = 2, width2 = 0
+"        
+"        "first judge left width
+"        if left_widths != []
+"            let [width1,width2] = left_widths[0]
+"            if width2 == ''
+"                let width2 = 'c0'
+"            endif
+"        elseif left_width_nrs != []
+"            let width1 = max(left_width_nrs)
+"            let width2 = min(left_width_nrs)
+"        elseif right_widths != []
+"            let [width1,width2] = right_widths[0]
+"            if width2 == ''
+"                let width2 = 'c0'
+"            endif
+"        elseif right_width_nrs != []
+"            let width1 = max(right_width_nrs)
+"            let width2 = min(right_width_nrs)
+"        elseif right_signal_link != {}
+"            "--------------------------------signal link------------------------------
+"            "--------------------------------to be modified------------------------------
+"            "let left_name = name
+"
+"            "let lines = getline(1,line('$'))
+"
+"            ""Get IO first
+"            ""   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+"            "let io_names = s:GetIO(lines,'name')
+"
+"            ""io names appear
+"            "for name in keys(io_names)
+"            "    if has_key(right_signal_link,name)
+"            "        "echo 'exist!!!!!!!!!!!!!'.name
+"            "    endif
+"            "endfor
+"
+"            let width1 = 'c0'
+"            let width2 = 'c0'
+"        else
+"            "no width
+"            let width1 = 'c0'
+"            let width2 = 'c0'
+"        endif
+"
+"        "use first sequence as signal sequence
+"        "   [type, sequence, width1, width2, signal_name, line]
+"        let sig_value = [a:type,seqs[0],width1,width2,name,lines]
+"        call extend(sig_names,{name : sig_value})
+"    endfor
+"
+""        let sig_seqs = {}
+""        for name in keys(sig_names)
+""            let value = sig_names[name]
+""            let seq = value[1]
+""            call extend(sig_seqs,{seq : value})
+""        endfor
+""
+""        for seq in sort(s:Str2Num(keys(sig_seqs)),'n')
+""            let value = sig_seqs[seq]
+""            let width1 = value[2]
+""            let width2 = value[3]
+""            let name = value[4]
+""            echo name.' '.width1.':'.width2.' '
+""        endfor
+"
+"    if a:mode == 'name'
+"        return sig_names
+"    elseif a:mode == 'seq'
 "        let sig_seqs = {}
 "        for name in keys(sig_names)
 "            let value = sig_names[name]
 "            let seq = value[1]
 "            call extend(sig_seqs,{seq : value})
 "        endfor
-"
-"        for seq in sort(s:Str2Num(keys(sig_seqs)),'n')
-"            let value = sig_seqs[seq]
-"            let width1 = value[2]
-"            let width2 = value[3]
-"            let name = value[4]
-"            echo name.' '.width1.':'.width2.' '
-"        endfor
-
-    if a:mode == 'name'
-        return sig_names
-    elseif a:mode == 'seq'
-        let sig_seqs = {}
-        for name in keys(sig_names)
-            let value = sig_names[name]
-            let seq = value[1]
-            call extend(sig_seqs,{seq : value})
-        endfor
-        return sig_seqs
-    else
-        echohl ErrorMsg | echo "Error mode input for function GetSig! mode = ".a:mode| echohl None
-    endif
-    
-endfunction
-"}}}3
+"        return sig_seqs
+"    else
+"        echohl ErrorMsg | echo "Error mode input for function GetSig! mode = ".a:mode| echohl None
+"    endif
+"    
+"endfunction
+""}}}3
 
 "GetAllSig 获取所有信号{{{3
 "--------------------------------------------------
@@ -5064,7 +5404,6 @@ endfunction
 "---------------------------------------------------
 function s:GetAllSig(lines,mode)
     let sig_names = {}
-    let reg_names = {}
 
     "io{{{4
     "   list of port sequences(including comment lines)
@@ -5093,18 +5432,22 @@ function s:GetAllSig(lines,mode)
     "}}}4
 
     "reg{{{4
+    let reg_names = {}
     "   list of width_names    
     "    0     1            2      3               4            5                6             7
     "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
     let freg_width_names = s:GetfReg(a:lines) 
     let creg_width_names = s:GetcReg(a:lines) 
-    let reg_width_names = extend(freg_width_names,creg_width_names,"error")
+    let reg_width_names = copy(freg_width_names)
+    call extend(reg_width_names,creg_width_names,"error")
+
     "remove reg exists in io
     for name in keys(reg_width_names)
         if has_key(io_names,name)
             call remove(reg_width_names,name)
         endif
     endfor
+
     "record reg
     for name in keys(reg_width_names)
         if has_key(freg_width_names,name)
@@ -5176,6 +5519,21 @@ function s:GetAllSig(lines,mode)
     "Get declared register
     let [decl_reg,auto_reg] = s:GetDeclReg(a:lines)
     "}}}4
+
+"    "print reg test {{{4
+"    for name in keys(reg_names)
+"        let value = reg_names[name]
+"        "    0     1             2      3            4         5
+"        "   [type, specify type, width, signal_name, resolved, seq]
+"        let width = value[2]
+"        let type = value[1]
+"        let resolved = value[4]
+"        echo " name==" . name . repeat(" ",32-strlen(name)).
+"                    \" width==" . width . repeat(" ",16-strlen(width)).
+"                    \" type==" . type . repeat(" ",8-strlen(type)).
+"                    \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
+"    endfor
+"    "}}}4
 
     if a:mode == 'reg'
         return reg_names
@@ -5272,7 +5630,34 @@ function s:GetAllSig(lines,mode)
     let iwire_width_names = s:GetiWire(a:lines,files,modules,reg_width_names,decl_reg,io_names)
     "}}}4
 
+"    "print awire test {{{4
+"    for name in keys(sig_names)
+"        "    0     1             2      3            4         5
+"        "   [type, specify type, width, signal_name, resolved, seq]
+"        let value = sig_names[name]
+"        if value[1] == 'awire'
+"            let width = value[2]
+"            let resolved = value[4]
+"            echo " name==" . name . repeat(" ",32-strlen(name)).
+"                        \" width==" . width . repeat(" ",16-strlen(width)).
+"                        \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
+"        endif
+"    endfor
+"    "}}}4
+    
+"    "print iwire test {{{4
+"    for name in keys(iwire_width_names)
+"        let value = iwire_width_names[name]
+"        let widths = value[4]
+"        let resolved = value[5]
+"        echo " name==" . name . repeat(" ",32-strlen(name)).
+"                    \" width==" . widths[0] . repeat(" ",16-strlen(widths[0])).
+"                    \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
+"    endfor
+"    }}}4
+
     "wire{{{4
+    let wire_names = {}
     for name in keys(iwire_width_names)
         let iwire_value = iwire_width_names[name]
         let iwire_resolved = iwire_value[5]
@@ -5289,6 +5674,7 @@ function s:GetAllSig(lines,mode)
             if awire_resolved == 1 && iwire_resolved == 0
                 let value = awire_value
                 call extend(sig_names,{name : value})
+                call extend(wire_names,{name : value})
             "use iwire
             else
                 let conn_widths = iwire_value[4]
@@ -5297,6 +5683,7 @@ function s:GetAllSig(lines,mode)
                 "   [type, specify type, width, signal_name, resolved, seq]
                 let value = ['wire','iwire',conn_widths[-1],name,0,iwire_seqs[0]]
                 call extend(sig_names,{name : value})
+                call extend(wire_names,{name : value})
             endif
         else
             "   list of signal sequences
@@ -5305,22 +5692,14 @@ function s:GetAllSig(lines,mode)
             let conn_widths = iwire_value[4]
             let value = ['wire','iwire',conn_widths[-1],name,iwire_resolved,iwire_seqs[0]]
             call extend(sig_names,{name : value})
+            call extend(wire_names,{name : value})
         endif
     endfor
     "}}}4
-    
 
-"    "print iwire test {{{4
-"    for name in keys(iwire_width_names)
-"        let value = iwire_width_names[name]
-"        let widths = value[4]
-"        let resolved = value[5]
-"        echo " name==" . name . repeat(" ",32-strlen(name)).
-"                    \" width==" . widths[0] . repeat(" ",16-strlen(widths[0])).
-"                    \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
-"    endfor
-"    }}}4
-
+    if a:mode == 'wire'
+        return wire_names
+    endif
 
 "    "print all signal test {{{4
 "    let io_sigs = {}
@@ -5379,7 +5758,6 @@ function s:GetAllSig(lines,mode)
 "                    \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
 "    endfor
 "    "}}}4
-
 
     return [sig_names,io_names,reg_width_names,awire_width_names,iwire_width_names]
 
