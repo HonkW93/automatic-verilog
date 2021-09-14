@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/09/14 01:13
+" Last Modified:  2021/09/14 23:54
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -18,6 +18,7 @@
 " 2021/5/28     HonkW           1.1.0                   Optimize AutoInst & AutoPara
 " 2021/6/12     HonkW           1.1.2                   Prototype of AutoReg
 " 2021/8/1      HonkW           1.1.6                   Add modified verision of RtlTree
+" 2021/9/14     HonkW           1.2.4                   Prototype of AutoDef
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
 
@@ -57,6 +58,7 @@ let s:atr_reg_new = get(g:,'atr_reg_new',1)                 "add //REG_NEW if re
 let s:atr_reg_del = get(g:,'atr_reg_del',1)                 "add //REG_DEL if register has been deleted from the module
 "let s:atr_keep_chg = get(g:,'atr_keep_chg',1)              "keep changed register
 let s:atr_tail_not_align = get(g:,'atr_tail_not_align',0)   "don't do alignment in tail when autoreg
+let s:atr_unresolved_flag = get(g:,'atr_unresolved_flag',0) "add //unresolved if reg is unresolved
 "}}}2
 
 "AutoWire 自动线网配置{{{2
@@ -64,6 +66,7 @@ let s:atw_wire_new = get(g:,'atw_wire_new',1)               "add //WIRE_NEW if w
 let s:atw_wire_del = get(g:,'atw_wire_del',1)               "add //WIRE_DEL if wire has been deleted from the module
 "let s:atw_keep_chg = get(g:,'atw_keep_chg',1)              "keep changed wire
 let s:atw_tail_not_align = get(g:,'atw_tail_not_align',0)   "don't do alignment in tail when autowire
+let s:atw_unresolved_flag = get(g:,'atw_unresolved_flag',0) "add //unresolved if wire is unresolved
 "}}}2
 
 "Progressbar 进度条支持{{{2
@@ -209,7 +212,7 @@ amenu &Verilog.Code.Always@.always\ @(*)                                :call Al
 amenu &Verilog.Code.Always@.always\ @(negedge\ or\ negedge)             :call AlBnn()<CR>
 amenu &Verilog.Code.Always@.always\ @(posedge)                          :call AlBp()<CR>
 amenu &Verilog.Code.Always@.always\ @(negedge)                          :call AlBn()<CR>
-amenu &Verilog.Code.Header.AddHeader<TAB><;header>                      :call AddHeader()<CR>
+amenu &Verilog.Code.Header.AddHeader<TAB><;hd>                          :call AddHeader()<CR>
 amenu &Verilog.Code.Comment.SingleLineComment<TAB><;//>                 :call AutoComment()<CR>
 amenu &Verilog.Code.Comment.MultiLineComment<TAB>Visual-Mode\ <;/*>     :call AutoComment2()<CR>
 amenu &Verilog.Code.Comment.CurLineAddComment<TAB><;/$>                 :call AddCurLineComment()<CR>
@@ -226,7 +229,9 @@ amenu &Verilog.AutoPara.AutoPara(0)<TAB>One                             :call Au
 amenu &Verilog.AutoPara.AutoParaValue(1)<TAB>All                        :call AutoParaValue(1)<CR>
 amenu &Verilog.AutoPara.AutoParaValue(0)<TAB>One                        :call AutoParaValue(0)<CR>
 
-amenu &Verilog.AutoReg.AutoReg()<TAB>                                   :call AutoReg()<CR>
+amenu &Verilog.AutoDef.AutoDef()<TAB>                                   :call AutoDef()<CR>
+amenu &Verilog.AutoDef.AutoReg()<TAB>                                   :call AutoReg()<CR>
+amenu &Verilog.AutoDef.AutoWire()<TAB>                                  :call AutoWire()<CR>
 "}}}3
 
 "}}}2
@@ -247,13 +252,14 @@ map <S-F4>      :call AutoPara(0)<ESC>
 map <S-F5>      :call AutoParaValue(0)<ESC>
 map <S-F6>      :call AutoReg()<ESC>
 map <S-F7>      :call AutoWire()<ESC>
+map <S-F8>      :call AutoDef()<ESC>
 "}}}3
 
 "Code Snippet 代码段{{{3
 "Add Always 添加always块
 map ;al         :call AlBpp()<CR>i
 "Add Header 添加文件头
-map ;header     :call AddHeader()<CR> 
+map ;hd         :call AddHeader()<CR> 
 "Add Comment 添加注释
 map ;//         :call AutoComment()<ESC>
 map ;/*         <ESC>:call AutoComment2()<ESC>
@@ -1342,6 +1348,80 @@ function AutoWire()
             call append(line('.'),lines)
 
             "Only autowire once
+            break
+
+        endwhile
+
+        "Put cursor back to original position
+        call cursor(orig_idx,orig_col)
+    endtry
+endfunction
+"}}}3
+
+"AutoDef 自动定义所有信号{{{3
+"--------------------------------------------------
+" Function: AutoDef
+" Input: 
+"   N/A
+" Description:
+"   autodef all signals
+"   autodef = autoreg + autowire
+" Output:
+"   Formatted autodef code
+"---------------------------------------------------
+function AutoDef()
+    let prefix = s:start_prefix
+    try
+        "Record current position
+        let orig_idx = line('.')
+        let orig_col = col('.')
+
+        "AutoDef all start from top line
+        call cursor(1,1)
+
+        while 1
+            "Put cursor to /*autodef*/ line
+            if search('\/\*autodef\*\/','W') == 0
+                break
+            endif
+
+            "Kill all contents between //Start of automatic define and //End of automatic define 
+            "Current position must be at /*autodef*/ line
+            "call s:KillAutoDef()
+
+            "darw //Start of automatic define
+            call append(line('.'),prefix.'//Start of automatic define')
+            call cursor(line('.')+1,1)
+
+            "AutoReg(){{{4
+            "add /*autoreg*/
+            call append(line('.'),'/*autoreg*/')
+            "cursor + 1
+            call cursor(line('.')+1,1)
+            "AutoReg
+            call AutoReg()
+            "delete /*autoreg*/
+            execute ':'.line('.').'d'
+            "cursor to end
+            call search('\/\/End of automatic reg','W')
+            "}}}4
+
+            "AutoWire(){{{4
+            "add /*autowire*/
+            call append(line('.'),'/*autowire*/')
+            "cursor + 1
+            call cursor(line('.')+1,1)
+            "AutoReg
+            call AutoWire()
+            "delete /*autowire*/
+            execute ':'.line('.').'d'
+            "cursor to end
+            call search('\/\/End of automatic wire','W')
+            "}}}4
+    
+            call append(line('.'),prefix.'//End of automatic define')
+
+            "Only autodef once
             break
 
         endwhile
@@ -3583,12 +3663,12 @@ function s:KillAutoReg()
         while 1
             let line = getline(idx)
             "start of autoreg
-            if line =~ '//Start of automatic reg'
+            if line =~ '\/\/Start of automatic reg'
                 execute ':'.idx.'d'
                 let kill_busy = 1
             elseif kill_busy == 1
                 "end of autoreg
-                if line =~ '//End of automatic reg'
+                if line =~ '\/\/End of automatic reg'
                     "call deletebufline('%',idx)
                     execute ':'.idx.'d'
                     break
@@ -3749,6 +3829,15 @@ function s:DrawReg(reg_names,reg_list)
                 call remove(reg_list,reg_idx)
             endif
         endif
+        "process //unresolved
+        if s:atr_unresolved_flag == 1
+            let resolved = value[4]
+            if resolved == 0
+                let line = line.'// unresolved'
+            else
+                let line = line
+            endif
+        endif
 
         call add(lines,line)
 
@@ -3806,6 +3895,15 @@ function s:DrawReg(reg_names,reg_list)
             else
                 let line = line
                 call remove(reg_list,reg_idx)
+            endif
+        endif
+        "process //unresolved
+        if s:atr_unresolved_flag == 1
+            let resolved = value[4]
+            if resolved == 0
+                let line = line.'// unresolved'
+            else
+                let line = line
             endif
         endif
 
@@ -4449,12 +4547,12 @@ function s:KillAutoWire()
         while 1
             let line = getline(idx)
             "start of autowire
-            if line =~ '//Start of automatic wire'
+            if line =~ '\/\/Start of automatic wire'
                 execute ':'.idx.'d'
                 let kill_busy = 1
             elseif kill_busy == 1
                 "end of autowire
-                if line =~ '//End of automatic wire'
+                if line =~ '\/\/End of automatic wire'
                     "call deletebufline('%',idx)
                     execute ':'.idx.'d'
                     break
@@ -4615,6 +4713,15 @@ function s:DrawWire(wire_names,wire_list)
                 call remove(wire_list,wire_idx)
             endif
         endif
+        "process //unresolved
+        if s:atw_unresolved_flag == 1
+            let resolved = value[4]
+            if resolved == 0
+                let line = line.'// unresolved'
+            else
+                let line = line
+            endif
+        endif
 
         call add(lines,line)
 
@@ -4674,6 +4781,15 @@ function s:DrawWire(wire_names,wire_list)
                 call remove(wire_list,wire_idx)
             endif
         endif
+        "process //unresolved
+        if s:atw_unresolved_flag == 1
+            let resolved = value[4]
+            if resolved == 0
+                let line = line.'// unresolved'
+            else
+                let line = line
+            endif
+        endif
 
         call add(lines,line)
 
@@ -4709,183 +4825,250 @@ endfunction
 "-------------------------------------------------------------------
 "                             AutoDef
 "-------------------------------------------------------------------
+"AutoDef-Kill
+"KillAutoWire 删除所有自动线网声明"{{{3
+"--------------------------------------------------
+" Function: KillAutoDef
+" Input: 
+"   Must put cursor to /*autodef*/ position
+" Description:
+" e.g kill all declaration after /*autodef*/
+"    /*autodef*/
+"    //Start of automatic define
+"    ...
+"    //End of automatic define
+"
+"   --------------> after KillAutoDef
+"
+"    /*autodef*/
+"
+" Output:
+"   line after kill
+"   kill all between //Start of automatic define & //End of automatic define
+"---------------------------------------------------
+function s:KillAutoDef() 
+    let orig_idx = line('.')
+    let orig_col = col('.')
+    let idx = line('.')
+    let line = getline(idx)
+    let kill_busy = 0
+    if line =~ '/\*\<autodef\>'
+        "keep current line
+        let idx = idx + 1
+        while 1
+            let line = getline(idx)
+            "start of autodef
+            if line =~ '\/\/Start of automatic define'
+                execute ':'.idx.'d'
+                let kill_busy = 1
+            elseif kill_busy == 1
+                "end of autowire
+                if line =~ '\/\/End of automatic define'
+                    "call deletebufline('%',idx)
+                    execute ':'.idx.'d'
+                    break
+                "abnormal end
+                elseif line =~ 'endmodule' || idx == line('$')
+                    echohl ErrorMsg | echo "Error running KillAutoDef! Kill abnormally till the end!"| echohl None
+                    break
+                "middle
+                else
+                    "call deletebufline('%',idx)
+                    execute ':'.idx.'d'
+                endif
+            else
+                let idx = idx + 1
+                "never start, normal end 
+                if line =~ 'endmodule' || idx == line('$')
+                    break
+                endif
+            endif 
+        endwhile
+    else
+        echohl ErrorMsg | echo "Error running KillAutoDef! Kill line not match /*autodef*/ !"| echohl None
+    endif
 
-"only for test use
-map <S-F8>      :call TestAutoVerilog()<ESC>
+    "cursor back
+    call cursor(orig_idx,orig_col)
+endfunction 
+"}}}3
+
+"Only for test use!!!!!!!!!!
 function TestAutoVerilog() "{{{3
 
     let lines = getline(1,line('$'))
     let [sig_names,io_names,reg_width_names,awire_width_names,iwire_width_names] = s:GetAllSig(lines,'all')
 
-"
-"    "test wire use {{{4
-"
-"    let lines = getline(1,line('$'))
-"
-"    "gather all signals together
-"
-"    let io_names = s:GetIO(lines,'name')
-"    
-"    let reg_names = reg_width_names
-"
-"    "test reg {{{5
-"    let cnt0 = 0
-"    for name in keys(reg_names)
-"        let cnt0 += 1
-"    endfor
-"    "echo cnt0
-"
-"    let cnt1 = 0
-"    for line in lines
-"        if line =~ '^\s*reg\s.*;\s*.*$'
-"            let name = matchstr(line,'^\s*reg\s*\(\[.*\]\)\?\s*\zs\w\+\ze\s*;\s*.*$')
-"            let cnt1 += 1
-"            "echo name
-"            if has_key(reg_names,name)
-"                call remove(reg_names,name)
-"            else
-"                "call append(line('$'),name)
-"            endif
-"        endif
-"    endfor
-"    "echo cnt1
-"
-"    let err_flag = 0
-"    let err_regs = []
-"    if cnt0 != cnt1
-"        for reg in keys (reg_names)
-"            let err_flag = 1
-"            call add(err_regs,reg)
-"        endfor
-"        if err_flag == 1
-"            echo 'err!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-"            echo cnt0
-"            echo cnt1
-"            call append(line('$'),'reg remain-----')
-"            call append(line('$'),err_regs)
-"        else
-"            echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-"        endif
-"    else
-"        echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-"    endif
-"    "}}}5
-"    
-"    "test wire {{{5
-"    
-"    "io wire
-"    let iowire_names = {}
-"    for name in keys(io_names)
-"        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-"        let value = io_names[name]
-"        let type = value[0]
-"        if type == 'wire' || type == 'none'
-"            call extend(iowire_names, {name : value})
-"        endif
-"    endfor
-"
-"    "iwire and awire
-"    let awire_width_names = copy(awire_width_names)
-"    let iwire_width_names = copy(iwire_width_names)
-"    let orig_awire_width_names = copy(awire_width_names)
-"    let orig_iwire_width_names = copy(iwire_width_names)
-"
-"    "iwire{{{6
-"    let cnt_iwire = 0
-"    for wire in keys(iwire_width_names)
-"        let cnt_iwire += 1
-"    endfor
-"
-"    let cnt_assign_iwire = 0
-"    let cnt_assign_wire = 0
-"    for wire in keys (awire_width_names)
-"        let cnt_assign_wire += 1
-"        if has_key(iwire_width_names,wire)
-"            let cnt_assign_iwire += 1
-"            call remove(iwire_width_names,wire)
-"            continue
-"        endif
-"    endfor
-"
-"    "declared wire in iwire
-"    let cnt_decl_iwire = 0
-"    let decl_wire = {}
-"    for line in lines
-"        if line =~ '^\s*wire.*;\s*.*$'
-"            "let name = matchstr(line,'^\s*wire\s*\(\[.*\]\)\?\s*\zs\w\+\ze.*;\s*\(\/\/.*\)\?\s*$')
-"            while line =~ '^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*'
-"                "delete abnormal
-"                if line =~ '\<signed\>\|\<unsigned\>'
-"                    let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
-"                elseif line =~ '\/\/.*$'
-"                    let line = substitute(line,'\/\/.*$','','')
-"                endif
-"                let names = matchstr(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*\zs.\{-\}\ze\s*;\s*')
-"                "in case style of wire a = {b,c,d};
-"                let names = substitute(names,'\(\/\/\)\@<!=.*$','','')
-"                "in case style of wire [1:0] a,b,c;
-"                for name in split(names,',')
-"                    let name = matchstr(name,'\w\+')
-"                    call extend(decl_wire,{name : ""})
-"                    if has_key(iwire_width_names,name)
-"                        let cnt_decl_iwire += 1
-"                        call remove(iwire_width_names,name)
-"                    endif
-"                endfor
-"                let line = substitute(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*','','')
-"            endwhile
-"        endif
-"    endfor
-"
-"    if len(iwire_width_names) == 0
-"        echo 'iwire match right!!!!!!!!!!!!!!!!!!!!!'
-"    else
-"        echo 'iwire not all match'
-"        call append(line('$'),'iwire remain-----')
-"        for name in keys ( iwire_width_names )
-"            call append(line('$'),name)
-"        endfor
-"    endif
-"    "}}}6
-"    
-"    "all wire {{{6
-"    let all_wire_names = {}
-"    let awire_width_names = orig_awire_width_names
-"    let iwire_width_names = orig_iwire_width_names
-"
-"    for wire in keys(iwire_width_names)
-"        call extend(all_wire_names,{wire : ""})
-"    endfor
-"
-"    for wire in keys(awire_width_names)
-"        call extend(all_wire_names,{wire : ""})
-"    endfor
-"
-"    for wire in keys(iowire_names)
-"        call extend(all_wire_names,{wire : ""})
-"    endfor
-"
-"    for name in keys(decl_wire)
-"        if has_key(all_wire_names,name)
-"            call remove(decl_wire,name)
-"        endif
-"    endfor
-"
-"    if len(decl_wire) == 0
-"        echo 'decl wire match right!!!!!!!!!!!!!!!!!!!!!'
-"    else
-"        echo 'decl wire not all match'
-"        call append(line('$'),'decl wire remain-----')
-"        for name in keys ( decl_wire)
-"            call append(line('$'),name)
-"        endfor
-"    endif
-"    "}}}6
-"    
-"    "}}}5
-"
-"   "}}}4
-"
+    "test wire use {{{4
+
+    let lines = getline(1,line('$'))
+
+    "gather all signals together
+
+    let io_names = s:GetIO(lines,'name')
+    
+    let reg_names = reg_width_names
+
+    "test reg {{{5
+    let cnt0 = 0
+    for name in keys(reg_names)
+        let cnt0 += 1
+    endfor
+    "echo cnt0
+
+    let cnt1 = 0
+    for line in lines
+        if line =~ '^\s*reg\s.*;\s*.*$'
+            let name = matchstr(line,'^\s*reg\s*\(\[.*\]\)\?\s*\zs\w\+\ze\s*;\s*.*$')
+            let cnt1 += 1
+            "echo name
+            if has_key(reg_names,name)
+                call remove(reg_names,name)
+            else
+                "call append(line('$'),name)
+            endif
+        endif
+    endfor
+    "echo cnt1
+
+    let err_flag = 0
+    let err_regs = []
+    if cnt0 != cnt1
+        for reg in keys (reg_names)
+            let err_flag = 1
+            call add(err_regs,reg)
+        endfor
+        if err_flag == 1
+            echo 'err!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+            echo cnt0
+            echo cnt1
+            call append(line('$'),'reg remain-----')
+            call append(line('$'),err_regs)
+        else
+            echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+        endif
+    else
+        echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+    endif
+    "}}}5
+    
+    "test wire {{{5
+    
+    "io wire
+    let iowire_names = {}
+    for name in keys(io_names)
+        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+        let value = io_names[name]
+        let type = value[0]
+        if type == 'wire' || type == 'none'
+            call extend(iowire_names, {name : value})
+        endif
+    endfor
+
+    "iwire and awire
+    let awire_width_names = copy(awire_width_names)
+    let iwire_width_names = copy(iwire_width_names)
+    let orig_awire_width_names = copy(awire_width_names)
+    let orig_iwire_width_names = copy(iwire_width_names)
+
+    "iwire{{{6
+    let cnt_iwire = 0
+    for wire in keys(iwire_width_names)
+        let cnt_iwire += 1
+    endfor
+
+    let cnt_assign_iwire = 0
+    let cnt_assign_wire = 0
+    for wire in keys (awire_width_names)
+        let cnt_assign_wire += 1
+        if has_key(iwire_width_names,wire)
+            let cnt_assign_iwire += 1
+            call remove(iwire_width_names,wire)
+            continue
+        endif
+    endfor
+
+    "declared wire in iwire
+    let cnt_decl_iwire = 0
+    let decl_wire = {}
+    for line in lines
+        if line =~ '^\s*wire.*;\s*.*$'
+            "let name = matchstr(line,'^\s*wire\s*\(\[.*\]\)\?\s*\zs\w\+\ze.*;\s*\(\/\/.*\)\?\s*$')
+            while line =~ '^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*'
+                "delete abnormal
+                if line =~ '\<signed\>\|\<unsigned\>'
+                    let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
+                elseif line =~ '\/\/.*$'
+                    let line = substitute(line,'\/\/.*$','','')
+                endif
+                let names = matchstr(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*\zs.\{-\}\ze\s*;\s*')
+                "in case style of wire a = {b,c,d};
+                let names = substitute(names,'\(\/\/\)\@<!=.*$','','')
+                "in case style of wire [1:0] a,b,c;
+                for name in split(names,',')
+                    let name = matchstr(name,'\w\+')
+                    call extend(decl_wire,{name : ""})
+                    if has_key(iwire_width_names,name)
+                        let cnt_decl_iwire += 1
+                        call remove(iwire_width_names,name)
+                    endif
+                endfor
+                let line = substitute(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*','','')
+            endwhile
+        endif
+    endfor
+
+    if len(iwire_width_names) == 0
+        echo 'iwire match right!!!!!!!!!!!!!!!!!!!!!'
+    else
+        echo 'iwire not all match'
+        call append(line('$'),'iwire remain-----')
+        for name in keys ( iwire_width_names )
+            call append(line('$'),name)
+        endfor
+    endif
+    "}}}6
+    
+    "all wire {{{6
+    let all_wire_names = {}
+    let awire_width_names = orig_awire_width_names
+    let iwire_width_names = orig_iwire_width_names
+
+    for wire in keys(iwire_width_names)
+        call extend(all_wire_names,{wire : ""})
+    endfor
+
+    for wire in keys(awire_width_names)
+        call extend(all_wire_names,{wire : ""})
+    endfor
+
+    for wire in keys(iowire_names)
+        call extend(all_wire_names,{wire : ""})
+    endfor
+
+    for name in keys(decl_wire)
+        if has_key(all_wire_names,name)
+            call remove(decl_wire,name)
+        endif
+    endfor
+
+    if len(decl_wire) == 0
+        echo 'decl wire match right!!!!!!!!!!!!!!!!!!!!!'
+    else
+        echo 'decl wire not all match'
+        call append(line('$'),'decl wire remain-----')
+        for name in keys ( decl_wire)
+            call append(line('$'),name)
+        endfor
+    endif
+    "}}}6
+    
+    "}}}5
+
+   "}}}4
+
+    call AutoWire()
+
 endfunction "}}}3
 
 "-------------------------------------------------------------------
@@ -5543,6 +5726,7 @@ function s:GetAllSig(lines,mode)
     "   list of width_names    
     "    0     1            2      3               4            5                6             7
     "   [seqs, signal_name, lines, left_width_nrs, left_widths, right_width_nrs, right_widths, right_signal_link]
+    let wire_names = {}
     let awire_width_names = s:GetaWire(a:lines) 
     "remove awire exists in io
     for name in keys(awire_width_names)
@@ -5611,6 +5795,7 @@ function s:GetAllSig(lines,mode)
         "    0     1             2      3            4         5
         "   [type, specify type, width, signal_name, resolved, seq]
         let value = ['wire',type,width,name,resolved,seqs[0]]
+        call extend(wire_names,{name : value})
         call extend(sig_names,{name : value})
     endfor
     "}}}4
@@ -5644,7 +5829,7 @@ function s:GetAllSig(lines,mode)
 "        endif
 "    endfor
 "    "}}}4
-    
+  
 "    "print iwire test {{{4
 "    for name in keys(iwire_width_names)
 "        let value = iwire_width_names[name]
@@ -5654,16 +5839,17 @@ function s:GetAllSig(lines,mode)
 "                    \" width==" . widths[0] . repeat(" ",16-strlen(widths[0])).
 "                    \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
 "    endfor
-"    }}}4
+"    "}}}4
 
     "wire{{{4
-    let wire_names = {}
     for name in keys(iwire_width_names)
         let iwire_value = iwire_width_names[name]
         let iwire_resolved = iwire_value[5]
         let iwire_seqs = iwire_value[0]
-        if has_key(sig_names,name)
-            let awire_value = sig_names[name]
+
+        "iwire and awire duplicate
+        if has_key(wire_names,name)
+            let awire_value = wire_names[name]
             let awire_resolved = awire_value[4] 
 
             if awire_value[1] != 'awire'
@@ -5672,9 +5858,6 @@ function s:GetAllSig(lines,mode)
 
             "use awire
             if awire_resolved == 1 && iwire_resolved == 0
-                let value = awire_value
-                call extend(sig_names,{name : value})
-                call extend(wire_names,{name : value})
             "use iwire
             else
                 let conn_widths = iwire_value[4]
@@ -5685,6 +5868,7 @@ function s:GetAllSig(lines,mode)
                 call extend(sig_names,{name : value})
                 call extend(wire_names,{name : value})
             endif
+        "only iwire
         else
             "   list of signal sequences
             "    0     1             2      3            4         5
@@ -5696,10 +5880,6 @@ function s:GetAllSig(lines,mode)
         endif
     endfor
     "}}}4
-
-    if a:mode == 'wire'
-        return wire_names
-    endif
 
 "    "print all signal test {{{4
 "    let io_sigs = {}
@@ -5758,6 +5938,10 @@ function s:GetAllSig(lines,mode)
 "                    \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
 "    endfor
 "    "}}}4
+    
+    if a:mode == 'wire'
+        return wire_names
+    endif
 
     return [sig_names,io_names,reg_width_names,awire_width_names,iwire_width_names]
 
