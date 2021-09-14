@@ -1,6 +1,216 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.4] - 2021-09-14
+
+### Added
+
+- Add `AutoDef`
+
+  新增初版`AutoDef()`，待测试
+
+## [1.2.3] - 2021-09-14
+
+### Added
+
+- Add `AutoWire`
+
+  新增初版`AutoWire()`，待测试
+
+### Changed
+
+- Optimize `Draw`
+
+  优化所有`Draw`函数，包括`DrawIO`，`DrawPara`，`DrawParaValue`，`DrawReg`，`DrawWire`，使其对齐逻辑统一
+
+- Optimize `GetReg`& `GetWire`
+
+  优化 `GetReg()`及 `GetWire()`函数，均统一使用`GetAllSig()`函数作为获取接口，为以后`Merge()`函数作铺垫
+  
+- Optimize `GetDeclReg`& `GetDeclWire`
+
+  优化已自动例化的寄存器或线网的获取方式。只识别`//Start of ...`以及`//End of ...`
+
+
+## [1.2.2] - 2021-09-04
+
+### Fixed
+
+- Bug fixed for `GetInstModuleName`
+
+  修复搜索特殊情况下匹配模块名异常的问题，例子如下：
+
+  ```verilog
+  module test #(.PARA_A(PARA_A)) u_test(
+  ......
+  );
+  ```
+
+### Changed
+
+- Optimize `GetiWire`
+
+  `GetiWire`函数巨幅优化，包括：
+
+  1. 将删除`parameter`的模块外移，简化代码
+  2. 由外部获取多个参数值，避免重复计算
+  3. 简化内部获取信号流程（使用`has_key`替代原循环的方式）
+
+### Added
+
+- Add `Progressbar`
+
+  由于`GetiWire`获取速度较慢及为后续函数考虑，新增`progressbar`进度条相关函数用于显示当前获取进度。进度条相关函数基于插件`progressbar`，作者`Andreas Politz`，[progressbar](http://www.vim.org/scripts/script.php?script_id=2006)
+
+
+
+## [1.2.1] - 2021-08-31
+
+### Fixed
+
+- Bug fixed for `GetReg,GetaWire`
+
+  `GetReg(),GetaWire(),`自动跳过`defparam`，避免异常
+
+- Bug fixed for`GetIO`
+
+  `GetIO()`修复注释类型`// ......  /*autoinst*/`产生的异常
+
+- Bug fixed for`GetiWire`
+
+  1. `GetiWire()`修复无法获取`IP`的输入输出端口导致`iwire`获取失败的异常
+
+  2. `GetiWire()`修复括号嵌套导致的获取失败异常，（例如`.ADDR_CFG_LAST ( 32*(ROOT_CHN_NUM) )`的异常匹配）
+
+- Bug fixed for`AutoPara`
+
+  `AutoPara()`修复`#`和`(`不在同一行的特殊写法导致的异常问题
+
+### Changed
+
+- Optimize `Auto`
+
+  优化各个`Auto()`函数写法，只使用单个的`try`及`endtry`
+
+### Added
+
+- Add `GetAllSig`
+
+  新增`GetAllSig()`函数，获取单文件内所有信号并去冗余（未完成），为`AutoDef`编写做准备。
+
+
+
+
+## [1.2.0] - 2021-08-27
+
+### Fixed
+
+- Bug fixed for `GetaWire`
+
+  修复完善部分`GetaWire()`函数的正则匹配机制
+
+- Bug fixed for`GetReg`
+
+  1. 修复完善部分`GetReg()`部分子函数的正则匹配机制，避免错误匹配
+  2. 子函数在匹配前自动跳过注释`//`，避免错误匹配
+
+- Bug fixed for `GetIO`
+
+  修复`GetIO()`在部分括号`(`匹配时因带注释(`//`)导致的获取模块名或例化名异常的问题
+
+### Changed
+
+- Force new buffer for `RtlTree`
+
+  意外关闭原`buffer`后允许`RtlTree`强制重新打开，避免窗口异常`bug`。
+
+
+
+## [1.1.9] - 2021-08-24
+
+### Fixed
+
+- Bug fixed for `GetiWire`
+
+  修复完善部分`GetiWire()`函数的正则匹配机制，避免错误匹配多重括号，同时保证单行多例化的情况，例子如下：
+
+  ```verilog
+  module test u_test ( .a(wire_a) .b(wire_b[(3+2*4):0]))
+  ```
+
+- Bug fixed for `GetIO`
+
+  修复`GetIO()`无法获取`IO`带`none`字眼的`bug`
+
+### Changed
+
+- Force jump for `RtlTree`
+
+  原`buffer`修改后未保存时允许`RtlTree`进行强制跳转，避免窗口异常`bug`。
+
+
+
+## [1.1.8] - 2021-08-21
+
+### Fixed
+
+- Bug fixed for `GetiWire`,`GetaWire`&`GetReg`
+
+  修复完善部分`Get()`函数的正则匹配机制，避免错误匹配（例如`for(i=0;i<10;i=1+1)`,`wire a=1`等异常匹配）
+
+- Bug fixed for `GetiWire`
+
+  修复`GetiWire()`异常匹配`.a()`的问题
+
+- Bug fixed for `GetiWire`
+
+  修复`GetiWire()`在无法获取例化文件的情况下无法正常完成的问题
+
+- Bug fixed for `GetaWire`
+
+  修复`GetaWire()`多行无法获取的问题，例子如下
+
+  ```verilog
+  assign a = b | c | d |
+      	   e | f | g;
+  ```
+
+- Bug fixed for `GetiSig`
+
+  注释未完成的`GetSig()`，避免其异常问题
+
+- Bug fixed for `GetIO`
+
+  修复`GetIO()`在模块名或例化名后带注释(`//`)导致的获取模块名或例化名异常的问题
+
+- Bug fixed for `GetReg`
+
+  修复获取连续`reg`的异常问题（例如`reg a=1,b=3'd7;`）
+
+### Changed
+
+- Change keyboard click method for `RtlTree`
+
+  更改`RtlTree`的键盘操作方式，点击`+`,`-`,`~`为展开至例化模块，普通点击为跳转至例化位置。
+
+
+
+## [1.1.7] - 2021-08-13
+
+### Added
+
+- Add `GetaWire`，`GetiWire`
+
+  新增`GetaWire()`以及`GetiWire()`函数，为`autowire`以及`autodef`做准备
+
+### Fixed
+
+- Bug fixed for `GetRightWidth`
+
+  修复`GetRightWidth()`函数的部分遗留`bug`，完善其正则匹配机制
+
+
+
 ## [1.1.6] - 2021-08-02
 
 ### Added
@@ -13,6 +223,8 @@ All notable changes to this project will be documented in this file. The format 
   2. 修复原脚本`:q`退出时无法再次进入的异常`Bug`
   3. 实现跨文件夹`RtlTree`功能
 
+
+
 ## [1.1.5] - 2021-08-01
 
 ### Changed
@@ -21,6 +233,8 @@ All notable changes to this project will be documented in this file. The format 
 
   更改现有函数的配置方式，可通过`.vimrc`外部配置
 
+
+
 ## [1.1.4] - 2021-07-21
 
 ### Added
@@ -28,6 +242,8 @@ All notable changes to this project will be documented in this file. The format 
 - Add comment for `AutoInst`
 
   `AutoInst()`可配置添加注释例化模块所在位置`//Instance...<DIR>...`
+
+
 
 
 ## [1.1.3] - 2021-06-21
@@ -41,6 +257,8 @@ All notable changes to this project will be documented in this file. The format 
 - Bug fixed for `AutoReg`
 
   修复`AutoReg()`对重复多次相同写法（例如'a[3:0]+b[4:0]'）解析错误而产生的异常`Bug`
+
+
 
 ## [1.1.2] - 2021-06-12
 
@@ -67,7 +285,8 @@ All notable changes to this project will be documented in this file. The format 
 
   优化写法，`GetIO()`, `GetPara()`, `DrawIO()`, `DrawPara()`, `DrawParaValue()`等函数添加注释及折叠，方便后续定位故障
   
-  
+
+
 
 
 ## [1.1.1] - 2021-06-04
