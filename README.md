@@ -101,27 +101,27 @@ Plugin 'HonkW93/automatic-verilog'
 
 ### 3.1 AutoInst
 
-
+![autoinst](https://cdn.jsdelivr.net/gh/HonkW93/automatic-verilog@master/demo/autoinst.gif)
 
 ### 3.2 AutoPara
 
-
+![autopara](https://cdn.jsdelivr.net/gh/HonkW93/automatic-verilog@master/demo/autopara.gif)
 
 ### 3.3 AutoParaValue
 
-
+![autoparavalue](https://cdn.jsdelivr.net/gh/HonkW93/automatic-verilog@master/demo/autoparavalue.gif)
 
 ### 3.4 AutoReg
 
-
+![autoreg](https://cdn.jsdelivr.net/gh/HonkW93/automatic-verilog@master/demo/autoreg.gif)
 
 ### 3.5 AutoWire
 
-
+![autowire](https://cdn.jsdelivr.net/gh/HonkW93/automatic-verilog@master/demo/autowire.gif)
 
 ### 3.6 AutoDef
 
-
+![autodef](https://cdn.jsdelivr.net/gh/HonkW93/automatic-verilog@master/demo/autodef.gif)
 
 ## 4. 文档
 
