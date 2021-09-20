@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/09/14 23:54
+" Last Modified:  2021/09/19 10:10
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -4184,6 +4184,8 @@ function s:GetiWire(lines,files,modules,reg_width_names,decl_reg,io_names)
             "echo 'module_name = '.module_name
             for idx in range(idx1,idx2)
                 let line = lines[idx-1]
+                "delete comment
+                let line = substitute(line,'\/\/.*$','','')
                 " [^.] is used to find only one inst
                 " * is used to avoid bracket inside braket
                 "e.g. .do(r_tx_data_12[(2+3-1:0)]));
@@ -4374,6 +4376,8 @@ function s:GetiWire_DelPara(lines)
     while idx < len(a:lines)
         let idx = idx + 1
         let line = a:lines[idx-1]
+        "delete comment
+        let line = substitute(line,'\/\/.*$','','')
         "record #
         if line =~ '#'
             let multi_line = ''
