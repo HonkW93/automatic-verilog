@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/09/19 10:10
+" Last Modified:  2021/09/24 00:09
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -1390,8 +1390,11 @@ function AutoDef()
             "call s:KillAutoDef()
 
             "darw //Start of automatic define
-            call append(line('.'),prefix.'//Start of automatic define')
-            call cursor(line('.')+1,1)
+            if search('\/\/Start of automatic define','W') != 0
+            else
+                call append(line('.'),prefix.'//Start of automatic define')
+                call cursor(line('.')+1,1)
+            endif
 
             "AutoReg(){{{4
             "add /*autoreg*/
@@ -1419,7 +1422,10 @@ function AutoDef()
             call search('\/\/End of automatic wire','W')
             "}}}4
     
-            call append(line('.'),prefix.'//End of automatic define')
+            if search('\/\/End of automatic define','W')
+            else
+                call append(line('.'),prefix.'//End of automatic define')
+            endif
 
             "Only autodef once
             break
