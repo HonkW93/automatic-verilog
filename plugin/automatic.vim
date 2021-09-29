@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/09/24 00:09
+" Last Modified:  2021/09/29 22:10
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -1564,17 +1564,27 @@ function s:GetIO(lines,mode)
                 let width1 = matchstr(width,'\v\[\zs\S+\ze:.*\]')   
                 let width2 = matchstr(width,'\v\[.*:\zs\S+\ze\]')   
 
-                if width1 == ''
+                if width == ''
                     let width1 = 'c0'
-                endif
-                if width2 == ''
                     let width2 = 'c0'
+                else
+                    "[`DEFINT_PARA]
+                    if width1 == '' && width2 == ''
+                        let width1 = matchstr(width,'\[\zs.*\ze\]')
+                    endif
+                    "[5]
+                    if width1 == ''
+                        let width1 = 'c0'
+                    endif
+                    if width2 == ''
+                        let width2 = 'c0'
+                    endif
                 endif
 
                 "name
                 let line = substitute(line,io_dir,'','')
                 let line = substitute(line,'\<reg\>\|\<wire\>','','')
-                let line = substitute(line,'\[.*:.*\]','','')
+                let line = substitute(line,'\[.*\]','','')
                 let name = matchstr(line,'\w\+')
                 if name == ''
                     let name = 'NULL'
@@ -2059,10 +2069,16 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
         if type != 'keep' 
             let name = value[5]
             "calculate maximum len of position to Draw
-            if value[3] == 'c0' || value[4] == 'c0'
-                let width = ''
-            else
+            if value[4] == 'c0'
+                if value[3] == 'c0' 
+                    let width = ''
+                else
+                    let width = '['.value[3].']'
+                endif
+            elseif value[3] != 'c0'
                 let width = '['.value[3].':'.value[4].']'
+            else
+                let width = ''
             endif
             "io that's changed will be keeped if config 
             let connect = name.width
@@ -2121,10 +2137,16 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             "name2bracket
             let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(name)-len('.'))
             "width
-            if value[3] == 'c0' || value[4] == 'c0'
-                let width = ''
-            else
+            if value[4] == 'c0'
+                if value[3] == 'c0' 
+                    let width = ''
+                else
+                    let width = '['.value[3].']'
+                endif
+            elseif value[3] != 'c0'
                 let width = '['.value[3].':'.value[4].']'
+            else
+                let width = ''
             endif
 
             "io that's changed will be keeped if config 
@@ -5999,8 +6021,14 @@ function s:GetDirList()
     if dirlist == [] 
         let dirlist = [dir]
     endif
+    "expand directories like $HOME
+    let exp_dirlist = []
+    for dir in dirlist
+        let dir = expand(dir)
+        call add(exp_dirlist,dir)
+    endfor
 
-    return [dirlist,str2nr(rec)]
+    return [exp_dirlist,str2nr(rec)]
 
 endfunction
 "}}}3
