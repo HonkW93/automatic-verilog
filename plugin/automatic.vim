@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/09/29 22:10
+" Last Modified:  2021/10/18 21:40
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -955,8 +955,15 @@ function AutoInst(mode)
 
             "Add instance directory before autoinst
             if s:ati_add_dir == 1
-                if getline(idx3-1) !~ '^\s*/\/\Instance'
-                    call append(idx3-1,s:start_prefix.'//Instance: '.add_dir)
+                let idx = idx3-1
+                if getline(idx) =~ '^\s*/\/\Instance'
+                    if getline(idx) =~ '//Instance: '.add_dir
+                    else
+                        call append(idx-1,s:start_prefix.'//Instance: '.add_dir)
+                        execute ':'.idx3.'d'
+                    endif
+                else
+                    call append(idx,s:start_prefix.'//Instance: '.add_dir)
                 endif
             endif
 
