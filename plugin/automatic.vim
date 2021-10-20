@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/10/18 21:40
+" Last Modified:  2021/10/20 22:43
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -953,6 +953,13 @@ function AutoInst(mode)
             "if io_seqs connection has been changed, keep it
             let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names)
 
+            "Delete current line );
+            let line = substitute(getline(line('.')),')\s*;','','')
+            call setline(line('.'),line)
+            "Append io port and );
+            call add(lines,s:start_prefix.');')
+            call append(line('.'),lines)
+
             "Add instance directory before autoinst
             if s:ati_add_dir == 1
                 let idx = idx3-1
@@ -960,19 +967,15 @@ function AutoInst(mode)
                     if getline(idx) =~ '//Instance: '.add_dir
                     else
                         call append(idx-1,s:start_prefix.'//Instance: '.add_dir)
+                        let orig_dir_idx = line('.')
+                        let orig_dir_col = col('.')
                         execute ':'.idx3.'d'
+                        call cursor(orig_dir_idx,orig_dir_col)
                     endif
                 else
                     call append(idx,s:start_prefix.'//Instance: '.add_dir)
                 endif
             endif
-
-            "Delete current line );
-            let line = substitute(getline(line('.')),')\s*;','','')
-            call setline(line('.'),line)
-            "Append io port and );
-            call add(lines,s:start_prefix.');')
-            call append(line('.'),lines)
 
             "mode = 0, only autoinst once
             if a:mode == 0
@@ -2364,9 +2367,9 @@ function s:GetPara(lines,mode)
             call extend(line_idxs,{idx : value})
         endif
 
-        "find )
+        "find ), skip function like $clog2(BMAN)
         if wait_port_para == 0 
-            if line =~ ')'
+            if line =~ ')' && line !~ '\$\w\+(.*)'
                 let wait_right_braket = 0
                 continue
             endif
