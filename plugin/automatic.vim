@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/10/20 22:43
+" Last Modified:  2021/11/06 19:57
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -67,6 +67,10 @@ let s:atw_wire_del = get(g:,'atw_wire_del',1)               "add //WIRE_DEL if w
 "let s:atw_keep_chg = get(g:,'atw_keep_chg',1)              "keep changed wire
 let s:atw_tail_not_align = get(g:,'atw_tail_not_align',0)   "don't do alignment in tail when autowire
 let s:atw_unresolved_flag = get(g:,'atw_unresolved_flag',0) "add //unresolved if wire is unresolved
+"}}}2
+
+"AutoDef 自动定义配置{{{2
+let s:atd_move = get(g:,'atd_move',0)
 "}}}2
 
 "Progressbar 进度条支持{{{2
@@ -1444,6 +1448,12 @@ function AutoDef()
 
         "Put cursor back to original position
         call cursor(orig_idx,orig_col)
+
+        "Move other define down below //End of automatic define
+        if s:atd_move == 1
+            call s:DefMove()
+        endif
+
     endtry
 endfunction
 "}}}3
@@ -4868,7 +4878,7 @@ endfunction
 "                             AutoDef
 "-------------------------------------------------------------------
 "AutoDef-Kill
-"KillAutoWire 删除所有自动线网声明"{{{3
+"KillAutoDef 删除所有自动线网声明"{{{3
 "--------------------------------------------------
 " Function: KillAutoDef
 " Input: 
@@ -4933,6 +4943,96 @@ function s:KillAutoDef()
     "cursor back
     call cursor(orig_idx,orig_col)
 endfunction 
+"}}}3
+
+"AutoDef-Move 
+"DefMove 移动所有自动线网声明"{{{3
+"--------------------------------------------------
+" Function: DefMove
+" Input: 
+"   
+" Description:
+"   Move all declaration outside
+"   //Start of automatic define 
+"   &
+"   //End of automatic define
+"   to the position below
+"   //End of automatic define
+"
+" e.g.
+"   reg [2:0]   a;
+"   .....
+"   //Start of automatic define
+"   ....
+"   reg [2:0]   b;
+"   //End of automatic define
+"   .....
+"   reg [2:0]   c;
+"
+"   --------------> after DefMove
+"
+"   //Start of automatic define
+"   ....
+"   reg [2:0]   b;
+"   //End of automatic define
+"   reg [2:0]   a;
+"   reg [2:0]   c;
+"   .....
+"
+" Output:
+"   line after move
+"---------------------------------------------------
+function s:DefMove() 
+    let lines = getline(1,line('$'))
+    let [keep_reg_list,upd_reg_list] = s:GetDeclReg(lines)
+    let [keep_wire_list,upd_wire_list] = s:GetDeclWire(lines)
+    let orig_idx = line('.')
+    let orig_col = col('.')
+    let idx = 0
+    let keep_lines = []
+    "mark all definie outside automatic define
+    while idx < len(lines)
+        let idx = idx + 1
+        let idx = s:SkipCommentLine(2,idx,lines)  "skip pair comment line
+        if idx == -1
+            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
+        endif
+        let line = lines[idx-1]
+        let orig_line = line
+        if line =~ '\<signed\>\|\<unsigned\>'
+            let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
+        elseif line =~ '\/\/.*$'
+            let line = substitute(line,'\/\/.*$','','')
+        endif
+        for reg in keep_reg_list
+            if line !~ '^\s*\/\/' && line =~ '^\s*reg\s\+\(\[.\{-\}\]\)\?\s*'.'\<'.reg.'\>'
+                call add(keep_lines,orig_line)
+                call remove(keep_reg_list,index(keep_reg_list,reg))
+                execute ':'.idx.'normal A//keep_reg'
+                break
+            endif
+        endfor
+        for wire in keep_wire_list
+            if line !~ '^\s*\/\/' && line =~ '^\s*wire\s\+\(\[.\{-\}\]\)\?\s*'.'\<'.wire.'\>'
+                call add(keep_lines,orig_line)
+                call remove(keep_wire_list,index(keep_wire_list,wire))
+                execute ':'.idx.'normal A//keep_wire'
+                break
+            endif
+        endfor
+    endwhile
+    call cursor(orig_idx,orig_col)
+    "append all define
+    call cursor(1,1)
+    call search('\/\/End of automatic define','W')
+    call append(line('.'),keep_lines)
+    "delete all scattered define
+    execute ':'.'g/^\s*reg.*\/\/keep_reg/d'
+    execute ':'.'g/^\s*wire.*\/\/keep_wire/d'
+    "cursor back
+    call cursor(1,1)
+    call search('\/\*autodef\*\/','W')
+endfunction
 "}}}3
 
 "Only for test use!!!!!!!!!!
