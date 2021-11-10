@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/11/06 19:57
+" Last Modified:  2021/11/10 22:13
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -59,6 +59,7 @@ let s:atr_reg_del = get(g:,'atr_reg_del',1)                 "add //REG_DEL if re
 "let s:atr_keep_chg = get(g:,'atr_keep_chg',1)              "keep changed register
 let s:atr_tail_not_align = get(g:,'atr_tail_not_align',0)   "don't do alignment in tail when autoreg
 let s:atr_unresolved_flag = get(g:,'atr_unresolved_flag',0) "add //unresolved if reg is unresolved
+let s:atr_remove_io = get(g:,'atr_remove_io',0)             "remove declared io from autoreg
 "}}}2
 
 "AutoWire 自动线网配置{{{2
@@ -67,10 +68,11 @@ let s:atw_wire_del = get(g:,'atw_wire_del',1)               "add //WIRE_DEL if w
 "let s:atw_keep_chg = get(g:,'atw_keep_chg',1)              "keep changed wire
 let s:atw_tail_not_align = get(g:,'atw_tail_not_align',0)   "don't do alignment in tail when autowire
 let s:atw_unresolved_flag = get(g:,'atw_unresolved_flag',0) "add //unresolved if wire is unresolved
+let s:atw_remove_io = get(g:,'atw_remove_io',1)             "remove declared io from autowire
 "}}}2
 
 "AutoDef 自动定义配置{{{2
-let s:atd_move = get(g:,'atd_move',0)
+let s:atd_move = get(g:,'atd_move',0)                       "move declared define(reg/wire) from other parts to places down below autodef
 "}}}2
 
 "Progressbar 进度条支持{{{2
@@ -5767,11 +5769,13 @@ function s:GetAllSig(lines,mode)
     call extend(reg_width_names,creg_width_names,"error")
 
     "remove reg exists in io
-    for name in keys(reg_width_names)
-        if has_key(io_names,name)
-            call remove(reg_width_names,name)
-        endif
-    endfor
+    if s:atr_remove_io == 1
+        for name in keys(reg_width_names)
+            if has_key(io_names,name)
+                call remove(reg_width_names,name)
+            endif
+        endfor
+    endif
 
     "record reg
     for name in keys(reg_width_names)
@@ -5871,11 +5875,13 @@ function s:GetAllSig(lines,mode)
     let wire_names = {}
     let awire_width_names = s:GetaWire(a:lines) 
     "remove awire exists in io
-    for name in keys(awire_width_names)
-        if has_key(io_names,name)
-            call remove(awire_width_names,name)
-        endif
-    endfor
+    if s:atw_remove_io == 1
+        for name in keys(awire_width_names)
+            if has_key(io_names,name)
+                call remove(awire_width_names,name)
+            endif
+        endfor
+    endif
     "record awire
     for name in keys(awire_width_names)
         let type = 'awire'
