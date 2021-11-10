@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/11/10 22:13
+" Last Modified:  2021/11/10 22:21
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -68,7 +68,7 @@ let s:atw_wire_del = get(g:,'atw_wire_del',1)               "add //WIRE_DEL if w
 "let s:atw_keep_chg = get(g:,'atw_keep_chg',1)              "keep changed wire
 let s:atw_tail_not_align = get(g:,'atw_tail_not_align',0)   "don't do alignment in tail when autowire
 let s:atw_unresolved_flag = get(g:,'atw_unresolved_flag',0) "add //unresolved if wire is unresolved
-let s:atw_remove_io = get(g:,'atw_remove_io',1)             "remove declared io from autowire
+let s:atw_remove_io = get(g:,'atw_remove_io',0)             "remove declared io from autowire
 "}}}2
 
 "AutoDef 自动定义配置{{{2
