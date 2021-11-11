@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/11/10 22:21
+" Last Modified:  2021/11/12 00:11
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -59,7 +59,7 @@ let s:atr_reg_del = get(g:,'atr_reg_del',1)                 "add //REG_DEL if re
 "let s:atr_keep_chg = get(g:,'atr_keep_chg',1)              "keep changed register
 let s:atr_tail_not_align = get(g:,'atr_tail_not_align',0)   "don't do alignment in tail when autoreg
 let s:atr_unresolved_flag = get(g:,'atr_unresolved_flag',0) "add //unresolved if reg is unresolved
-let s:atr_remove_io = get(g:,'atr_remove_io',0)             "remove declared io from autoreg
+let s:atr_remove_io = get(g:,'atr_remove_io',1)             "remove declared io from autoreg
 "}}}2
 
 "AutoWire 自动线网配置{{{2
@@ -68,7 +68,7 @@ let s:atw_wire_del = get(g:,'atw_wire_del',1)               "add //WIRE_DEL if w
 "let s:atw_keep_chg = get(g:,'atw_keep_chg',1)              "keep changed wire
 let s:atw_tail_not_align = get(g:,'atw_tail_not_align',0)   "don't do alignment in tail when autowire
 let s:atw_unresolved_flag = get(g:,'atw_unresolved_flag',0) "add //unresolved if wire is unresolved
-let s:atw_remove_io = get(g:,'atw_remove_io',0)             "remove declared io from autowire
+let s:atw_remove_io = get(g:,'atw_remove_io',1)             "remove declared io from autowire
 "}}}2
 
 "AutoDef 自动定义配置{{{2
@@ -859,12 +859,80 @@ endfunction "}}}3
 
 "Main Function 自动化主函数{{{2
 
+"AutoArg 自动声明{{{3
+"--------------------------------------------------
+" Function: AutoArg
+" Input: 
+"   N/A
+" Description:
+"   auto argument for input/output/inout
+" Output:
+"   Formatted autoarg code
+" Note:
+"   list of port sequences
+"            0     1        2       3       4       5            6          7
+"   value = [type, sequence,io_dir, width1, width2, signal_name, last_port, line ]
+"   io_seqs = {seq : value }
+"   io_names = {signal_name : value }
+"---------------------------------------------------
+function AutoArg()
+    try
+        "Record current position
+        let orig_idx = line('.')
+        let orig_col = col('.')
+
+        "AutoArg all start from top line
+        call cursor(1,1)
+
+        while 1
+            "Put cursor to /*autoarg*/ line
+            if search('\/\*autoarg\*\/','W') == 0
+                break
+            endif
+
+            "Skip comment line //
+            if getline('.') =~ '^\s*\/\/'
+                continue
+            endif
+
+            "Get io sequences {sequence : value} Read from current buffer
+            let lines = getline(1,line('$'))
+            let io_seqs = s:GetIO(lines,'seq')
+            let io_names = s:GetIO(lines,'name')
+
+            "Kill all contents under /*autoarg*/
+            "Current position must be at /*autoarg*/ line
+            call s:KillAutoArg()
+
+            "Draw io argument, use io_seqs
+            let lines = s:DrawArg(io_seqs)
+
+            "Delete current line );
+            let line = substitute(getline(line('.')),')\s*;','','')
+            call setline(line('.'),line)
+            "Append io port and );
+            call add(lines,s:start_prefix.');')
+            call append(line('.'),lines)
+
+            "only autoarg once
+            break
+
+        endwhile
+
+        "Put cursor back to original position
+        call cursor(orig_idx,orig_col)
+    endtry
+
+endfunction
+"}}}3
+
 "AutoInst 自动例化{{{3
 "--------------------------------------------------
 " Function: AutoInst
 " Input: 
 "   mode : mode for autoinst
 " Description:
+"   autoinst for inst module
 "   mode = 1, autoinst all instance
 "   mode = 0, autoinst only one instance
 " Output:
@@ -1004,6 +1072,7 @@ endfunction
 " Input: 
 "   mode : mode for autoinstparam
 " Description:
+"   autopara for inst module
 "   mode = 1, autoinstparam all parameter
 "   mode = 0, autoinstparam only one parameter
 " Output:
@@ -1126,6 +1195,7 @@ endfunction
 " Input: 
 "   mode : mode for autoinstparam
 " Description:
+"   auto para value for inst module
 "   mode = 1, autoinstparam_value all parameter
 "   mode = 0, autoinstparam_value only one parameter
 " Output:
@@ -1381,7 +1451,7 @@ endfunction
 "   N/A
 " Description:
 "   autodef all signals
-"   autodef = autoreg + autowire
+"   namely, autodef = autoreg + autowire
 " Output:
 "   Formatted autodef code
 "---------------------------------------------------
@@ -1463,6 +1533,294 @@ endfunction
 "}}}2
 
 "Sub Function 辅助函数{{{2
+
+"-------------------------------------------------------------------
+"                             AutoArg
+"-------------------------------------------------------------------
+"AutoArg-Get (Refer to GetIO)
+
+"AutoArg-Kill
+"KillAutoArg 删除所有声明{{{3
+"--------------------------------------------------
+" Function: KillAutoInst
+" Input: 
+"   Must put cursor to /*autoinst*/ position
+" Description:
+" e.g kill all declaration after /*autoinst*/
+"    
+"   module_name
+"   inst_name
+"   (   
+"       .clk        (clk),      //input
+"       /*autoinst*/
+"       .port_b     (port_b)    //output
+"   );
+"   
+"   --------------> after KillAutoInst
+"
+"   module_name
+"   inst_name
+"   (   
+"       .clk        (clk),      //input
+"       /*autoinst*/);
+"
+" Output:
+"   line after kill
+"---------------------------------------------------
+function s:KillAutoArg() 
+    let orig_idx = line('.')
+    let orig_col = col('.')
+    let idx = line('.')
+    let line = getline(idx)
+    if line =~ '/\*\<autoinst\>'
+        "if current line end with ');', one line
+        if line =~');\s*$'
+            return
+        else
+            "keep current line
+            let line = substitute(line,'\*/.*$','\*/);','')
+            call setline(idx,line)
+            "if current line not end with ');', multi-line
+            let idx = idx + 1
+            while 1
+                let line = getline(idx)
+                "end of inst
+                if line =~ ');\s*$'
+                    "call deletebufline('%',idx)
+                    execute ':'.idx.'d'
+                    break
+                "abnormal end
+                elseif line =~ 'endmodule' || idx == line('$')
+                    echohl ErrorMsg | echo "Error running KillAutoInst! Kill abnormally till the end!"| echohl None
+                    break
+                "middle
+                else
+                    "call deletebufline('%',idx)
+                    execute ':'.idx.'d'
+                endif
+            endwhile
+        endif
+    else
+        echohl ErrorMsg | echo "Error running KillAutoInst! Kill line not match /*autoinst*/ !"| echohl None
+    endif
+    "cursor back
+    call cursor(orig_idx,orig_col)
+endfunction
+"}}}3
+
+"AutoArg-Draw
+"DrawArg 按格式输出例化声明{{{3
+"--------------------------------------------------
+" Function: DrawIO
+" Input: 
+"   io_seqs : new inst io sequences for align
+"   io_list : old inst io name list
+"   chg_io_names : old inst io names that has been changed
+"
+" Description:
+" e.g draw io port sequences
+"   [wire,1,input,'c0','c0',clk,0,'       input       clk,']
+"   [reg,5,output,31,0,port_b,0,'    output reg [31:0] port_b']
+"   module_name
+"   inst_name
+"   (
+"       .clk        (clk),      //input
+"       .port_b     (port_b)    //output
+"   );
+"
+" Output:
+"   line that's aligned
+"   e.g
+"       .signal_name   (signal_name[width1:width2]      ), //io_dir
+"---------------------------------------------------
+function s:DrawArg(io_seqs,io_list,chg_io_names)
+    let prefix = s:start_prefix.repeat(' ',4)
+    let io_list = copy(a:io_list)
+    let chg_io_names = copy(a:chg_io_names)
+
+    "guarantee spaces width{{{4
+    let max_lbracket_len = 0
+    let max_rbracket_len = 0
+    for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
+        let value = a:io_seqs[seq]
+        let type = value[0]
+        if type != 'keep' 
+            let name = value[5]
+            "calculate maximum len of position to Draw
+            if value[4] == 'c0'
+                if value[3] == 'c0' 
+                    let width = ''
+                else
+                    let width = '['.value[3].']'
+                endif
+            elseif value[3] != 'c0'
+                let width = '['.value[3].':'.value[4].']'
+            else
+                let width = ''
+            endif
+            "io that's changed will be keeped if config 
+            let connect = name.width
+            if s:ati_keep_chg == 1
+                if(has_key(chg_io_names,name))
+                    let connect = chg_io_names[name]
+                endif
+            endif
+            "prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'
+            let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,s:name_pos_max])
+            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(connect)+4,s:symbol_pos_max])
+        endif
+    endfor
+    "}}}4
+
+    "draw io{{{4
+    let lines = []
+    let last_port_flag = 0
+
+    "io_list can be changed in function, therefore record if it's empty first
+    if io_list == []
+        let io_list_empty = 1
+    else
+        let io_list_empty = 0
+    endif
+
+    for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
+        let value = a:io_seqs[seq]
+        let type = value[0]
+        let line = value[7]
+        "add single comment/ifdef line{{{5
+        if type == 'keep' 
+            if line =~ '^\s*\/\/'
+                if s:ati_incl_cmnt == 1
+                    let line = prefix.substitute(line,'^\s*','','')
+                    call add(lines,line)
+                else
+                    "ignore comment line when not config
+                endif
+            elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)'
+                if s:ati_incl_ifdef == 1
+                    let line = prefix.substitute(line,'^\s*','','')
+                    call add(lines,line)
+                else
+                    "ignore ifdef line when not config
+                endif
+            endif
+        "}}}5
+        "add io line{{{5
+        else
+            "Format IO sequences
+            "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+            "name
+            let name = value[5]
+
+            "name2bracket
+            let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(name)-len('.'))
+            "width
+            if value[4] == 'c0'
+                if value[3] == 'c0' 
+                    let width = ''
+                else
+                    let width = '['.value[3].']'
+                endif
+            elseif value[3] != 'c0'
+                let width = '['.value[3].':'.value[4].']'
+            else
+                let width = ''
+            endif
+
+            "io that's changed will be keeped if config 
+            let connect = name.width
+            if s:ati_keep_chg == 1
+                if(has_key(chg_io_names,name))
+                    let connect = chg_io_names[name]
+                endif
+            endif
+            
+            "width2bracket
+            "don't align tail if config
+            if s:ati_tail_not_align == 1
+                let width2bracket = ''
+            else
+                let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-len('(')-len(connect))
+            endif
+
+            "comma
+            let last_port = value[6]
+            if last_port == 1
+                let comma = ' '         "space
+                let last_port_flag = 1  "special case: last port has been put in keep_io_list, there exist no last_port
+            else
+                let comma = ','      "comma exists
+            endif
+            "io_dir
+            let io_dir = value[2]
+
+            "Draw IO by config
+            "empty list, default
+            if io_list_empty == 1
+                if s:ati_io_dir == 1
+                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
+                else
+                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
+                endif
+            "update list,draw io by config
+            else
+                if s:ati_io_dir == 1
+                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
+                else
+                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
+                endif
+                "process //INST_NEW
+                let io_idx = index(io_list,name) 
+                "name not exist in old io_list, add //INST_NEW
+                if io_idx == -1
+                    if s:ati_inst_new == 1
+                        let line = line . ' // INST_NEW'
+                    else
+                        let line = line
+                    endif
+                "name already exist in old io_list,cover
+                else
+                    let line = line
+                    call remove(io_list,io_idx)
+                endif
+            endif
+
+            call add(lines,line)
+
+            "in case special case happen(last port has been put in keep_io_list, there exist no last_port)
+            "same time last line is not an io type, must record last_port index here
+            let self_last_port_idx = index(lines,line) 
+
+        endif
+    "}}}5
+    endfor
+
+    "special case: last port has been put in keep_io_list, there exist no last_port
+    if last_port_flag == 0
+        "set last item as last_port
+        let lines[self_last_port_idx] = substitute(lines[self_last_port_idx],',',' ','') 
+    endif
+
+    if io_list == []
+    "remain port in io_list
+    else
+        if s:ati_inst_del == 1
+            for name in io_list
+                let line = prefix.'//INST_DEL: Port '.name.' has been deleted.'
+                call add(lines,line)
+            endfor
+        endif
+    endif
+    "}}}4
+
+    if lines == []
+        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly writeen in verilog-95 but ati_95_support not open " | echohl None
+    endif
+
+    return lines
+
+endfunction
+"}}}3
 
 "-------------------------------------------------------------------
 "                             AutoInst
