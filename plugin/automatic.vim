@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/11/12 00:11
+" Last Modified:  2021/11/15 00:56
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -29,6 +29,17 @@ let s:name_pos_max = 32
 let s:symbol_pos_max = 64
 let s:start_pos  = 4
 let s:start_prefix = repeat(' ',s:start_pos)
+"}}}2
+
+"AutoArg 自动声明配置{{{2
+let s:ata_mode = get(g:,'ata_mode',0)
+"mode 0, no wrap
+if s:ata_mode == 0
+    let s:ata_tail_not_align = get(g:,'ata_tail_not_align',1)   "don't do alignment in tail when autoarg
+else
+"mode 1, wrap around
+
+endif
 "}}}2
 
 "AutoInst 自动例化配置{{{2
@@ -895,7 +906,7 @@ function AutoArg()
                 continue
             endif
 
-            "Get io sequences {sequence : value} Read from current buffer
+            "Get io sequences {sequence : value} from current buffer
             let lines = getline(1,line('$'))
             let io_seqs = s:GetIO(lines,'seq')
             let io_names = s:GetIO(lines,'name')
@@ -1542,27 +1553,26 @@ endfunction
 "AutoArg-Kill
 "KillAutoArg 删除所有声明{{{3
 "--------------------------------------------------
-" Function: KillAutoInst
+" Function: KillAutoArg
 " Input: 
-"   Must put cursor to /*autoinst*/ position
+"   Must put cursor to /*autoarg*/ position
 " Description:
-" e.g kill all declaration after /*autoinst*/
+" e.g kill all declaration after /*autoarg*/
 "    
 "   module_name
-"   inst_name
 "   (   
-"       .clk        (clk),      //input
-"       /*autoinst*/
-"       .port_b     (port_b)    //output
+"       /*autoarg*/
+"       //Input
+"       port_a,port_b,
+"       //Input
+"       port_c,port_d
 "   );
 "   
-"   --------------> after KillAutoInst
+"   --------------> after KillAutoArg
 "
 "   module_name
-"   inst_name
 "   (   
-"       .clk        (clk),      //input
-"       /*autoinst*/);
+"       /*autoarg*/);
 "
 " Output:
 "   line after kill
@@ -1572,7 +1582,7 @@ function s:KillAutoArg()
     let orig_col = col('.')
     let idx = line('.')
     let line = getline(idx)
-    if line =~ '/\*\<autoinst\>'
+    if line =~ '/\*\<autoarg\>'
         "if current line end with ');', one line
         if line =~');\s*$'
             return
@@ -1591,7 +1601,7 @@ function s:KillAutoArg()
                     break
                 "abnormal end
                 elseif line =~ 'endmodule' || idx == line('$')
-                    echohl ErrorMsg | echo "Error running KillAutoInst! Kill abnormally till the end!"| echohl None
+                    echohl ErrorMsg | echo "Error running KillAutoArg! Kill abnormally till the end!"| echohl None
                     break
                 "middle
                 else
@@ -1601,7 +1611,7 @@ function s:KillAutoArg()
             endwhile
         endif
     else
-        echohl ErrorMsg | echo "Error running KillAutoInst! Kill line not match /*autoinst*/ !"| echohl None
+        echohl ErrorMsg | echo "Error running KillAutoArg! Kill line not match /*autoarg*/ !"| echohl None
     endif
     "cursor back
     call cursor(orig_idx,orig_col)
@@ -1611,210 +1621,83 @@ endfunction
 "AutoArg-Draw
 "DrawArg 按格式输出例化声明{{{3
 "--------------------------------------------------
-" Function: DrawIO
+" Function: DrawArg
 " Input: 
 "   io_seqs : new inst io sequences for align
-"   io_list : old inst io name list
-"   chg_io_names : old inst io names that has been changed
 "
 " Description:
-" e.g draw io port sequences
+" e.g draw io argument sequences
 "   [wire,1,input,'c0','c0',clk,0,'       input       clk,']
 "   [reg,5,output,31,0,port_b,0,'    output reg [31:0] port_b']
 "   module_name
-"   inst_name
 "   (
-"       .clk        (clk),      //input
-"       .port_b     (port_b)    //output
+"       clk,
+"       port_b
 "   );
 "
 " Output:
-"   line that's aligned
-"   e.g
-"       .signal_name   (signal_name[width1:width2]      ), //io_dir
+"   line that's aligned(in different ways)
 "---------------------------------------------------
-function s:DrawArg(io_seqs,io_list,chg_io_names)
+function s:DrawArg(io_seqs)
     let prefix = s:start_prefix.repeat(' ',4)
-    let io_list = copy(a:io_list)
-    let chg_io_names = copy(a:chg_io_names)
 
     "guarantee spaces width{{{4
-    let max_lbracket_len = 0
-    let max_rbracket_len = 0
+    let max_comma_len = 0
     for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
         let value = a:io_seqs[seq]
         let type = value[0]
         if type != 'keep' 
             let name = value[5]
             "calculate maximum len of position to Draw
-            if value[4] == 'c0'
-                if value[3] == 'c0' 
-                    let width = ''
-                else
-                    let width = '['.value[3].']'
-                endif
-            elseif value[3] != 'c0'
-                let width = '['.value[3].':'.value[4].']'
-            else
-                let width = ''
-            endif
-            "io that's changed will be keeped if config 
-            let connect = name.width
-            if s:ati_keep_chg == 1
-                if(has_key(chg_io_names,name))
-                    let connect = chg_io_names[name]
-                endif
-            endif
-            "prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'
-            let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,s:name_pos_max])
-            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(connect)+4,s:symbol_pos_max])
+            "prefix.name.name2comma
+            let max_comma_len = max([max_comma_len,len(prefix)+len(name)+4,s:symbol_pos_max])
         endif
     endfor
     "}}}4
 
-    "draw io{{{4
+    "draw io argument{{{4
     let lines = []
-    let last_port_flag = 0
-
-    "io_list can be changed in function, therefore record if it's empty first
-    if io_list == []
-        let io_list_empty = 1
-    else
-        let io_list_empty = 0
-    endif
 
     for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
         let value = a:io_seqs[seq]
         let type = value[0]
         let line = value[7]
-        "add single comment/ifdef line{{{5
-        if type == 'keep' 
-            if line =~ '^\s*\/\/'
-                if s:ati_incl_cmnt == 1
-                    let line = prefix.substitute(line,'^\s*','','')
-                    call add(lines,line)
-                else
-                    "ignore comment line when not config
-                endif
-            elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)'
-                if s:ati_incl_ifdef == 1
-                    let line = prefix.substitute(line,'^\s*','','')
-                    call add(lines,line)
-                else
-                    "ignore ifdef line when not config
-                endif
-            endif
-        "}}}5
-        "add io line{{{5
-        else
+        "add io argument line{{{5
+        if type != 'keep' 
             "Format IO sequences
             "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
             "name
             let name = value[5]
 
-            "name2bracket
-            let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(name)-len('.'))
-            "width
-            if value[4] == 'c0'
-                if value[3] == 'c0' 
-                    let width = ''
-                else
-                    let width = '['.value[3].']'
-                endif
-            elseif value[3] != 'c0'
-                let width = '['.value[3].':'.value[4].']'
-            else
-                let width = ''
-            endif
-
-            "io that's changed will be keeped if config 
-            let connect = name.width
-            if s:ati_keep_chg == 1
-                if(has_key(chg_io_names,name))
-                    let connect = chg_io_names[name]
-                endif
-            endif
-            
-            "width2bracket
+            "name2comma
             "don't align tail if config
-            if s:ati_tail_not_align == 1
-                let width2bracket = ''
+            if s:ata_tail_not_align == 1
+                let name2comma= ''
             else
-                let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-len('(')-len(connect))
+                let name2comma = repeat(' ',max_comma_len-len(prefix)-len(name))
             endif
 
             "comma
             let last_port = value[6]
             if last_port == 1
                 let comma = ' '         "space
-                let last_port_flag = 1  "special case: last port has been put in keep_io_list, there exist no last_port
             else
                 let comma = ','      "comma exists
             endif
-            "io_dir
-            let io_dir = value[2]
 
-            "Draw IO by config
-            "empty list, default
-            if io_list_empty == 1
-                if s:ati_io_dir == 1
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
-                else
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
-                endif
-            "update list,draw io by config
-            else
-                if s:ati_io_dir == 1
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
-                else
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
-                endif
-                "process //INST_NEW
-                let io_idx = index(io_list,name) 
-                "name not exist in old io_list, add //INST_NEW
-                if io_idx == -1
-                    if s:ati_inst_new == 1
-                        let line = line . ' // INST_NEW'
-                    else
-                        let line = line
-                    endif
-                "name already exist in old io_list,cover
-                else
-                    let line = line
-                    call remove(io_list,io_idx)
-                endif
-            endif
+            "Draw Argument by config
+            let line = prefix.'.'.name.name2comma.comma
 
             call add(lines,line)
-
-            "in case special case happen(last port has been put in keep_io_list, there exist no last_port)
-            "same time last line is not an io type, must record last_port index here
-            let self_last_port_idx = index(lines,line) 
 
         endif
     "}}}5
     endfor
 
-    "special case: last port has been put in keep_io_list, there exist no last_port
-    if last_port_flag == 0
-        "set last item as last_port
-        let lines[self_last_port_idx] = substitute(lines[self_last_port_idx],',',' ','') 
-    endif
-
-    if io_list == []
-    "remain port in io_list
-    else
-        if s:ati_inst_del == 1
-            for name in io_list
-                let line = prefix.'//INST_DEL: Port '.name.' has been deleted.'
-                call add(lines,line)
-            endfor
-        endif
-    endif
     "}}}4
 
     if lines == []
-        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly writeen in verilog-95 but ati_95_support not open " | echohl None
+        echohl ErrorMsg | echo "Error io_seqs input for function DrawArg! io_seqs has no input/output definition! Possibly writeen in verilog-95 but ati_95_support not open " | echohl None
     endif
 
     return lines
