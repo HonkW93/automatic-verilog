@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/11/15 00:56
+" Last Modified:  2021/11/17 00:51
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -29,16 +29,25 @@ let s:name_pos_max = 32
 let s:symbol_pos_max = 64
 let s:start_pos  = 4
 let s:start_prefix = repeat(' ',s:start_pos)
+
+"autoarg {{{3
+"start position
+let s:ata_st_pos = 4
+let s:ata_st_prefix = repeat(' ',s:ata_st_pos)
+"symbol position
+let s:ata_sym_pos_max = 32 
+"}}}3
+
 "}}}2
 
 "AutoArg 自动声明配置{{{2
-let s:ata_mode = get(g:,'ata_mode',0)
+let s:ata_mode = get(g:,'ata_mode',1)
 "mode 0, no wrap
 if s:ata_mode == 0
     let s:ata_tail_not_align = get(g:,'ata_tail_not_align',1)   "don't do alignment in tail when autoarg
-else
 "mode 1, wrap around
-
+else
+    let s:ata_tail_not_align = 1                                "don't do alignment when ata_mode == 1
 endif
 "}}}2
 
@@ -888,6 +897,11 @@ endfunction "}}}3
 "---------------------------------------------------
 function AutoArg()
     try
+        "AutoArg must open ati_95_support
+        if s:ati_95_support == 0
+            echohl ErrorMsg | echo "Error because AutoArg must be used in verilog-95 but ati_95_support not open! " | echohl None
+        endif
+
         "Record current position
         let orig_idx = line('.')
         let orig_col = col('.')
@@ -1639,7 +1653,7 @@ endfunction
 "   line that's aligned(in different ways)
 "---------------------------------------------------
 function s:DrawArg(io_seqs)
-    let prefix = s:start_prefix.repeat(' ',4)
+    let prefix = s:start_prefix
 
     "guarantee spaces width{{{4
     let max_comma_len = 0
@@ -1657,6 +1671,9 @@ function s:DrawArg(io_seqs)
 
     "draw io argument{{{4
     let lines = []
+    let cur_len = 0
+    let max_len = s:ata_sym_pos_max
+    let wrap_line = prefix
 
     for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
         let value = a:io_seqs[seq]
@@ -1686,9 +1703,23 @@ function s:DrawArg(io_seqs)
             endif
 
             "Draw Argument by config
-            let line = prefix.'.'.name.name2comma.comma
-
-            call add(lines,line)
+            
+            "mode 0, no wrap
+            if s:ata_mode == 0
+                let line = prefix.name.name2comma.comma
+                call add(lines,line)
+            "mode 1, wrap around
+            else
+                let line = name.name2comma.comma
+                if cur_len + len(line.' ') < max_len
+                    let wrap_line = wrap_line.line.' '
+                    let cur_len = cur_len + len(line.' ')
+                else
+                    call add(lines,wrap_line)
+                    let wrap_line = prefix.line.' '
+                    let cur_len = len(prefix.line.' ')
+                endif
+            endif
 
         endif
     "}}}5
@@ -1697,7 +1728,7 @@ function s:DrawArg(io_seqs)
     "}}}4
 
     if lines == []
-        echohl ErrorMsg | echo "Error io_seqs input for function DrawArg! io_seqs has no input/output definition! Possibly writeen in verilog-95 but ati_95_support not open " | echohl None
+        echohl ErrorMsg | echo "Error io_seqs input for function DrawArg! io_seqs has no input/output definition! Possibly written in verilog-95 but ati_95_support not open " | echohl None
     endif
 
     return lines
@@ -2499,7 +2530,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
     "}}}4
 
     if lines == []
-        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly writeen in verilog-95 but ati_95_support not open " | echohl None
+        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly written in verilog-95 but ati_95_support not open " | echohl None
     endif
 
     return lines
