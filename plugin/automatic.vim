@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/11/17 00:51
+" Last Modified:  2021/11/18 01:14
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -41,13 +41,12 @@ let s:ata_sym_pos_max = 32
 "}}}2
 
 "AutoArg 自动声明配置{{{2
-let s:ata_mode = get(g:,'ata_mode',1)
-"mode 0, no wrap
+let s:ata_mode = get(g:,'ata_mode',1)                          "mode 0,no wrap; mode 1 wrap around
+let s:ata_io_clsf = get(g:,'ata_io_clsf',1)                    "input/output/inout classified
 if s:ata_mode == 0
-    let s:ata_tail_not_align = get(g:,'ata_tail_not_align',1)   "don't do alignment in tail when autoarg
-"mode 1, wrap around
+    let s:ata_tail_not_align = get(g:,'ata_tail_not_align',1)  "don't do alignment in tail when autoarg
 else
-    let s:ata_tail_not_align = 1                                "don't do alignment when ata_mode == 1
+    let s:ata_tail_not_align = 1                               "don't do alignment when ata_mode == 1
 endif
 "}}}2
 
@@ -936,7 +935,7 @@ function AutoArg()
             let line = substitute(getline(line('.')),')\s*;','','')
             call setline(line('.'),line)
             "Append io port and );
-            call add(lines,s:start_prefix.');')
+            call add(lines,');')
             call append(line('.'),lines)
 
             "only autoarg once
@@ -1670,47 +1669,59 @@ function s:DrawArg(io_seqs)
     "}}}4
 
     "draw io argument{{{4
-    let lines = []
-    let cur_len = 0
-    let max_len = s:ata_sym_pos_max
-    let wrap_line = prefix
 
-    for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
-        let value = a:io_seqs[seq]
-        let type = value[0]
-        let line = value[7]
-        "add io argument line{{{5
-        if type != 'keep' 
-            "Format IO sequences
-            "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-            "name
-            let name = value[5]
+    "input/output/inout not classified{{{5
+    if s:ata_io_clsf == 0
 
-            "name2comma
-            "don't align tail if config
-            if s:ata_tail_not_align == 1
-                let name2comma= ''
-            else
-                let name2comma = repeat(' ',max_comma_len-len(prefix)-len(name))
-            endif
+        "get io first{{{6
+        let io_lines = []
+        for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
+            let value = a:io_seqs[seq]
+            let type = value[0]
+            let line = value[7]
+            if type != 'keep' 
+                "Format IO sequences
+                "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+                "name
+                let name = value[5]
 
-            "comma
-            let last_port = value[6]
-            if last_port == 1
-                let comma = ' '         "space
-            else
-                let comma = ','      "comma exists
-            endif
+                "name2comma
+                "don't align tail if config
+                if s:ata_tail_not_align == 1
+                    let name2comma= ''
+                else
+                    let name2comma = repeat(' ',max_comma_len-len(prefix)-len(name))
+                endif
 
-            "Draw Argument by config
-            
-            "mode 0, no wrap
-            if s:ata_mode == 0
-                let line = prefix.name.name2comma.comma
-                call add(lines,line)
-            "mode 1, wrap around
-            else
+                "comma
+                let last_port = value[6]
+                if last_port == 1
+                    let comma = ' '         "space
+                else
+                    let comma = ','      "comma exists
+                endif
+
+                "get line
                 let line = name.name2comma.comma
+                call add(io_lines,line)
+            endif
+        endfor
+        "}}}6
+
+        "draw io{{{6
+        let lines = []
+        let max_len = s:ata_sym_pos_max
+        let cur_len = 0
+        let wrap_line = prefix
+        "mode 0, no wrap
+        if s:ata_mode == 0
+            for line in io_lines
+                call add(lines,prefix.line)
+            endfor
+        endif
+        "mode 1, wrap around
+        if s:ata_mode == 1
+            for line in io_lines
                 if cur_len + len(line.' ') < max_len
                     let wrap_line = wrap_line.line.' '
                     let cur_len = cur_len + len(line.' ')
@@ -1719,11 +1730,156 @@ function s:DrawArg(io_seqs)
                     let wrap_line = prefix.line.' '
                     let cur_len = len(prefix.line.' ')
                 endif
-            endif
-
+            endfor
+            call add(lines,wrap_line)
         endif
+        "}}}6
+
+        let lines[-1] = substitute(lines[-1],',\s*$','','') 
+
+    endif
     "}}}5
-    endfor
+    
+    "input/output/inout classified{{{5
+    if s:ata_io_clsf == 1
+        "get inputs/outputs/inouts first{{{6
+        let inputs = []
+        let outputs = []
+        let inouts = []
+        for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
+            let value = a:io_seqs[seq]
+            let type = value[0]
+            let line = value[7]
+            let io_dir = value[2]
+            if type != 'keep' 
+                "Format IO sequences
+                "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+                "name
+                let name = value[5]
+
+                "name2comma
+                "don't align tail if config
+                if s:ata_tail_not_align == 1
+                    let name2comma= ''
+                else
+                    let name2comma = repeat(' ',max_comma_len-len(prefix)-len(name))
+                endif
+
+                "comma
+                let last_port = value[6]
+                if last_port == 1
+                    let comma = ' '         "space
+                else
+                    let comma = ','      "comma exists
+                endif
+
+                "get line
+                let line = name.name2comma.comma
+
+                if io_dir == 'input'
+                    call add(inputs,line)
+                endif
+                if io_dir == 'output'
+                    call add(outputs,line)
+                endif
+                if io_dir == 'inout'
+                    call add(inouts,line)
+                endif
+
+            endif
+        endfor
+        "}}}6
+
+        "draw input{{{6
+        let lines = []
+        let max_len = s:ata_sym_pos_max
+
+        let cur_len = 0
+        let wrap_line = prefix
+        if inputs != []
+            call add(lines,prefix.'//Inputs')
+            "mode 0, no wrap
+            if s:ata_mode == 0
+                for input in inputs
+                    call add(lines,prefix.input)
+                endfor
+            endif
+            "mode 1, wrap around
+            if s:ata_mode == 1
+                for input in inputs
+                    if cur_len + len(input.' ') < max_len
+                        let wrap_line = wrap_line.input.' '
+                        let cur_len = cur_len + len(input.' ')
+                    else
+                        call add(lines,wrap_line)
+                        let wrap_line = prefix.input.' '
+                        let cur_len = len(prefix.input.' ')
+                    endif
+                endfor
+                call add(lines,wrap_line)
+            endif
+        endif
+        "}}}
+
+        "draw output{{{6
+        let cur_len = 0
+        let wrap_line = prefix
+        if outputs != []
+            call add(lines,prefix.'//Outputs')
+            "mode 0, no wrap
+            if s:ata_mode == 0
+                for output in outputs
+                    call add(lines,prefix.output)
+                endfor
+            endif
+            "mode 1, wrap around
+            if s:ata_mode == 1
+                for output in outputs
+                    if cur_len + len(output.' ') < max_len
+                        let wrap_line = wrap_line.output.' '
+                        let cur_len = cur_len + len(output.' ')
+                    else
+                        call add(lines,wrap_line)
+                        let wrap_line = prefix.output.' '
+                        let cur_len = len(prefix.output.' ')
+                    endif
+                endfor
+                call add(lines,wrap_line)
+            endif
+        endif
+        "}}}6
+        
+        "draw inout{{{6
+        let cur_len = 0
+        let wrap_line = prefix
+        if inouts != []
+            call add(lines,prefix.'//Inouts')
+            "mode 0, no wrap
+            if s:ata_mode == 0
+                for inout in inouts
+                    call add(lines,prefix.inout)
+                endfor
+            endif
+            "mode 1, wrap around
+            if s:ata_mode == 1
+                for inout in inouts
+                    if cur_len + len(inout.' ') < max_len
+                        let wrap_line = wrap_line.inout.' '
+                        let cur_len = cur_len + len(inout.' ')
+                    else
+                        call add(lines,wrap_line)
+                        let wrap_line = prefix.inout.' '
+                        let cur_len = len(prefix.inout.' ')
+                    endif
+                endfor
+                call add(lines,wrap_line)
+            endif
+        endif
+        "}}}6
+
+        let lines[-1] = substitute(lines[-1],',\s*$','','') 
+    endif
+    "}}}5
 
     "}}}4
 
