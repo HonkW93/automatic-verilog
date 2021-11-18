@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/11/18 01:14
+" Last Modified:  2021/11/18 15:32
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -25,17 +25,59 @@
 "Config 配置参数{{{1
 
 "Align 确定信号对齐位置{{{2
-let s:name_pos_max = 32
-let s:symbol_pos_max = 64
-let s:start_pos  = 4
-let s:start_prefix = repeat(' ',s:start_pos)
 
-"autoarg {{{3
+"AutoArg {{{3
 "start position
 let s:ata_st_pos = 4
 let s:ata_st_prefix = repeat(' ',s:ata_st_pos)
 "symbol position
 let s:ata_sym_pos_max = 32 
+"}}}3
+
+"AutoInst {{{3
+"start position
+let s:ati_st_pos = 4
+let s:ati_st_prefix = repeat(' ',s:ati_st_pos)
+"name position
+let s:ati_name_pos_max = 32 
+"symbol position
+let s:ati_sym_pos_max = 64 
+"}}}3
+
+"AutoPara{{{3
+"start position
+let s:atp_st_pos = 4
+let s:atp_st_prefix = repeat(' ',s:atp_st_pos)
+"name position
+let s:atp_name_pos_max = 32 
+"symbol position
+let s:atp_sym_pos_max = 64 
+"}}}3
+
+"AutoReg{{{3
+"start position
+let s:atr_st_pos = 4
+let s:atr_st_prefix = repeat(' ',s:atr_st_pos)
+"name position
+let s:atr_name_pos_max = 32 
+"symbol position
+let s:atr_sym_pos_max = 64 
+"}}}3
+
+"AutoWire{{{3
+"start position
+let s:atw_st_pos = 4
+let s:atw_st_prefix = repeat(' ',s:atw_st_pos)
+"name position
+let s:atw_name_pos_max = 32 
+"symbol position
+let s:atw_sym_pos_max = 64 
+"}}}3
+
+"AutoDef{{{3
+"start position
+let s:atd_st_pos = 4
+let s:atd_st_prefix = repeat(' ',s:atd_st_pos)
 "}}}3
 
 "}}}2
@@ -1055,7 +1097,7 @@ function AutoInst(mode)
             let line = substitute(getline(line('.')),')\s*;','','')
             call setline(line('.'),line)
             "Append io port and );
-            call add(lines,s:start_prefix.');')
+            call add(lines,s:ati_st_prefix.');')
             call append(line('.'),lines)
 
             "Add instance directory before autoinst
@@ -1064,14 +1106,14 @@ function AutoInst(mode)
                 if getline(idx) =~ '^\s*/\/\Instance'
                     if getline(idx) =~ '//Instance: '.add_dir
                     else
-                        call append(idx-1,s:start_prefix.'//Instance: '.add_dir)
+                        call append(idx-1,s:ati_st_prefix.'//Instance: '.add_dir)
                         let orig_dir_idx = line('.')
                         let orig_dir_col = col('.')
                         execute ':'.idx3.'d'
                         call cursor(orig_dir_idx,orig_dir_col)
                     endif
                 else
-                    call append(idx,s:start_prefix.'//Instance: '.add_dir)
+                    call append(idx,s:ati_st_prefix.'//Instance: '.add_dir)
                 endif
             endif
 
@@ -1194,7 +1236,7 @@ function AutoPara(mode)
             let line = substitute(getline(line('.')),')\s*','','')
             call setline(line('.'),line)
             "Append parameter and )
-            call add(lines,s:start_prefix.')')
+            call add(lines,s:atp_st_prefix.')')
             call append(line('.'),lines)
 
             "mode = 0, only autopara once
@@ -1309,7 +1351,7 @@ function AutoParaValue(mode)
             let line = substitute(getline(line('.')),')\s*','','')
             call setline(line('.'),line)
             "Append parameter and )
-            call add(lines,s:start_prefix.')')
+            call add(lines,s:atp_st_prefix.')')
             call append(line('.'),lines)
 
             "mode = 0, only autopara once
@@ -1480,7 +1522,7 @@ endfunction
 "   Formatted autodef code
 "---------------------------------------------------
 function AutoDef()
-    let prefix = s:start_prefix
+    let prefix = s:atd_st_prefix
     try
         "Record current position
         let orig_idx = line('.')
@@ -1652,7 +1694,7 @@ endfunction
 "   line that's aligned(in different ways)
 "---------------------------------------------------
 function s:DrawArg(io_seqs)
-    let prefix = s:start_prefix
+    let prefix = s:ata_st_prefix
 
     "guarantee spaces width{{{4
     let max_comma_len = 0
@@ -1663,7 +1705,7 @@ function s:DrawArg(io_seqs)
             let name = value[5]
             "calculate maximum len of position to Draw
             "prefix.name.name2comma
-            let max_comma_len = max([max_comma_len,len(prefix)+len(name)+4,s:symbol_pos_max])
+            let max_comma_len = max([max_comma_len,len(prefix)+len(name)+4,s:ata_sym_pos_max])
         endif
     endfor
     "}}}4
@@ -2506,7 +2548,7 @@ endfunction
 "       .signal_name   (signal_name[width1:width2]      ), //io_dir
 "---------------------------------------------------
 function s:DrawIO(io_seqs,io_list,chg_io_names)
-    let prefix = s:start_prefix.repeat(' ',4)
+    let prefix = s:ati_st_prefix.repeat(' ',4)
     let io_list = copy(a:io_list)
     let chg_io_names = copy(a:chg_io_names)
 
@@ -2538,8 +2580,8 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
                 endif
             endif
             "prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'
-            let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,s:name_pos_max])
-            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(connect)+4,s:symbol_pos_max])
+            let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,s:ati_name_pos_max])
+            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(connect)+4,s:ati_sym_pos_max])
         endif
     endfor
     "}}}4
@@ -3421,7 +3463,7 @@ endfunction
 "       .parameter_name   (parameter_name       )  //last_parameter
 "---------------------------------------------------
 function s:DrawPara(para_seqs,para_list,chg_para_names)
-    let prefix = s:start_prefix.repeat(' ',4)
+    let prefix = s:atp_st_prefix.repeat(' ',4)
 
     let para_list  = copy(a:para_list)
     let chg_para_names = copy(a:chg_para_names)
@@ -3440,8 +3482,8 @@ function s:DrawPara(para_seqs,para_list,chg_para_names)
             endif
         endif
         "prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'
-        let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(p_name)+4,s:name_pos_max])
-        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(p_value)+4,s:symbol_pos_max])
+        let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(p_name)+4,s:atp_name_pos_max])
+        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(p_value)+4,s:atp_sym_pos_max])
     endfor
     "}}}4
 
@@ -3624,7 +3666,7 @@ endfunction
 "       .parameter_name   (parameter_value      )  //last_parameter
 "---------------------------------------------------
 function s:DrawParaValue(para_seqs,para_list)
-    let prefix = s:start_prefix.repeat(' ',4)
+    let prefix = s:atp_st_prefix.repeat(' ',4)
     let para_list = copy(a:para_list)
 
     "guarantee spaces width{{{4
@@ -3635,8 +3677,8 @@ function s:DrawParaValue(para_seqs,para_list)
         let p_name = value[2]
         let p_value = value[3]
         "prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'
-        let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(p_name)+4,s:name_pos_max])
-        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(p_value)+4,s:symbol_pos_max])
+        let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(p_name)+4,s:atp_name_pos_max])
+        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(p_value)+4,s:atp_sym_pos_max])
     endfor
     "}}}4
 
@@ -4199,7 +4241,7 @@ endfunction
 "       reg  [WIDTH1:WIDTH2]     reg_name;
 "---------------------------------------------------
 function s:DrawReg(reg_names,reg_list)
-    let prefix = s:start_prefix
+    let prefix = s:atr_st_prefix
     let reg_list = copy(a:reg_list)
 
     "guarantee spaces width{{{4
@@ -4215,8 +4257,8 @@ function s:DrawReg(reg_names,reg_list)
             let width = value[2]
             "calculate maximum len of position to Draw
             "let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
-            let max_lname_len = max([max_lname_len,len(prefix)+len('reg  ')+len(width)+4,s:name_pos_max])
-            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,s:symbol_pos_max])
+            let max_lname_len = max([max_lname_len,len(prefix)+len('reg  ')+len(width)+4,s:atr_name_pos_max])
+            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,s:atr_sym_pos_max])
         endif
     endfor
     "}}}4
@@ -5087,7 +5129,7 @@ endfunction
 "       wire  [WIDTH1:WIDTH2]     wire_name;
 "---------------------------------------------------
 function s:DrawWire(wire_names,wire_list)
-    let prefix = s:start_prefix
+    let prefix = s:atw_st_prefix
     let wire_list = copy(a:wire_list)
 
     "guarantee spaces width{{{4
@@ -5103,8 +5145,8 @@ function s:DrawWire(wire_names,wire_list)
             let width = value[2]
             "calculate maximum len of position to Draw
             "let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
-            let max_lname_len = max([max_lname_len,len(prefix)+len('wire ')+len(width)+4,s:name_pos_max])
-            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,s:symbol_pos_max])
+            let max_lname_len = max([max_lname_len,len(prefix)+len('wire ')+len(width)+4,s:atw_name_pos_max])
+            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,s:atw_sym_pos_max])
         endif
     endfor
     "}}}4
