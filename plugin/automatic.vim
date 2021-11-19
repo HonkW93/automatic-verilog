@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/11/18 15:32
+" Last Modified:  2021/11/19 21:31
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -314,12 +314,24 @@ map <C-F8>      :call Invert()<ESC>
 "}}}3
 
 "Auto 自动化 {{{3
-map <S-F3>      :call AutoInst(0)<ESC>
-map <S-F4>      :call AutoPara(0)<ESC>
-map <S-F5>      :call AutoParaValue(0)<ESC>
-map <S-F6>      :call AutoReg()<ESC>
-map <S-F7>      :call AutoWire()<ESC>
-map <S-F8>      :call AutoDef()<ESC>
+if !hasmapto(':call AutoInst(0)<ESC>')
+    map <S-F3>      :call AutoInst(0)<ESC>
+endif
+if !hasmapto(':call AutoPara(0)<ESC>')
+    map <S-F4>      :call AutoPara(0)<ESC>
+endif
+if !hasmapto(':call AutoParaValue(0)<ESC>')
+    map <S-F5>      :call AutoParaValue(0)<ESC>
+endif
+if !hasmapto(':call AutoReg()<ESC>')
+    map <S-F6>      :call AutoReg()<ESC>
+endif
+if !hasmapto(':call AutoWire()<ESC>')
+    map <S-F7>      :call AutoWire()<ESC>
+endif
+if !hasmapto(':call AutoDef()<ESC>')
+    map <S-F8>      :call AutoDef()<ESC>
+endif
 "}}}3
 
 "Code Snippet 代码段{{{3
@@ -690,6 +702,7 @@ endfunction "}}}3
 "Update Last Modify Time 更新写入时间{{{2
 
 autocmd BufWrite *.v call UpdateLastModifyTime()
+autocmd BufWrite *.sv call UpdateLastModifyTime()
 
 function UpdateLastModifyTime() "{{{3
     let line = getline(8)
@@ -6607,10 +6620,12 @@ function s:GetDirList()
     if dirlist == [] 
         let dirlist = [dir]
     endif
-    "expand directories like $HOME
     let exp_dirlist = []
     for dir in dirlist
+        "expand directories in SYSTEM VARIABLE (e.g. $VIM -> F:/Vim)
         let dir = expand(dir)
+        "expand directories to full path(e.g. ./ -> /usr/share/vim/vim74 )
+        let dir = substitute(fnamemodify(dir,':p'),'\/$','','')
         call add(exp_dirlist,dir)
     endfor
 
@@ -6661,7 +6676,7 @@ function s:GetFileDirDic(dir,rec,files)
         let idx = idx + 1
     endwhile
 
-    let filelist = filter(copy(filedirlist),'v:val =~ ".v$" || v:val =~ ".sv$"')
+    let filelist = filter(copy(filedirlist),'v:val =~ "\\.v$" || v:val =~ "\\.sv$"')
 
     for file in filelist
         if has_key(a:files,file)
@@ -7503,7 +7518,7 @@ endfunction "}}}2
 " Output:
 "   generate tags for tag jump
 "---------------------------------------------------
-function s:WriteRtlTags(files,modules)
+function s:GenRtlTags(files,modules)
     let files = a:files
     let modules = a:modules
     "Write tags by module line
@@ -7550,7 +7565,7 @@ function RtlTree() "{{{2
             let s:top_modules = s:GetModuleFileDict(s:top_files)
         endtry
 
-        let tags = s:WriteRtlTags(s:top_files,s:top_modules)
+        let tags = s:GenRtlTags(s:top_files,s:top_modules)
         call writefile(tags,'tags')
         "echo 'Tags Write Finish!'
 
