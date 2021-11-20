@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/11/19 21:31
+" Last Modified:  2021/11/20 19:28
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -19,6 +19,7 @@
 " 2021/6/12     HonkW           1.1.2                   Prototype of AutoReg
 " 2021/8/1      HonkW           1.1.6                   Add modified verision of RtlTree
 " 2021/9/14     HonkW           1.2.4                   Prototype of AutoDef
+" 2021/11/20    HonkW           1.2.5                   Prototype of AutoArg
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
 
@@ -287,6 +288,7 @@ amenu &Verilog.Code.Template.LoadTemplate<TAB>                          :call Lo
 "}}}3
 
 "Auto 自动化{{{3
+amenu &Verilog.AutoArg.AutoArg()<TAB>                                   :call AutoArg()<CR>
 amenu &Verilog.AutoInst.AutoInst(1)<TAB>All                             :call AutoInst(1)<CR>
 amenu &Verilog.AutoInst.AutoInst(0)<TAB>One                             :call AutoInst(0)<CR>
 
@@ -299,6 +301,7 @@ amenu &Verilog.AutoPara.AutoParaValue(0)<TAB>One                        :call Au
 amenu &Verilog.AutoDef.AutoDef()<TAB>                                   :call AutoDef()<CR>
 amenu &Verilog.AutoDef.AutoReg()<TAB>                                   :call AutoReg()<CR>
 amenu &Verilog.AutoDef.AutoWire()<TAB>                                  :call AutoWire()<CR>
+
 "}}}3
 
 "}}}2
@@ -314,6 +317,9 @@ map <C-F8>      :call Invert()<ESC>
 "}}}3
 
 "Auto 自动化 {{{3
+if !hasmapto(':call AutoArg()<ESC>')
+    map <S-F2>      :call AutoArg()<ESC>
+endif
 if !hasmapto(':call AutoInst(0)<ESC>')
     map <S-F3>      :call AutoInst(0)<ESC>
 endif
