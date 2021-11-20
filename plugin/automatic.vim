@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/11/12 00:11
+" Last Modified:  2021/11/20 19:28
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -19,16 +19,78 @@
 " 2021/6/12     HonkW           1.1.2                   Prototype of AutoReg
 " 2021/8/1      HonkW           1.1.6                   Add modified verision of RtlTree
 " 2021/9/14     HonkW           1.2.4                   Prototype of AutoDef
+" 2021/11/20    HonkW           1.2.5                   Prototype of AutoArg
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
 
 "Config 配置参数{{{1
 
 "Align 确定信号对齐位置{{{2
-let s:name_pos_max = 32
-let s:symbol_pos_max = 64
-let s:start_pos  = 4
-let s:start_prefix = repeat(' ',s:start_pos)
+
+"AutoArg {{{3
+"start position
+let s:ata_st_pos = 4
+let s:ata_st_prefix = repeat(' ',s:ata_st_pos)
+"symbol position
+let s:ata_sym_pos_max = 32 
+"}}}3
+
+"AutoInst {{{3
+"start position
+let s:ati_st_pos = 4
+let s:ati_st_prefix = repeat(' ',s:ati_st_pos)
+"name position
+let s:ati_name_pos_max = 32 
+"symbol position
+let s:ati_sym_pos_max = 64 
+"}}}3
+
+"AutoPara{{{3
+"start position
+let s:atp_st_pos = 4
+let s:atp_st_prefix = repeat(' ',s:atp_st_pos)
+"name position
+let s:atp_name_pos_max = 32 
+"symbol position
+let s:atp_sym_pos_max = 64 
+"}}}3
+
+"AutoReg{{{3
+"start position
+let s:atr_st_pos = 4
+let s:atr_st_prefix = repeat(' ',s:atr_st_pos)
+"name position
+let s:atr_name_pos_max = 32 
+"symbol position
+let s:atr_sym_pos_max = 64 
+"}}}3
+
+"AutoWire{{{3
+"start position
+let s:atw_st_pos = 4
+let s:atw_st_prefix = repeat(' ',s:atw_st_pos)
+"name position
+let s:atw_name_pos_max = 32 
+"symbol position
+let s:atw_sym_pos_max = 64 
+"}}}3
+
+"AutoDef{{{3
+"start position
+let s:atd_st_pos = 4
+let s:atd_st_prefix = repeat(' ',s:atd_st_pos)
+"}}}3
+
+"}}}2
+
+"AutoArg 自动声明配置{{{2
+let s:ata_mode = get(g:,'ata_mode',1)                          "mode 0,no wrap; mode 1 wrap around
+let s:ata_io_clsf = get(g:,'ata_io_clsf',1)                    "input/output/inout classified
+if s:ata_mode == 0
+    let s:ata_tail_not_align = get(g:,'ata_tail_not_align',1)  "don't do alignment in tail when autoarg
+else
+    let s:ata_tail_not_align = 1                               "don't do alignment when ata_mode == 1
+endif
 "}}}2
 
 "AutoInst 自动例化配置{{{2
@@ -226,6 +288,7 @@ amenu &Verilog.Code.Template.LoadTemplate<TAB>                          :call Lo
 "}}}3
 
 "Auto 自动化{{{3
+amenu &Verilog.AutoArg.AutoArg()<TAB>                                   :call AutoArg()<CR>
 amenu &Verilog.AutoInst.AutoInst(1)<TAB>All                             :call AutoInst(1)<CR>
 amenu &Verilog.AutoInst.AutoInst(0)<TAB>One                             :call AutoInst(0)<CR>
 
@@ -238,6 +301,7 @@ amenu &Verilog.AutoPara.AutoParaValue(0)<TAB>One                        :call Au
 amenu &Verilog.AutoDef.AutoDef()<TAB>                                   :call AutoDef()<CR>
 amenu &Verilog.AutoDef.AutoReg()<TAB>                                   :call AutoReg()<CR>
 amenu &Verilog.AutoDef.AutoWire()<TAB>                                  :call AutoWire()<CR>
+
 "}}}3
 
 "}}}2
@@ -253,12 +317,27 @@ map <C-F8>      :call Invert()<ESC>
 "}}}3
 
 "Auto 自动化 {{{3
-map <S-F3>      :call AutoInst(0)<ESC>
-map <S-F4>      :call AutoPara(0)<ESC>
-map <S-F5>      :call AutoParaValue(0)<ESC>
-map <S-F6>      :call AutoReg()<ESC>
-map <S-F7>      :call AutoWire()<ESC>
-map <S-F8>      :call AutoDef()<ESC>
+if !hasmapto(':call AutoArg()<ESC>')
+    map <S-F2>      :call AutoArg()<ESC>
+endif
+if !hasmapto(':call AutoInst(0)<ESC>')
+    map <S-F3>      :call AutoInst(0)<ESC>
+endif
+if !hasmapto(':call AutoPara(0)<ESC>')
+    map <S-F4>      :call AutoPara(0)<ESC>
+endif
+if !hasmapto(':call AutoParaValue(0)<ESC>')
+    map <S-F5>      :call AutoParaValue(0)<ESC>
+endif
+if !hasmapto(':call AutoReg()<ESC>')
+    map <S-F6>      :call AutoReg()<ESC>
+endif
+if !hasmapto(':call AutoWire()<ESC>')
+    map <S-F7>      :call AutoWire()<ESC>
+endif
+if !hasmapto(':call AutoDef()<ESC>')
+    map <S-F8>      :call AutoDef()<ESC>
+endif
 "}}}3
 
 "Code Snippet 代码段{{{3
@@ -629,6 +708,7 @@ endfunction "}}}3
 "Update Last Modify Time 更新写入时间{{{2
 
 autocmd BufWrite *.v call UpdateLastModifyTime()
+autocmd BufWrite *.sv call UpdateLastModifyTime()
 
 function UpdateLastModifyTime() "{{{3
     let line = getline(8)
@@ -877,6 +957,11 @@ endfunction "}}}3
 "---------------------------------------------------
 function AutoArg()
     try
+        "AutoArg must open ati_95_support
+        if s:ati_95_support == 0
+            echohl ErrorMsg | echo "Error because AutoArg must be used in verilog-95 but ati_95_support not open! " | echohl None
+        endif
+
         "Record current position
         let orig_idx = line('.')
         let orig_col = col('.')
@@ -895,7 +980,7 @@ function AutoArg()
                 continue
             endif
 
-            "Get io sequences {sequence : value} Read from current buffer
+            "Get io sequences {sequence : value} from current buffer
             let lines = getline(1,line('$'))
             let io_seqs = s:GetIO(lines,'seq')
             let io_names = s:GetIO(lines,'name')
@@ -911,7 +996,7 @@ function AutoArg()
             let line = substitute(getline(line('.')),')\s*;','','')
             call setline(line('.'),line)
             "Append io port and );
-            call add(lines,s:start_prefix.');')
+            call add(lines,');')
             call append(line('.'),lines)
 
             "only autoarg once
@@ -1031,7 +1116,7 @@ function AutoInst(mode)
             let line = substitute(getline(line('.')),')\s*;','','')
             call setline(line('.'),line)
             "Append io port and );
-            call add(lines,s:start_prefix.');')
+            call add(lines,s:ati_st_prefix.');')
             call append(line('.'),lines)
 
             "Add instance directory before autoinst
@@ -1040,14 +1125,14 @@ function AutoInst(mode)
                 if getline(idx) =~ '^\s*/\/\Instance'
                     if getline(idx) =~ '//Instance: '.add_dir
                     else
-                        call append(idx-1,s:start_prefix.'//Instance: '.add_dir)
+                        call append(idx-1,s:ati_st_prefix.'//Instance: '.add_dir)
                         let orig_dir_idx = line('.')
                         let orig_dir_col = col('.')
                         execute ':'.idx3.'d'
                         call cursor(orig_dir_idx,orig_dir_col)
                     endif
                 else
-                    call append(idx,s:start_prefix.'//Instance: '.add_dir)
+                    call append(idx,s:ati_st_prefix.'//Instance: '.add_dir)
                 endif
             endif
 
@@ -1170,7 +1255,7 @@ function AutoPara(mode)
             let line = substitute(getline(line('.')),')\s*','','')
             call setline(line('.'),line)
             "Append parameter and )
-            call add(lines,s:start_prefix.')')
+            call add(lines,s:atp_st_prefix.')')
             call append(line('.'),lines)
 
             "mode = 0, only autopara once
@@ -1285,7 +1370,7 @@ function AutoParaValue(mode)
             let line = substitute(getline(line('.')),')\s*','','')
             call setline(line('.'),line)
             "Append parameter and )
-            call add(lines,s:start_prefix.')')
+            call add(lines,s:atp_st_prefix.')')
             call append(line('.'),lines)
 
             "mode = 0, only autopara once
@@ -1456,7 +1541,7 @@ endfunction
 "   Formatted autodef code
 "---------------------------------------------------
 function AutoDef()
-    let prefix = s:start_prefix
+    let prefix = s:atd_st_prefix
     try
         "Record current position
         let orig_idx = line('.')
@@ -1542,27 +1627,26 @@ endfunction
 "AutoArg-Kill
 "KillAutoArg 删除所有声明{{{3
 "--------------------------------------------------
-" Function: KillAutoInst
+" Function: KillAutoArg
 " Input: 
-"   Must put cursor to /*autoinst*/ position
+"   Must put cursor to /*autoarg*/ position
 " Description:
-" e.g kill all declaration after /*autoinst*/
+" e.g kill all declaration after /*autoarg*/
 "    
 "   module_name
-"   inst_name
 "   (   
-"       .clk        (clk),      //input
-"       /*autoinst*/
-"       .port_b     (port_b)    //output
+"       /*autoarg*/
+"       //Input
+"       port_a,port_b,
+"       //Input
+"       port_c,port_d
 "   );
 "   
-"   --------------> after KillAutoInst
+"   --------------> after KillAutoArg
 "
 "   module_name
-"   inst_name
 "   (   
-"       .clk        (clk),      //input
-"       /*autoinst*/);
+"       /*autoarg*/);
 "
 " Output:
 "   line after kill
@@ -1572,7 +1656,7 @@ function s:KillAutoArg()
     let orig_col = col('.')
     let idx = line('.')
     let line = getline(idx)
-    if line =~ '/\*\<autoinst\>'
+    if line =~ '/\*\<autoarg\>'
         "if current line end with ');', one line
         if line =~');\s*$'
             return
@@ -1591,7 +1675,7 @@ function s:KillAutoArg()
                     break
                 "abnormal end
                 elseif line =~ 'endmodule' || idx == line('$')
-                    echohl ErrorMsg | echo "Error running KillAutoInst! Kill abnormally till the end!"| echohl None
+                    echohl ErrorMsg | echo "Error running KillAutoArg! Kill abnormally till the end!"| echohl None
                     break
                 "middle
                 else
@@ -1601,7 +1685,7 @@ function s:KillAutoArg()
             endwhile
         endif
     else
-        echohl ErrorMsg | echo "Error running KillAutoInst! Kill line not match /*autoinst*/ !"| echohl None
+        echohl ErrorMsg | echo "Error running KillAutoArg! Kill line not match /*autoarg*/ !"| echohl None
     endif
     "cursor back
     call cursor(orig_idx,orig_col)
@@ -1611,210 +1695,257 @@ endfunction
 "AutoArg-Draw
 "DrawArg 按格式输出例化声明{{{3
 "--------------------------------------------------
-" Function: DrawIO
+" Function: DrawArg
 " Input: 
 "   io_seqs : new inst io sequences for align
-"   io_list : old inst io name list
-"   chg_io_names : old inst io names that has been changed
 "
 " Description:
-" e.g draw io port sequences
+" e.g draw io argument sequences
 "   [wire,1,input,'c0','c0',clk,0,'       input       clk,']
 "   [reg,5,output,31,0,port_b,0,'    output reg [31:0] port_b']
 "   module_name
-"   inst_name
 "   (
-"       .clk        (clk),      //input
-"       .port_b     (port_b)    //output
+"       clk,
+"       port_b
 "   );
 "
 " Output:
-"   line that's aligned
-"   e.g
-"       .signal_name   (signal_name[width1:width2]      ), //io_dir
+"   line that's aligned(in different ways)
 "---------------------------------------------------
-function s:DrawArg(io_seqs,io_list,chg_io_names)
-    let prefix = s:start_prefix.repeat(' ',4)
-    let io_list = copy(a:io_list)
-    let chg_io_names = copy(a:chg_io_names)
+function s:DrawArg(io_seqs)
+    let prefix = s:ata_st_prefix
 
     "guarantee spaces width{{{4
-    let max_lbracket_len = 0
-    let max_rbracket_len = 0
+    let max_comma_len = 0
     for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
         let value = a:io_seqs[seq]
         let type = value[0]
         if type != 'keep' 
             let name = value[5]
             "calculate maximum len of position to Draw
-            if value[4] == 'c0'
-                if value[3] == 'c0' 
-                    let width = ''
-                else
-                    let width = '['.value[3].']'
-                endif
-            elseif value[3] != 'c0'
-                let width = '['.value[3].':'.value[4].']'
-            else
-                let width = ''
-            endif
-            "io that's changed will be keeped if config 
-            let connect = name.width
-            if s:ati_keep_chg == 1
-                if(has_key(chg_io_names,name))
-                    let connect = chg_io_names[name]
-                endif
-            endif
-            "prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'
-            let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,s:name_pos_max])
-            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(connect)+4,s:symbol_pos_max])
+            "prefix.name.name2comma
+            let max_comma_len = max([max_comma_len,len(prefix)+len(name)+4,s:ata_sym_pos_max])
         endif
     endfor
     "}}}4
 
-    "draw io{{{4
-    let lines = []
-    let last_port_flag = 0
+    "draw io argument{{{4
 
-    "io_list can be changed in function, therefore record if it's empty first
-    if io_list == []
-        let io_list_empty = 1
-    else
-        let io_list_empty = 0
-    endif
+    "input/output/inout not classified{{{5
+    if s:ata_io_clsf == 0
 
-    for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
-        let value = a:io_seqs[seq]
-        let type = value[0]
-        let line = value[7]
-        "add single comment/ifdef line{{{5
-        if type == 'keep' 
-            if line =~ '^\s*\/\/'
-                if s:ati_incl_cmnt == 1
-                    let line = prefix.substitute(line,'^\s*','','')
-                    call add(lines,line)
+        "get io first{{{6
+        let io_lines = []
+        for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
+            let value = a:io_seqs[seq]
+            let type = value[0]
+            let line = value[7]
+            if type != 'keep' 
+                "Format IO sequences
+                "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+                "name
+                let name = value[5]
+
+                "name2comma
+                "don't align tail if config
+                if s:ata_tail_not_align == 1
+                    let name2comma= ''
                 else
-                    "ignore comment line when not config
+                    let name2comma = repeat(' ',max_comma_len-len(prefix)-len(name))
                 endif
-            elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)'
-                if s:ati_incl_ifdef == 1
-                    let line = prefix.substitute(line,'^\s*','','')
-                    call add(lines,line)
+
+                "comma
+                let last_port = value[6]
+                if last_port == 1
+                    let comma = ' '         "space
                 else
-                    "ignore ifdef line when not config
+                    let comma = ','      "comma exists
                 endif
+
+                "get line
+                let line = name.name2comma.comma
+                call add(io_lines,line)
             endif
-        "}}}5
-        "add io line{{{5
-        else
-            "Format IO sequences
-            "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-            "name
-            let name = value[5]
+        endfor
+        "}}}6
 
-            "name2bracket
-            let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(name)-len('.'))
-            "width
-            if value[4] == 'c0'
-                if value[3] == 'c0' 
-                    let width = ''
-                else
-                    let width = '['.value[3].']'
-                endif
-            elseif value[3] != 'c0'
-                let width = '['.value[3].':'.value[4].']'
-            else
-                let width = ''
-            endif
-
-            "io that's changed will be keeped if config 
-            let connect = name.width
-            if s:ati_keep_chg == 1
-                if(has_key(chg_io_names,name))
-                    let connect = chg_io_names[name]
-                endif
-            endif
-            
-            "width2bracket
-            "don't align tail if config
-            if s:ati_tail_not_align == 1
-                let width2bracket = ''
-            else
-                let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-len('(')-len(connect))
-            endif
-
-            "comma
-            let last_port = value[6]
-            if last_port == 1
-                let comma = ' '         "space
-                let last_port_flag = 1  "special case: last port has been put in keep_io_list, there exist no last_port
-            else
-                let comma = ','      "comma exists
-            endif
-            "io_dir
-            let io_dir = value[2]
-
-            "Draw IO by config
-            "empty list, default
-            if io_list_empty == 1
-                if s:ati_io_dir == 1
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
-                else
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
-                endif
-            "update list,draw io by config
-            else
-                if s:ati_io_dir == 1
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
-                else
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
-                endif
-                "process //INST_NEW
-                let io_idx = index(io_list,name) 
-                "name not exist in old io_list, add //INST_NEW
-                if io_idx == -1
-                    if s:ati_inst_new == 1
-                        let line = line . ' // INST_NEW'
-                    else
-                        let line = line
-                    endif
-                "name already exist in old io_list,cover
-                else
-                    let line = line
-                    call remove(io_list,io_idx)
-                endif
-            endif
-
-            call add(lines,line)
-
-            "in case special case happen(last port has been put in keep_io_list, there exist no last_port)
-            "same time last line is not an io type, must record last_port index here
-            let self_last_port_idx = index(lines,line) 
-
-        endif
-    "}}}5
-    endfor
-
-    "special case: last port has been put in keep_io_list, there exist no last_port
-    if last_port_flag == 0
-        "set last item as last_port
-        let lines[self_last_port_idx] = substitute(lines[self_last_port_idx],',',' ','') 
-    endif
-
-    if io_list == []
-    "remain port in io_list
-    else
-        if s:ati_inst_del == 1
-            for name in io_list
-                let line = prefix.'//INST_DEL: Port '.name.' has been deleted.'
-                call add(lines,line)
+        "draw io{{{6
+        let lines = []
+        let max_len = s:ata_sym_pos_max
+        let cur_len = 0
+        let wrap_line = prefix
+        "mode 0, no wrap
+        if s:ata_mode == 0
+            for line in io_lines
+                call add(lines,prefix.line)
             endfor
         endif
+        "mode 1, wrap around
+        if s:ata_mode == 1
+            for line in io_lines
+                if cur_len + len(line.' ') < max_len
+                    let wrap_line = wrap_line.line.' '
+                    let cur_len = cur_len + len(line.' ')
+                else
+                    call add(lines,wrap_line)
+                    let wrap_line = prefix.line.' '
+                    let cur_len = len(prefix.line.' ')
+                endif
+            endfor
+            call add(lines,wrap_line)
+        endif
+        "}}}6
+
+        let lines[-1] = substitute(lines[-1],',\s*$','','') 
+
     endif
+    "}}}5
+    
+    "input/output/inout classified{{{5
+    if s:ata_io_clsf == 1
+        "get inputs/outputs/inouts first{{{6
+        let inputs = []
+        let outputs = []
+        let inouts = []
+        for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
+            let value = a:io_seqs[seq]
+            let type = value[0]
+            let line = value[7]
+            let io_dir = value[2]
+            if type != 'keep' 
+                "Format IO sequences
+                "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+                "name
+                let name = value[5]
+
+                "name2comma
+                "don't align tail if config
+                if s:ata_tail_not_align == 1
+                    let name2comma= ''
+                else
+                    let name2comma = repeat(' ',max_comma_len-len(prefix)-len(name))
+                endif
+
+                "comma
+                let last_port = value[6]
+                if last_port == 1
+                    let comma = ' '         "space
+                else
+                    let comma = ','      "comma exists
+                endif
+
+                "get line
+                let line = name.name2comma.comma
+
+                if io_dir == 'input'
+                    call add(inputs,line)
+                endif
+                if io_dir == 'output'
+                    call add(outputs,line)
+                endif
+                if io_dir == 'inout'
+                    call add(inouts,line)
+                endif
+
+            endif
+        endfor
+        "}}}6
+
+        "draw input{{{6
+        let lines = []
+        let max_len = s:ata_sym_pos_max
+
+        let cur_len = 0
+        let wrap_line = prefix
+        if inputs != []
+            call add(lines,prefix.'//Inputs')
+            "mode 0, no wrap
+            if s:ata_mode == 0
+                for input in inputs
+                    call add(lines,prefix.input)
+                endfor
+            endif
+            "mode 1, wrap around
+            if s:ata_mode == 1
+                for input in inputs
+                    if cur_len + len(input.' ') < max_len
+                        let wrap_line = wrap_line.input.' '
+                        let cur_len = cur_len + len(input.' ')
+                    else
+                        call add(lines,wrap_line)
+                        let wrap_line = prefix.input.' '
+                        let cur_len = len(prefix.input.' ')
+                    endif
+                endfor
+                call add(lines,wrap_line)
+            endif
+        endif
+        "}}}
+
+        "draw output{{{6
+        let cur_len = 0
+        let wrap_line = prefix
+        if outputs != []
+            call add(lines,prefix.'//Outputs')
+            "mode 0, no wrap
+            if s:ata_mode == 0
+                for output in outputs
+                    call add(lines,prefix.output)
+                endfor
+            endif
+            "mode 1, wrap around
+            if s:ata_mode == 1
+                for output in outputs
+                    if cur_len + len(output.' ') < max_len
+                        let wrap_line = wrap_line.output.' '
+                        let cur_len = cur_len + len(output.' ')
+                    else
+                        call add(lines,wrap_line)
+                        let wrap_line = prefix.output.' '
+                        let cur_len = len(prefix.output.' ')
+                    endif
+                endfor
+                call add(lines,wrap_line)
+            endif
+        endif
+        "}}}6
+        
+        "draw inout{{{6
+        let cur_len = 0
+        let wrap_line = prefix
+        if inouts != []
+            call add(lines,prefix.'//Inouts')
+            "mode 0, no wrap
+            if s:ata_mode == 0
+                for inout in inouts
+                    call add(lines,prefix.inout)
+                endfor
+            endif
+            "mode 1, wrap around
+            if s:ata_mode == 1
+                for inout in inouts
+                    if cur_len + len(inout.' ') < max_len
+                        let wrap_line = wrap_line.inout.' '
+                        let cur_len = cur_len + len(inout.' ')
+                    else
+                        call add(lines,wrap_line)
+                        let wrap_line = prefix.inout.' '
+                        let cur_len = len(prefix.inout.' ')
+                    endif
+                endfor
+                call add(lines,wrap_line)
+            endif
+        endif
+        "}}}6
+
+        let lines[-1] = substitute(lines[-1],',\s*$','','') 
+    endif
+    "}}}5
+
     "}}}4
 
     if lines == []
-        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly writeen in verilog-95 but ati_95_support not open " | echohl None
+        echohl ErrorMsg | echo "Error io_seqs input for function DrawArg! io_seqs has no input/output definition! Possibly written in verilog-95 but ati_95_support not open " | echohl None
     endif
 
     return lines
@@ -2436,7 +2567,7 @@ endfunction
 "       .signal_name   (signal_name[width1:width2]      ), //io_dir
 "---------------------------------------------------
 function s:DrawIO(io_seqs,io_list,chg_io_names)
-    let prefix = s:start_prefix.repeat(' ',4)
+    let prefix = s:ati_st_prefix.repeat(' ',4)
     let io_list = copy(a:io_list)
     let chg_io_names = copy(a:chg_io_names)
 
@@ -2468,8 +2599,8 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
                 endif
             endif
             "prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'
-            let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,s:name_pos_max])
-            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(connect)+4,s:symbol_pos_max])
+            let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,s:ati_name_pos_max])
+            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(connect)+4,s:ati_sym_pos_max])
         endif
     endfor
     "}}}4
@@ -2616,7 +2747,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
     "}}}4
 
     if lines == []
-        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly writeen in verilog-95 but ati_95_support not open " | echohl None
+        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly written in verilog-95 but ati_95_support not open " | echohl None
     endif
 
     return lines
@@ -3351,7 +3482,7 @@ endfunction
 "       .parameter_name   (parameter_name       )  //last_parameter
 "---------------------------------------------------
 function s:DrawPara(para_seqs,para_list,chg_para_names)
-    let prefix = s:start_prefix.repeat(' ',4)
+    let prefix = s:atp_st_prefix.repeat(' ',4)
 
     let para_list  = copy(a:para_list)
     let chg_para_names = copy(a:chg_para_names)
@@ -3370,8 +3501,8 @@ function s:DrawPara(para_seqs,para_list,chg_para_names)
             endif
         endif
         "prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'
-        let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(p_name)+4,s:name_pos_max])
-        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(p_value)+4,s:symbol_pos_max])
+        let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(p_name)+4,s:atp_name_pos_max])
+        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(p_value)+4,s:atp_sym_pos_max])
     endfor
     "}}}4
 
@@ -3554,7 +3685,7 @@ endfunction
 "       .parameter_name   (parameter_value      )  //last_parameter
 "---------------------------------------------------
 function s:DrawParaValue(para_seqs,para_list)
-    let prefix = s:start_prefix.repeat(' ',4)
+    let prefix = s:atp_st_prefix.repeat(' ',4)
     let para_list = copy(a:para_list)
 
     "guarantee spaces width{{{4
@@ -3565,8 +3696,8 @@ function s:DrawParaValue(para_seqs,para_list)
         let p_name = value[2]
         let p_value = value[3]
         "prefix.'.'.p_name.name2bracket.'('.p_value.value2bracket.')'
-        let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(p_name)+4,s:name_pos_max])
-        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(p_value)+4,s:symbol_pos_max])
+        let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(p_name)+4,s:atp_name_pos_max])
+        let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(p_value)+4,s:atp_sym_pos_max])
     endfor
     "}}}4
 
@@ -4129,7 +4260,7 @@ endfunction
 "       reg  [WIDTH1:WIDTH2]     reg_name;
 "---------------------------------------------------
 function s:DrawReg(reg_names,reg_list)
-    let prefix = s:start_prefix
+    let prefix = s:atr_st_prefix
     let reg_list = copy(a:reg_list)
 
     "guarantee spaces width{{{4
@@ -4145,8 +4276,8 @@ function s:DrawReg(reg_names,reg_list)
             let width = value[2]
             "calculate maximum len of position to Draw
             "let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
-            let max_lname_len = max([max_lname_len,len(prefix)+len('reg  ')+len(width)+4,s:name_pos_max])
-            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,s:symbol_pos_max])
+            let max_lname_len = max([max_lname_len,len(prefix)+len('reg  ')+len(width)+4,s:atr_name_pos_max])
+            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,s:atr_sym_pos_max])
         endif
     endfor
     "}}}4
@@ -5017,7 +5148,7 @@ endfunction
 "       wire  [WIDTH1:WIDTH2]     wire_name;
 "---------------------------------------------------
 function s:DrawWire(wire_names,wire_list)
-    let prefix = s:start_prefix
+    let prefix = s:atw_st_prefix
     let wire_list = copy(a:wire_list)
 
     "guarantee spaces width{{{4
@@ -5033,8 +5164,8 @@ function s:DrawWire(wire_names,wire_list)
             let width = value[2]
             "calculate maximum len of position to Draw
             "let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
-            let max_lname_len = max([max_lname_len,len(prefix)+len('wire ')+len(width)+4,s:name_pos_max])
-            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,s:symbol_pos_max])
+            let max_lname_len = max([max_lname_len,len(prefix)+len('wire ')+len(width)+4,s:atw_name_pos_max])
+            let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,s:atw_sym_pos_max])
         endif
     endfor
     "}}}4
@@ -6495,10 +6626,12 @@ function s:GetDirList()
     if dirlist == [] 
         let dirlist = [dir]
     endif
-    "expand directories like $HOME
     let exp_dirlist = []
     for dir in dirlist
+        "expand directories in SYSTEM VARIABLE (e.g. $VIM -> F:/Vim)
         let dir = expand(dir)
+        "expand directories to full path(e.g. ./ -> /usr/share/vim/vim74 )
+        let dir = substitute(fnamemodify(dir,':p'),'\/$','','')
         call add(exp_dirlist,dir)
     endfor
 
@@ -6549,7 +6682,7 @@ function s:GetFileDirDic(dir,rec,files)
         let idx = idx + 1
     endwhile
 
-    let filelist = filter(copy(filedirlist),'v:val =~ ".v$" || v:val =~ ".sv$"')
+    let filelist = filter(copy(filedirlist),'v:val =~ "\\.v$" || v:val =~ "\\.sv$"')
 
     for file in filelist
         if has_key(a:files,file)
@@ -7391,7 +7524,7 @@ endfunction "}}}2
 " Output:
 "   generate tags for tag jump
 "---------------------------------------------------
-function s:WriteRtlTags(files,modules)
+function s:GenRtlTags(files,modules)
     let files = a:files
     let modules = a:modules
     "Write tags by module line
@@ -7438,7 +7571,7 @@ function RtlTree() "{{{2
             let s:top_modules = s:GetModuleFileDict(s:top_files)
         endtry
 
-        let tags = s:WriteRtlTags(s:top_files,s:top_modules)
+        let tags = s:GenRtlTags(s:top_files,s:top_modules)
         call writefile(tags,'tags')
         "echo 'Tags Write Finish!'
 
