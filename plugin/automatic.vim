@@ -2,11 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-<<<<<<< HEAD
 " Last Modified:  2021/11/20 19:28
-=======
-" Last Modified:  2021/11/19 21:31
->>>>>>> 399626812069ad96b9762b23aef8899a0dc9fe23
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -321,12 +317,9 @@ map <C-F8>      :call Invert()<ESC>
 "}}}3
 
 "Auto 自动化 {{{3
-<<<<<<< HEAD
 if !hasmapto(':call AutoArg()<ESC>')
     map <S-F2>      :call AutoArg()<ESC>
 endif
-=======
->>>>>>> 399626812069ad96b9762b23aef8899a0dc9fe23
 if !hasmapto(':call AutoInst(0)<ESC>')
     map <S-F3>      :call AutoInst(0)<ESC>
 endif
