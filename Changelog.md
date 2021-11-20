@@ -1,13 +1,62 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.2.4] - 2021-09-14
+## [1.2.5] - 2021-11-19
+
+### Added
+
+- Add `AutoArg`
+
+  新增`AutoArg()`，包括4种可配置模式
+
+### Fixed
+
+- Optimize `GetDirList`
+
+  优化 `GetDirList()`地址获取方式，使用绝对地址`full path`，不再使用相对地址
+
+- Bug fixed for `GetFileDirDic`
+
+  修复`GetFileDirDic()`获取除`.v`以及`.sv`之外以`v`结尾的目标文件的的异常匹配
+
+  > 依据来源：
+  >
+  > `:h string`
+  >
+  > Single quoted strings are useful for patterns, so that backslashes do not need
+  > to be doubled.	These two commands are equivalent:
+  > 	` if a =~ "\\s*"`
+  > 	`if a =~ '\s*'`
+
+### Changed
+
+- Optimize `key maping`
+
+  允许自定义`Auto`函数的快捷键
+
+  > 依据来源：
+  >
+  > `:h hasmapto()`
+
+- Optimize  `remove_io` for `AutoReg`,`AutoWire` and `AutoDef`
+
+  添加`remove_io`配置项
+
+- Optimize  `atd_move` for `AutoDef`
+
+  添加`atd_move`配置项
+
+  
+
+## [1.2.4] - 2021-09-15
 
 ### Added
 
 - Add `AutoDef`
 
   新增初版`AutoDef()`，待测试
+  
+  
 
 ## [1.2.3] - 2021-09-14
 
@@ -30,6 +79,8 @@ All notable changes to this project will be documented in this file. The format 
 - Optimize `GetDeclReg`& `GetDeclWire`
 
   优化已自动例化的寄存器或线网的获取方式。只识别`//Start of ...`以及`//End of ...`
+  
+  
 
 
 ## [1.2.2] - 2021-09-04
