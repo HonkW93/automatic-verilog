@@ -123,6 +123,10 @@ Plugin 'HonkW93/automatic-verilog'
 
 ![autodef](https://cdn.jsdelivr.net/gh/HonkW93/automatic-verilog@master/demo/autodef.gif)
 
+### 3.7 AutoArg
+
+![autoarg](https://cdn.jsdelivr.net/gh/HonkW93/automatic-verilog@master/demo/autoarg.gif)
+
 ## 4. 文档
 
 [Vimcript-AutoMatic | HonkW](https://blog.honk.wang/posts/AutoMatic/)
