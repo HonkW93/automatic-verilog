@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/11/20 19:28
+" Last Modified:  2021/12/02 01:01
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -1717,7 +1717,7 @@ function s:DrawArg(io_seqs)
 
     "guarantee spaces width{{{4
     let max_comma_len = 0
-    for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
+    for seq in sort(s:Str2Num(keys(a:io_seqs)),s:sort_funcref)
         let value = a:io_seqs[seq]
         let type = value[0]
         if type != 'keep' 
@@ -1736,7 +1736,7 @@ function s:DrawArg(io_seqs)
 
         "get io first{{{6
         let io_lines = []
-        for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
+        for seq in sort(s:Str2Num(keys(a:io_seqs)),s:sort_funcref)
             let value = a:io_seqs[seq]
             let type = value[0]
             let line = value[7]
@@ -1807,7 +1807,7 @@ function s:DrawArg(io_seqs)
         let inputs = []
         let outputs = []
         let inouts = []
-        for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
+        for seq in sort(s:Str2Num(keys(a:io_seqs)),s:sort_funcref)
             let value = a:io_seqs[seq]
             let type = value[0]
             let line = value[7]
@@ -2574,7 +2574,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
     "guarantee spaces width{{{4
     let max_lbracket_len = 0
     let max_rbracket_len = 0
-    for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
+    for seq in sort(s:Str2Num(keys(a:io_seqs)),s:sort_funcref)
         let value = a:io_seqs[seq]
         let type = value[0]
         if type != 'keep' 
@@ -2616,7 +2616,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
         let io_list_empty = 0
     endif
 
-    for seq in sort(s:Str2Num(keys(a:io_seqs)),'n')
+    for seq in sort(s:Str2Num(keys(a:io_seqs)),s:sort_funcref)
         let value = a:io_seqs[seq]
         let type = value[0]
         let line = value[7]
@@ -2920,7 +2920,7 @@ function s:GetPara(lines,mode)
 
     "remove single comment line before first declaration parameter
     "find last port parameter first 
-    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+    for idx in sort(s:Str2Num(keys(line_idxs)),s:sort_funcref)
         let value = line_idxs[idx]
         let type = value[0]
         if type == 'port'
@@ -2928,7 +2928,7 @@ function s:GetPara(lines,mode)
         endif
     endfor
     "find last decl parameter first 
-    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+    for idx in sort(s:Str2Num(keys(line_idxs)),s:sort_funcref)
         let value = line_idxs[idx]
         let type = value[0]
         if type == 'decl'
@@ -2937,7 +2937,7 @@ function s:GetPara(lines,mode)
     endfor
 
     "remove single comment line
-    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+    for idx in sort(s:Str2Num(keys(line_idxs)),s:sort_funcref)
         let value = line_idxs[idx]
         let type = value[0]
         let line = value[2]
@@ -2978,7 +2978,7 @@ function s:GetPara(lines,mode)
     "   `endif
     "---------------------------------------------------------------
     "remove single comment line after last declaration parameter
-    for idx in reverse(sort(s:Str2Num(keys(line_idxs)),'n'))
+    for idx in reverse(sort(s:Str2Num(keys(line_idxs)),s:sort_funcref))
         let value = line_idxs[idx]
         let type = value[0]
         let line = value[2]
@@ -2992,7 +2992,7 @@ function s:GetPara(lines,mode)
     endfor
 
     "ifdef keeped if below is declaration parameter
-    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+    for idx in sort(s:Str2Num(keys(line_idxs)),s:sort_funcref)
         let value = line_idxs[idx]
         let type = value[0]
         let line = value[2]
@@ -3015,7 +3015,7 @@ function s:GetPara(lines,mode)
 
     let endif_exist = 0
     "endif keeped only once after declaration parameter
-    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+    for idx in sort(s:Str2Num(keys(line_idxs)),s:sort_funcref)
         let value = line_idxs[idx]
         let type = value[0]
         let line = value[2]
@@ -3036,7 +3036,7 @@ function s:GetPara(lines,mode)
 
     "generate parameter seqs{{{4
     let seq = 0
-    for idx in sort(s:Str2Num(keys(line_idxs)),'n')
+    for idx in sort(s:Str2Num(keys(line_idxs)),s:sort_funcref)
         let value = line_idxs[idx]
         "[type, idx, line]
         let type = value[0]
@@ -3088,7 +3088,7 @@ function s:GetPara(lines,mode)
     if len(keys(para_seqs)) > 0
         "last parameter in port 
         let last_port_seq = 0
-        for seq in sort(s:Str2Num(keys(para_seqs)),'n')
+        for seq in sort(s:Str2Num(keys(para_seqs)),s:sort_funcref)
             let value = para_seqs[seq]
             let type = value[0]
             if type == 'port'
@@ -3097,7 +3097,7 @@ function s:GetPara(lines,mode)
         endfor
         "last parameter in declaration
         let last_decl_seq = 0
-        for seq in sort(s:Str2Num(keys(para_seqs)),'n')
+        for seq in sort(s:Str2Num(keys(para_seqs)),s:sort_funcref)
             let value = para_seqs[seq]
             let type = value[0]
             if(type == 'decl')
@@ -3490,7 +3490,7 @@ function s:DrawPara(para_seqs,para_list,chg_para_names)
     "guarantee spaces width{{{4
     let max_lbracket_len = 0
     let max_rbracket_len = 0
-    for seq in sort(s:Str2Num(keys(a:para_seqs)),'n')
+    for seq in sort(s:Str2Num(keys(a:para_seqs)),s:sort_funcref)
         let value = a:para_seqs[seq]
         let p_name = value[2]
         let p_value = p_name
@@ -3517,7 +3517,7 @@ function s:DrawPara(para_seqs,para_list,chg_para_names)
         let para_list_empty = 0
     endif
 
-    for seq in sort(s:Str2Num(keys(a:para_seqs)),'n')
+    for seq in sort(s:Str2Num(keys(a:para_seqs)),s:sort_funcref)
         let value = a:para_seqs[seq]
         let type = value[0]
         let line = value[5]
@@ -3691,7 +3691,7 @@ function s:DrawParaValue(para_seqs,para_list)
     "guarantee spaces width{{{4
     let max_lbracket_len = 0
     let max_rbracket_len = 0
-    for seq in sort(s:Str2Num(keys(a:para_seqs)),'n')
+    for seq in sort(s:Str2Num(keys(a:para_seqs)),s:sort_funcref)
         let value = a:para_seqs[seq]
         let p_name = value[2]
         let p_value = value[3]
@@ -3712,7 +3712,7 @@ function s:DrawParaValue(para_seqs,para_list)
         let para_list_empty = 0
     endif
 
-    for seq in sort(s:Str2Num(keys(a:para_seqs)),'n')
+    for seq in sort(s:Str2Num(keys(a:para_seqs)),s:sort_funcref)
         let value = a:para_seqs[seq]
         let type = value[0]
         "ignore single comment/ifdef line{{{5
@@ -4320,7 +4320,7 @@ function s:DrawReg(reg_names,reg_list)
     "}}}5
 
     "draw freg{{{5
-    for seq in sort(s:Str2Num(keys(freg_seqs)),'n')
+    for seq in sort(s:Str2Num(keys(freg_seqs)),s:sort_funcref)
         let value = freg_seqs[seq]
         "Format reg sequences
         "    0     1             2      3            4         5
@@ -4388,7 +4388,7 @@ function s:DrawReg(reg_names,reg_list)
     "}}}5
 
     "draw creg{{{5
-    for seq in sort(s:Str2Num(keys(creg_seqs)),'n')
+    for seq in sort(s:Str2Num(keys(creg_seqs)),s:sort_funcref)
         let value = creg_seqs[seq]
         "Format reg sequences
         "    0       1         2       3       4            5 
@@ -5208,7 +5208,7 @@ function s:DrawWire(wire_names,wire_list)
     "}}}5
 
     "draw awire{{{5
-    for seq in sort(s:Str2Num(keys(awire_seqs)),'n')
+    for seq in sort(s:Str2Num(keys(awire_seqs)),s:sort_funcref)
         let value = awire_seqs[seq]
         "Format wire sequences
         "    0     1             2      3            4         5
@@ -5276,7 +5276,7 @@ function s:DrawWire(wire_names,wire_list)
     "}}}5
 
     "draw iwire{{{5
-    for seq in sort(s:Str2Num(keys(iwire_seqs)),'n')
+    for seq in sort(s:Str2Num(keys(iwire_seqs)),s:sort_funcref)
         let value = iwire_seqs[seq]
         "Format wire sequences
         "    0       1         2       3       4            5 
@@ -6167,7 +6167,7 @@ endfunction
 ""            call extend(sig_seqs,{seq : value})
 ""        endfor
 ""
-""        for seq in sort(s:Str2Num(keys(sig_seqs)),'n')
+""        for seq in sort(s:Str2Num(keys(sig_seqs)),s:sort_funcref)
 ""            let value = sig_seqs[seq]
 ""            let width1 = value[2]
 ""            let width2 = value[3]
@@ -6844,6 +6844,30 @@ function s:Str2Num(list)
 endfunction
 "}}}3
 
+"SortNaturalOrder sort函数Funcref（用于sort函数排序）{{{3
+" Comparator function for natural ordering of numbers
+function! SortNaturalOrder(firstNr, secondNr)
+  if a:firstNr < a:secondNr
+    return -1
+  elseif a:firstNr > a:secondNr
+    return 1
+  else 
+    return 0
+  endif
+endfunction
+
+if v:version < 704 
+elseif v:version == 704
+    if has("patch341") 
+        let s:sort_funcref = 'n'
+    else
+        let s:sort_funcref = 'SortNaturalOrder'
+    endif
+else
+    let s:sort_funcref = 'n'
+endif
+
+"}}}3
 "}}}2
 
 "}}}1

@@ -1,6 +1,26 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.5.1] - 2021-12-2
+
+### Changed
+
+- Backward compatibility
+
+  优化 `sort()`获取方式，兼容部分`vim74`版本
+
+  > 依据来源：
+  >
+  > `:h sort()`
+  >
+  > `:h v:version()`
+  >
+  > [sorting - Sort numbers in vimscript - Stack Overflow](https://stackoverflow.com/questions/27226987/sort-numbers-in-vimscript)
+  >
+  > [regex - Vim - Sort each line of numbers in a file? - Stack Overflow](https://stackoverflow.com/questions/25870715/vim-sort-each-line-of-numbers-in-a-file)
+  >
+  > *Edit:* This relies on the 'n' flag of the `sort()` function, which was added in 7.4.341 to allow sorting numbers rather than always treating them as strings.
+
 ## [1.2.5] - 2021-11-19
 
 ### Added
