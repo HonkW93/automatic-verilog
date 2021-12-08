@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/12/02 01:01
+" Last Modified:  2021/12/08 22:48
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -2110,7 +2110,10 @@ function s:GetIO(lines,mode)
 
             "break{{{5
             "abnormal break
-            if line =~ '^\s*\<always\>' || line =~ '^\s*\<assign\>' || line =~ '^\s*\<endmodule\>' || line =~ '\<autodef\>'
+            if line =~ '^\s*\<always\>' || line =~ '^\s*\<assign\>' || line =~ '^\s*\<endmodule\>'
+                if wait_port == 1
+                    echohl ErrorMsg | echo "Error when GetIO! No io port but always/assign/endmodule show up!"| echohl None
+                endif
                 break
             endif
             
