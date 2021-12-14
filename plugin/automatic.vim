@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/12/08 22:48
+" Last Modified:  2021/12/14 23:52
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -81,6 +81,10 @@ let s:atd_st_pos = 4
 let s:atd_st_prefix = repeat(' ',s:atd_st_pos)
 "}}}3
 
+"}}}2
+
+"FileList 文件列表配置{{{2
+let s:filelistfile = get(g:,'filelistfile','')                       "filelistfile like ./filelist.f
 "}}}2
 
 "AutoArg 自动声明配置{{{2
@@ -5532,179 +5536,182 @@ endfunction
 "Only for test use!!!!!!!!!!
 function TestAutoVerilog() "{{{3
 
-    let lines = getline(1,line('$'))
-    let [sig_names,io_names,reg_width_names,awire_width_names,iwire_width_names] = s:GetAllSig(lines,'all')
+"    let lines = getline(1,line('$'))
+"    let [sig_names,io_names,reg_width_names,awire_width_names,iwire_width_names] = s:GetAllSig(lines,'all')
+"
+"    "test wire use {{{4
+"
+"    let lines = getline(1,line('$'))
+"
+"    "gather all signals together
+"
+"    let io_names = s:GetIO(lines,'name')
+"    
+"    let reg_names = reg_width_names
+"
+"    "test reg {{{5
+"    let cnt0 = 0
+"    for name in keys(reg_names)
+"        let cnt0 += 1
+"    endfor
+"    "echo cnt0
+"
+"    let cnt1 = 0
+"    for line in lines
+"        if line =~ '^\s*reg\s.*;\s*.*$'
+"            let name = matchstr(line,'^\s*reg\s*\(\[.*\]\)\?\s*\zs\w\+\ze\s*;\s*.*$')
+"            let cnt1 += 1
+"            "echo name
+"            if has_key(reg_names,name)
+"                call remove(reg_names,name)
+"            else
+"                "call append(line('$'),name)
+"            endif
+"        endif
+"    endfor
+"    "echo cnt1
+"
+"    let err_flag = 0
+"    let err_regs = []
+"    if cnt0 != cnt1
+"        for reg in keys (reg_names)
+"            let err_flag = 1
+"            call add(err_regs,reg)
+"        endfor
+"        if err_flag == 1
+"            echo 'err!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"            echo cnt0
+"            echo cnt1
+"            call append(line('$'),'reg remain-----')
+"            call append(line('$'),err_regs)
+"        else
+"            echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"        endif
+"    else
+"        echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+"    endif
+"    "}}}5
+"    
+"    "test wire {{{5
+"    
+"    "io wire
+"    let iowire_names = {}
+"    for name in keys(io_names)
+"        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+"        let value = io_names[name]
+"        let type = value[0]
+"        if type == 'wire' || type == 'none'
+"            call extend(iowire_names, {name : value})
+"        endif
+"    endfor
+"
+"    "iwire and awire
+"    let awire_width_names = copy(awire_width_names)
+"    let iwire_width_names = copy(iwire_width_names)
+"    let orig_awire_width_names = copy(awire_width_names)
+"    let orig_iwire_width_names = copy(iwire_width_names)
+"
+"    "iwire{{{6
+"    let cnt_iwire = 0
+"    for wire in keys(iwire_width_names)
+"        let cnt_iwire += 1
+"    endfor
+"
+"    let cnt_assign_iwire = 0
+"    let cnt_assign_wire = 0
+"    for wire in keys (awire_width_names)
+"        let cnt_assign_wire += 1
+"        if has_key(iwire_width_names,wire)
+"            let cnt_assign_iwire += 1
+"            call remove(iwire_width_names,wire)
+"            continue
+"        endif
+"    endfor
+"
+"    "declared wire in iwire
+"    let cnt_decl_iwire = 0
+"    let decl_wire = {}
+"    for line in lines
+"        if line =~ '^\s*wire.*;\s*.*$'
+"            "let name = matchstr(line,'^\s*wire\s*\(\[.*\]\)\?\s*\zs\w\+\ze.*;\s*\(\/\/.*\)\?\s*$')
+"            while line =~ '^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*'
+"                "delete abnormal
+"                if line =~ '\<signed\>\|\<unsigned\>'
+"                    let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
+"                elseif line =~ '\/\/.*$'
+"                    let line = substitute(line,'\/\/.*$','','')
+"                endif
+"                let names = matchstr(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*\zs.\{-\}\ze\s*;\s*')
+"                "in case style of wire a = {b,c,d};
+"                let names = substitute(names,'\(\/\/\)\@<!=.*$','','')
+"                "in case style of wire [1:0] a,b,c;
+"                for name in split(names,',')
+"                    let name = matchstr(name,'\w\+')
+"                    call extend(decl_wire,{name : ""})
+"                    if has_key(iwire_width_names,name)
+"                        let cnt_decl_iwire += 1
+"                        call remove(iwire_width_names,name)
+"                    endif
+"                endfor
+"                let line = substitute(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*','','')
+"            endwhile
+"        endif
+"    endfor
+"
+"    if len(iwire_width_names) == 0
+"        echo 'iwire match right!!!!!!!!!!!!!!!!!!!!!'
+"    else
+"        echo 'iwire not all match'
+"        call append(line('$'),'iwire remain-----')
+"        for name in keys ( iwire_width_names )
+"            call append(line('$'),name)
+"        endfor
+"    endif
+"    "}}}6
+"    
+"    "all wire {{{6
+"    let all_wire_names = {}
+"    let awire_width_names = orig_awire_width_names
+"    let iwire_width_names = orig_iwire_width_names
+"
+"    for wire in keys(iwire_width_names)
+"        call extend(all_wire_names,{wire : ""})
+"    endfor
+"
+"    for wire in keys(awire_width_names)
+"        call extend(all_wire_names,{wire : ""})
+"    endfor
+"
+"    for wire in keys(iowire_names)
+"        call extend(all_wire_names,{wire : ""})
+"    endfor
+"
+"    for name in keys(decl_wire)
+"        if has_key(all_wire_names,name)
+"            call remove(decl_wire,name)
+"        endif
+"    endfor
+"
+"    if len(decl_wire) == 0
+"        echo 'decl wire match right!!!!!!!!!!!!!!!!!!!!!'
+"    else
+"        echo 'decl wire not all match'
+"        call append(line('$'),'decl wire remain-----')
+"        for name in keys ( decl_wire)
+"            call append(line('$'),name)
+"        endfor
+"    endif
+"    "}}}6
+"    
+"    "}}}5
+"
+"   "}}}4
+"
+"    call AutoWire()
 
-    "test wire use {{{4
-
-    let lines = getline(1,line('$'))
-
-    "gather all signals together
-
-    let io_names = s:GetIO(lines,'name')
+     let file = s:GetFilelistFile()
+     echo file
     
-    let reg_names = reg_width_names
-
-    "test reg {{{5
-    let cnt0 = 0
-    for name in keys(reg_names)
-        let cnt0 += 1
-    endfor
-    "echo cnt0
-
-    let cnt1 = 0
-    for line in lines
-        if line =~ '^\s*reg\s.*;\s*.*$'
-            let name = matchstr(line,'^\s*reg\s*\(\[.*\]\)\?\s*\zs\w\+\ze\s*;\s*.*$')
-            let cnt1 += 1
-            "echo name
-            if has_key(reg_names,name)
-                call remove(reg_names,name)
-            else
-                "call append(line('$'),name)
-            endif
-        endif
-    endfor
-    "echo cnt1
-
-    let err_flag = 0
-    let err_regs = []
-    if cnt0 != cnt1
-        for reg in keys (reg_names)
-            let err_flag = 1
-            call add(err_regs,reg)
-        endfor
-        if err_flag == 1
-            echo 'err!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-            echo cnt0
-            echo cnt1
-            call append(line('$'),'reg remain-----')
-            call append(line('$'),err_regs)
-        else
-            echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-        endif
-    else
-        echo 'reg match right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-    endif
-    "}}}5
-    
-    "test wire {{{5
-    
-    "io wire
-    let iowire_names = {}
-    for name in keys(io_names)
-        "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-        let value = io_names[name]
-        let type = value[0]
-        if type == 'wire' || type == 'none'
-            call extend(iowire_names, {name : value})
-        endif
-    endfor
-
-    "iwire and awire
-    let awire_width_names = copy(awire_width_names)
-    let iwire_width_names = copy(iwire_width_names)
-    let orig_awire_width_names = copy(awire_width_names)
-    let orig_iwire_width_names = copy(iwire_width_names)
-
-    "iwire{{{6
-    let cnt_iwire = 0
-    for wire in keys(iwire_width_names)
-        let cnt_iwire += 1
-    endfor
-
-    let cnt_assign_iwire = 0
-    let cnt_assign_wire = 0
-    for wire in keys (awire_width_names)
-        let cnt_assign_wire += 1
-        if has_key(iwire_width_names,wire)
-            let cnt_assign_iwire += 1
-            call remove(iwire_width_names,wire)
-            continue
-        endif
-    endfor
-
-    "declared wire in iwire
-    let cnt_decl_iwire = 0
-    let decl_wire = {}
-    for line in lines
-        if line =~ '^\s*wire.*;\s*.*$'
-            "let name = matchstr(line,'^\s*wire\s*\(\[.*\]\)\?\s*\zs\w\+\ze.*;\s*\(\/\/.*\)\?\s*$')
-            while line =~ '^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*'
-                "delete abnormal
-                if line =~ '\<signed\>\|\<unsigned\>'
-                    let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
-                elseif line =~ '\/\/.*$'
-                    let line = substitute(line,'\/\/.*$','','')
-                endif
-                let names = matchstr(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*\zs.\{-\}\ze\s*;\s*')
-                "in case style of wire a = {b,c,d};
-                let names = substitute(names,'\(\/\/\)\@<!=.*$','','')
-                "in case style of wire [1:0] a,b,c;
-                for name in split(names,',')
-                    let name = matchstr(name,'\w\+')
-                    call extend(decl_wire,{name : ""})
-                    if has_key(iwire_width_names,name)
-                        let cnt_decl_iwire += 1
-                        call remove(iwire_width_names,name)
-                    endif
-                endfor
-                let line = substitute(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*','','')
-            endwhile
-        endif
-    endfor
-
-    if len(iwire_width_names) == 0
-        echo 'iwire match right!!!!!!!!!!!!!!!!!!!!!'
-    else
-        echo 'iwire not all match'
-        call append(line('$'),'iwire remain-----')
-        for name in keys ( iwire_width_names )
-            call append(line('$'),name)
-        endfor
-    endif
-    "}}}6
-    
-    "all wire {{{6
-    let all_wire_names = {}
-    let awire_width_names = orig_awire_width_names
-    let iwire_width_names = orig_iwire_width_names
-
-    for wire in keys(iwire_width_names)
-        call extend(all_wire_names,{wire : ""})
-    endfor
-
-    for wire in keys(awire_width_names)
-        call extend(all_wire_names,{wire : ""})
-    endfor
-
-    for wire in keys(iowire_names)
-        call extend(all_wire_names,{wire : ""})
-    endfor
-
-    for name in keys(decl_wire)
-        if has_key(all_wire_names,name)
-            call remove(decl_wire,name)
-        endif
-    endfor
-
-    if len(decl_wire) == 0
-        echo 'decl wire match right!!!!!!!!!!!!!!!!!!!!!'
-    else
-        echo 'decl wire not all match'
-        call append(line('$'),'decl wire remain-----')
-        for name in keys ( decl_wire)
-            call append(line('$'),name)
-        endfor
-    endif
-    "}}}6
-    
-    "}}}5
-
-   "}}}4
-
-    call AutoWire()
-
 endfunction "}}}3
 
 "-------------------------------------------------------------------
@@ -6589,46 +6596,134 @@ endfunction
 "}}}3
 
 "Others
-"{{{3 GetDirList 获取需要例化的文件夹名以及是否递归
+"{{{3 GetVerilogLib 获取v文件搜索位置
 "--------------------------------------------------
-" Function: GetDirList
+" Function: GetVerilogLib
 " Input: 
 "   Lines look like: 
 "   verilog-library-directories:()
 "   verilog-library-directories-recursive:0
+"   verilog-library-flags:()
 " Description:
 " e.g
-"   verilog-library-directories:("test" ".")
-"   verilog-library-directories-recursive:1
+"   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"   | Style                                                                  | Function                     |
+"   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"   | verilog-library-directories:("test" ".")                               | add the directory test & .   |
+"   +------------------------------------------------------------------------+------------------------------+
+"   | verilog-library-directories-recursive:1                                | directory search recursive   |
+"   +------------------------------------------------------------------------+------------------------------+
+"   | verilog-library-files:("/some/path/technology.v" "/some/path/tech2.v") | add the two files            |
+"   +------------------------------------------------------------------------+------------------------------+
+"   | verilog-library-flags:("-y dir -y dir2")                               | add the directory dir & dir2 |
+"   +------------------------------------------------------------------------+------------------------------+
+"   | verilog-library-flags:("+incdir+dir3")                                 | add the directory dir3       |
+"   +------------------------------------------------------------------------+------------------------------+
+"   | verilog-library-flags:("+libext+.v")                                   | add the extension .v         |
+"   +------------------------------------------------------------------------+------------------------------+
+"   | verilog-library-flags:("-v filename")                                  | add file of filename         |
+"   +------------------------------------------------------------------------+------------------------------+
+"   |                                                                        |                              |
+"   +------------------------------------------------------------------------+------------------------------+
+"   | verilog-library-flags:("-f filename")                                  | add filelist of filename     |
+"   +------------------------------------------------------------------------+------------------------------+
+"   | verilog-library-flags:("-t filename")                                  | add tag of filename          |
+"   +------------------------------------------------------------------------+------------------------------+
+"
+"
 " Output:
-"   dirlist and recursive flag
-"   e.g.
-"       dirlist = ['test','.']
+"   Parameter for verilog library
+" e.g.
+"   1.name:dir 
+"     dirlist and recursive flag
+"       dirlist = ['test','.','dir','dir2','dir3']
 "       rec = 1
+"   2.name:file
+"     filelist
+"       filelist = ['/some/path/technology.v','/some/path/tech2.v']
+"   3.name:ext
+"     extension for file
+"       ext = 'v' 
 "---------------------------------------------------
-function s:GetDirList()
+function GetVerilogLib()
+    "
     let dirlist = [] 
     let rec = 1
+    "
+    let filelist = [] 
+    "
+    let y_dirlist = []
+
+    "
     let lines = getline(1,line('$'))
     for line in lines
-        "find directories
+        "verilog-library-directories
         if line =~ 'verilog-library-directories:(.*)'
+            "find directories
             let dir = matchstr(line,'verilog-library-directories:(\zs.*\ze)')
             call substitute(dir,'"\zs\S*\ze"','\=add(dirlist,submatch(0))','g')
         endif
-        "find recursive
         if line =~ 'verilog-library-directories-recursive:'
+            "find recursive
             let rec = matchstr(line,'verilog-library-directories-recursive:\s*\zs\d\ze\s*$')
             if rec != '0' && rec != '1'
                 echohl ErrorMsg | echo "Error input for verilog-library-directories-recursive = ".rec| echohl None
             endif
         endif
+
+        "verilog-library-files
+        if line =~ 'verilog-library-files:(.*)'
+            let file = matchstr(line,'verilog-library-files:(\zs.*\ze)')
+            call substitute(file,'"\zs\S*\ze"','\=add(filelist,submatch(0))','g')
+        endif
+        
+        "verilog-library-flags
+        if line =~ 'verilog-library-flags:(.*)'
+            let flags = matchstr(line,'verilog-library-flags:(\zs.*\ze)')
+            if flags =~ '-y'
+                "//verilog-library-flags:("-y dir ./dir2/test/" "-y otherdir")
+                call substitute(flags,'"\zs-y.\{-}\ze"','\=add(y_dirlist,submatch(0))','g')
+                for ydir in y_dirlist
+                    let ydir = substitute(ydir,'-y','','g')
+                    call substitute(ydir,'\zs\S\+\ze','\=add(dirlist,submatch(0))','g')
+                endfor
+            elseif flags =~ '+incdir+'
+                "verilog-library-flags:("+incdir+dir3")
+                let dir = matchstr(flags,'"+incdir+\zs\S\+\ze"')
+                call add(dirlist,dir)
+            endif
+            
+            if flags =~ '-v'
+                "verilog-library-flags:("-v filename")
+            endif
+
+            if flags =~ '+libext+'
+                "verilog-library-flags:("+libext+.v")
+            endif
+
+            if flags =~ '-f'
+                "verilog-library-flags:("-f filename")
+            endif
+
+            if flags =~ '-t'
+                "verilog-library-flags:("-t filename")
+            endif
+        endif
+        
     endfor
+
+    "echo filelist
+    "echo y_dirlist
+    "echo dirlist 
+    "echo flist
+
+    "{{{4 process verilog-library-directories
     "default
     let dir = '.'       
     if dirlist == [] 
         let dirlist = [dir]
     endif
+    "expand directories
     let exp_dirlist = []
     for dir in dirlist
         "expand directories in SYSTEM VARIABLE (e.g. $VIM -> F:/Vim)
@@ -6637,8 +6732,52 @@ function s:GetDirList()
         let dir = substitute(fnamemodify(dir,':p'),'\/$','','')
         call add(exp_dirlist,dir)
     endfor
+    let dirlist = exp_dirlist
+    "}}}4
 
-    return [exp_dirlist,str2nr(rec)]
+    return [dirlist,str2nr(rec)]
+
+endfunction
+"}}}3
+
+"{{{3 GetDirList 获取需要例化的文件夹名以及是否递归
+function s:GetDirList()
+    let dirlist = [] 
+    let rec = 1
+    let lines = getline(1,line('$'))
+    for line in lines
+        "verilog-library-directories
+        if line =~ 'verilog-library-directories:(.*)'
+            "find directories
+            let dir = matchstr(line,'verilog-library-directories:(\zs.*\ze)')
+            call substitute(dir,'"\zs\S*\ze"','\=add(dirlist,submatch(0))','g')
+        endif
+        if line =~ 'verilog-library-directories-recursive:'
+            "find recursive
+            let rec = matchstr(line,'verilog-library-directories-recursive:\s*\zs\d\ze\s*$')
+            if rec != '0' && rec != '1'
+                echohl ErrorMsg | echo "Error input for verilog-library-directories-recursive = ".rec| echohl None
+            endif
+        endif
+    endfor
+
+    "default
+    let dir = '.'       
+    if dirlist == [] 
+        let dirlist = [dir]
+    endif
+    "expand directories
+    let exp_dirlist = []
+    for dir in dirlist
+        "expand directories in SYSTEM VARIABLE (e.g. $VIM -> F:/Vim)
+        let dir = expand(dir)
+        "expand directories to full path(e.g. ./ -> /usr/share/vim/vim74 )
+        let dir = substitute(fnamemodify(dir,':p'),'\/$','','')
+        call add(exp_dirlist,dir)
+    endfor
+    let dirlist = exp_dirlist
+
+    return [dirlist,str2nr(rec)]
 
 endfunction
 "}}}3
@@ -6706,6 +6845,69 @@ function s:GetFileDirDic(dir,rec,files)
 
 endfunction
 
+"}}}3
+
+"{{{3 GetFilelistFile 获取filelist
+"--------------------------------------------------
+" Function: GetFilelistFile
+" Input: 
+"   1. 
+"   Lines look like: 
+"   verilog-library-filelist:()
+"   2.
+"   ./filelist.f ./file_list.f or other .f file
+"   3.
+"   global variable s:filelistfile
+" Description:
+" e.g
+"   verilog-library-filelist:(./filelist.f)
+" Output:
+"   filelist
+"   e.g. ./filelist.f
+"---------------------------------------------------
+let s:filelist_browse = 1
+function s:GetFilelistFile()
+    let file = ''
+    if s:filelist_browse == 1 
+        if has("browse")
+            let file = browse(0,'Select Your Filelist','./','')
+            if file !~ '.f$'
+                echo 'file '.file.' not ended with .f, might not be a filelist'
+            endif
+        else
+            echohl ErrorMsg | echo "Your Vim has no support for GUI browse!!!" | echohl None
+        endif
+    else
+        "find global filelist
+        if s:filelistfile != ''
+            let file = s:filelistfile
+        endif
+        "find filelist by comment
+        if file == ''
+            let lines = getline(1,line('$'))
+            for line in lines
+                if line =~ 'verilog-library-filelist:(.*)'
+                    let file = matchstr(line,'verilog-library-filelist:("\zs.*\ze")')
+                endif
+            endfor
+        endif
+        "find filelist by filelist.f file_list.f or last .f file
+        if file == ''
+            let filelist = filter(copy(glob('./'.'*',0,1)),'v:val =~ "\\.f$"')
+            for file in filelist
+                if file =~ 'filelist'
+                    break
+                elseif file =~ 'file_list'
+                    break
+                endif
+            endfor
+        endif
+    endif
+
+    let file = expand(file)
+    let file = fnamemodify(file,':p')
+    return file
+endfunction
 "}}}3
 
 "GetModuleFileDict 获取模块名和文件名关系{{{3
