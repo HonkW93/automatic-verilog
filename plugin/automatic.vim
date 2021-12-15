@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/12/08 22:48
+" Last Modified:  2021/12/15 23:23
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -137,8 +137,16 @@ let s:atw_remove_io = get(g:,'atw_remove_io',1)             "remove declared io 
 let s:atd_move = get(g:,'atd_move',0)                       "move declared define(reg/wire) from other parts to places down below autodef
 "}}}2
 
-"Progressbar 进度条支持{{{2
+"{{{2 Debug
+
+"{{{3 debug注释行
+let s:skip_cmt_debug = 0
+"}}}3
+
+"Progressbar 进度条支持{{{3
 let s:atv_pb_en = 0
+"}}}3
+
 "}}}2
 
 "Timing Wave 定义波形{{{2
@@ -6822,8 +6830,12 @@ function s:SkipCommentLine(mode,idx,lines)
         endif
     endfor
 
-    echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
-    return -1
+    if s:skip_cmt_debug == 1
+        echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
+        return -1
+    else
+        return idx
+    endif
 
 endfunction
 "}}}3
