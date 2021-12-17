@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/12/15 23:23
+" Last Modified:  2021/12/17 22:22
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -247,8 +247,8 @@ let s:not_keywords_pattern = s:VlogKeyWords . '\@!\(\<\w\+\>\)'
 "}}}1
 
 "Version 启动判断{{{1
-if version < 704        "如果vim版本低于7.4则无效,写法为 if v:version < 704,代表版本低于7.4
-    echohl ErrorMsg | echo "automatic-verilog: this plugin requires vim >= 7.4. "| echohl None
+if version < 703        "如果vim版本低于7.3则无效,写法为 if v:version < 704,代表版本低于7.4
+    echohl ErrorMsg | echo "automatic-verilog: this plugin requires vim >= 7.3. "| echohl None
    finish
 endif
 if exists("vlog_plugin")
@@ -6684,8 +6684,14 @@ endfunction
 "   files : files-directory dictionary(.v or .sv file)
 "---------------------------------------------------
 function s:GetFileDirDic(dir,rec,files)
+    "v:version > 8.0
     "let filelist = readdir(a:dir,{n -> n =~ '.v$\|.sv$'})
-    let filedirlist = glob(a:dir.'/'.'*',0,1)
+    if v:version >= 704
+        let filedirlist = glob(a:dir.'/'.'*',0,1)
+    else
+        let filedirlist = split(glob(a:dir.'/'.'*',0))
+    endif
+
     let idx = 0
     while idx <len(filedirlist)
         let file = fnamemodify(filedirlist[idx],':t')
@@ -6861,7 +6867,7 @@ endfunction
 
 "SortNaturalOrder sort函数Funcref（用于sort函数排序）{{{3
 " Comparator function for natural ordering of numbers
-function! SortNaturalOrder(firstNr, secondNr)
+function s:SortNaturalOrder(firstNr, secondNr)
   if a:firstNr < a:secondNr
     return -1
   elseif a:firstNr > a:secondNr
@@ -6871,15 +6877,16 @@ function! SortNaturalOrder(firstNr, secondNr)
   endif
 endfunction
 
-if v:version < 704 
+if v:version > 704
+    let s:sort_funcref = 'n'
 elseif v:version == 704
     if has("patch341") 
         let s:sort_funcref = 'n'
     else
-        let s:sort_funcref = 'SortNaturalOrder'
+        let s:sort_funcref = 's:SortNaturalOrder'
     endif
-else
-    let s:sort_funcref = 'n'
+elseif v:version == 703
+    let s:sort_funcref = 's:SortNaturalOrder'
 endif
 
 "}}}3
