@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/12/20 00:23
+" Last Modified:  2021/12/20 23:24
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -89,8 +89,8 @@ let s:at_cf_mode = 0                                                    "0:norma
 let s:at_cf_flist_browse = get(g:,'at_cf_flist_browse',1)               "browse filelist file
 let s:at_cf_flistfile = get(g:,'at_cf_flistfile','')                    "flistfile like ./filelist.f
 "tags
-let s:at_cf_tags_browse = get(g:,'at_cf_tags_browse',1)                 "browse filelist file
-let s:at_cf_tags = get(g:,'at_cf_tags','')                              "flistfile like ./filelist.f
+let s:at_cf_tags_browse = get(g:,'at_cf_tags_browse',1)                 "browse tag file
+let s:at_cf_tags = get(g:,'at_cf_tags','')                              "tag like ./tags
 "}}}2
 
 "AutoArg 自动声明配置{{{2
@@ -5715,7 +5715,8 @@ function TestAutoVerilog() "{{{3
 "
 "    call AutoWire()
 
-     let file = s:GetFileList()
+     "let file = s:GetFileList()
+     let file = s:GetTags()
     
 endfunction "}}}3
 
@@ -6460,6 +6461,7 @@ function s:GetAllSig(lines,mode)
     let [dirlist,rec,vlist,flist,tlist] = s:GetVerilogLib()
     "Get file-dir dictionary 
     let files = s:GetFileDirDicFromList(dirlist,rec)
+
     "Get module-file dictionary
     let modules = s:GetModuleFileDict(files)
     "Get iwire
@@ -6653,7 +6655,7 @@ endfunction
 "       flist = ['../filelist/ctags_filelist.f']
 "   5.name:tlist
 "     taglist to get verilog file
-"       flist = ['../filelist/tags']
+"       tlist = ['../filelist/tags']
 "---------------------------------------------------
 function s:GetVerilogLib()
     "dir
@@ -6811,6 +6813,140 @@ function s:GetVerilogLib()
 endfunction
 "}}}3
 
+"{{{3 GetFileList 获取filelist
+"--------------------------------------------------
+" Function: GetFileList
+" Input: 
+"   1.browse 
+"     browse filelist file
+"   2.
+"     global variable s:at_cf_flistfile
+"   3.
+"     Lines look like: 
+"     verilog-library-flags:("-f filename")
+"   4.
+"     ./filelist.f ./file_list.f or other .f file
+" Description:
+" e.g
+"   verilog-library-filelist:(./filelist.f)
+" Output:
+"   filelist
+"   e.g. ./filelist.f
+"---------------------------------------------------
+function s:GetFileList()
+    let file = ''
+    if s:at_cf_flist_browse == 1 
+        if has("browse")
+            let file = browse(0,'Select Your Filelist','./','')
+            if file !~ '.f$'
+                echo 'file "'.file.'" not ended with .f, might not be a filelist, please notice'
+            endif
+        else
+            echohl ErrorMsg | echo "Your vim has no support for GUI browse!!! Please close s:at_cf_flist_browse" | echohl None
+        endif
+    else
+        "find global filelist
+        if s:at_cf_flistfile != ''
+            let file = s:at_cf_flistfile
+        endif
+        "find filelist by comment
+        if file == ''
+            let [dirlist,rec,vlist,flist,tlist] = s:GetVerilogLib()
+            if flist != []
+                let file = flist[0]
+            endif
+        endif
+        "find filelist by filelist.f file_list.f or last .f file
+        if file == ''
+            let filelist = filter(copy(glob('./'.'*',0,1)),'v:val =~ "\\.f$"')
+            for file in filelist
+                if file =~ 'filelist'
+                    break
+                elseif file =~ 'file_list'
+                    break
+                endif
+            endfor
+        endif
+    endif
+
+    if file == '' 
+        echohl ErrorMsg | echo "Please select at least one filelist file!!!" | echohl None
+    else
+        let file = expand(file)
+        let file = fnamemodify(file,':p')
+        echo 'file "'.file.'" selected as filelist'
+    endif
+
+    return file
+
+endfunction
+"}}}3
+
+"{{{3 GetTags 获取tags
+"--------------------------------------------------
+" Function: GetTags
+" Input: 
+"   1.browse 
+"     browse tag file
+"   2.
+"     global variable s:at_cf_tags
+"   3.
+"     Lines look like: 
+"     verilog-library-flags:("-t filename")
+"   4.
+"     tags
+" Description:
+" e.g
+"   verilog-library-flags:("-t filename")
+" Output:
+"   tags 
+"   e.g. ./tags
+"---------------------------------------------------
+function s:GetTags()
+    let file = ''
+    if s:at_cf_tags_browse == 1 
+        if has("browse")
+            let file = browse(0,'Select Your Tags','./','')
+            if file !~ 'tag'
+                echo 'file "'.file.'" not match tag, might not be a tag, please notice'
+            endif
+        else
+            echohl ErrorMsg | echo "Your vim has no support for GUI browse!!! Please close s:at_cf_tags_browse" | echohl None
+        endif
+    else
+        "find global tags
+        if s:at_cf_tags!= ''
+            let file = s:at_cf_tags
+        endif
+        "find tags by comment
+        if file == ''
+            let [dirlist,rec,vlist,flist,tlist] = s:GetVerilogLib()
+            if tlist !=[]
+                let file = tlist[0]
+            endif
+        endif
+        "find tags 
+        if file == ''
+            let taglist = filter(copy(glob('./'.'*',0,1)),'v:val =~ "tag"')
+            if taglist != []
+                let file = taglist[0]
+            endif
+        endif
+    endif
+
+    if file == '' 
+        echohl ErrorMsg | echo "Please select at least one tag file!!!" | echohl None
+    else
+        let file = expand(file)
+        let file = fnamemodify(file,':p')
+        echo 'file "'.file.'" selected as tags'
+    endif
+
+    return file
+
+endfunction
+"}}}3
+
 "GetFileDirDict 获取文件名文件夹关系{{{3
 "--------------------------------------------------
 " Function : GetFileDirDicFromList
@@ -6874,72 +7010,6 @@ function s:GetFileDirDic(dir,rec,files)
 
 endfunction
 
-"}}}3
-
-"{{{3 GetFileList 获取filelist
-"--------------------------------------------------
-" Function: GetFileList
-" Input: 
-"   1.browse 
-"     browse filelist file
-"   2.
-"   global variable s:at_cf_flistfile
-"   3.
-"   Lines look like: 
-"   verilog-library-filelist:()
-"   4.
-"   ./filelist.f ./file_list.f or other .f file
-" Description:
-" e.g
-"   verilog-library-filelist:(./filelist.f)
-" Output:
-"   filelist
-"   e.g. ./filelist.f
-"---------------------------------------------------
-function s:GetFileList()
-    let file = ''
-    if s:at_cf_flist_browse == 1 
-        if has("browse")
-            let file = browse(0,'Select Your Filelist','./','')
-            if file !~ '.f$'
-                echo 'file "'.file.'" not ended with .f, might not be a filelist, please notice'
-            else
-                echo 'file "'.file.'" selected as filelist'
-            endif
-        else
-            echohl ErrorMsg | echo "Your vim has no support for GUI browse!!! Please close s:at_cf_flist_browse" | echohl None
-        endif
-    else
-        "find global filelist
-        if s:at_cf_flistfile != ''
-            let file = s:at_cf_flistfile
-            echo 'file "'.file.'" selected as filelist'
-        endif
-        "find filelist by comment
-        if file == ''
-            let [dirlist,rec,vlist,flist,tlist] = s:GetVerilogLib()
-            if flist !=[]
-                let file = flist[0]
-                echo 'file "'.file.'" selected as filelist'
-            endif
-        endif
-        "find filelist by filelist.f file_list.f or last .f file
-        if file == ''
-            let filelist = filter(copy(glob('./'.'*',0,1)),'v:val =~ "\\.f$"')
-            for file in filelist
-                if file =~ 'filelist'
-                    break
-                elseif file =~ 'file_list'
-                    break
-                endif
-            endfor
-            echo 'file "'.file.'" selected as filelist'
-        endif
-    endif
-    let file = expand(file)
-    let file = fnamemodify(file,':p')
-    return file
-endfunction
 "}}}3
 
 "GetModuleFileDict 获取模块名和文件名关系{{{3
