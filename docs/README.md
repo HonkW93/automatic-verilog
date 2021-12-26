@@ -6,7 +6,7 @@
 
 一款自动化verilog脚本，基于vimscript。
 
-由[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067) & [vim auto script for verilog & RtlTree](http://bbs.eetop.cn/thread-335755-1-1.html)修改而来，原作者zhangguo。
+由[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067) & [vim auto script for verilog & RtlTree](http://bbs.eetop.cn/thread-335755-1-1.html)修改而来，原作者zhangguo。部分功能参考[Verilog-Mode](https://veripool.org/verilog-mode/)。
 
 
 
