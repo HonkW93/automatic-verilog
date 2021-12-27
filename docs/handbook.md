@@ -2,7 +2,7 @@
 
 包含部分功能的操作步骤和一些特性。使用前请按照快速上手的安装步骤保证脚本正确安装。
 
-## AutoInst
+## 自动例化-AutoInst
 
 ---
 
@@ -125,7 +125,7 @@
 
 
 
-## AutoPara
+## 自动参数-AutoPara
 
 ---
 
@@ -238,7 +238,7 @@
 
    支持特殊的`parameter`连续多个的写法，例如`parameter A = 1, B = 5, C = 6`。
 
-## AutoReg
+## 自动寄存器-AutoReg
 
 ---
 
@@ -359,7 +359,7 @@
    ```
 
 
-## AutoWire
+## 自动线网-AutoWire
 
 ---
 
@@ -459,7 +459,7 @@
    ```
 
 
-## AutoDef
+## 自动定义-AutoDef
 
 ---
 
@@ -508,7 +508,7 @@
    ![atd_move](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/atd_move.gif)
 
 
-## AutoArg
+## 自动声明-AutoArg
 
 ---
 
@@ -635,7 +635,7 @@
    ![io_clasf](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/io_clasf.gif)
 
 
-## RtlTree
+## 树状拓扑-RtlTree
 
 ---
 
@@ -671,7 +671,7 @@
 
    
 
-## 跨文件夹
+## 跨文件夹-CrossDir
 
 ---
 
@@ -710,7 +710,7 @@
    注意不要在`桌面`或者`盘符根目录`等位置打开文件并使用脚本，否则搜索可能会卡死。（暂时不考虑修复为自动切换地址到文件位置，因为与`RtlTree`部分功能冲突）
 
 
-## 位置对齐
+## 位置对齐-Align
 
 ---
 
