@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2021/12/20 23:24
+" Last Modified:  2021/12/28 23:04
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
 "                    https://www.vim.org/scripts/script.php?script_id=4067 
@@ -83,14 +83,14 @@ let s:atd_st_prefix = repeat(' ',s:atd_st_pos)
 
 "}}}2
 
-"CrossFile 跨文件夹配置{{{2
-let s:at_cf_mode = 0                                                    "0:normal 1:filelist 2:tags
+"CrossDir 跨文件夹配置{{{2
+let s:atv_cd_mode = 0                                                   "0:normal 1:filelist 2:tags
 "filelist
-let s:at_cf_flist_browse = get(g:,'at_cf_flist_browse',1)               "browse filelist file
-let s:at_cf_flistfile = get(g:,'at_cf_flistfile','')                    "flistfile like ./filelist.f
+let s:atv_cd_flist_browse = get(g:,'atv_cd_flist_browse',1)             "browse filelist file
+let s:atv_cd_flist_file = get(g:,'atv_cd_flist_file','')                "flistfile like ./filelist.f
 "tags
-let s:at_cf_tags_browse = get(g:,'at_cf_tags_browse',1)                 "browse tag file
-let s:at_cf_tags = get(g:,'at_cf_tags','')                              "tag like ./tags
+let s:atv_cd_tags_browse = get(g:,'atv_cd_tags_browse',1)               "browse tag file
+let s:atv_cd_tags_file = get(g:,'atv_cd_tags_file','')                  "tag like ./tags
 "}}}2
 
 "AutoArg 自动声明配置{{{2
@@ -5715,8 +5715,8 @@ function TestAutoVerilog() "{{{3
 "
 "    call AutoWire()
 
-     "let file = s:GetFileList()
-     let file = s:GetTags()
+     let file = s:GetFileList()
+     "let file = s:GetTags()
     
 endfunction "}}}3
 
@@ -6820,7 +6820,7 @@ endfunction
 "   1.browse 
 "     browse filelist file
 "   2.
-"     global variable s:at_cf_flistfile
+"     global variable s:atv_cd_flist_file
 "   3.
 "     Lines look like: 
 "     verilog-library-flags:("-f filename")
@@ -6835,19 +6835,19 @@ endfunction
 "---------------------------------------------------
 function s:GetFileList()
     let file = ''
-    if s:at_cf_flist_browse == 1 
+    if s:atv_cd_flist_browse == 1 
         if has("browse")
             let file = browse(0,'Select Your Filelist','./','')
             if file !~ '.f$'
                 echo 'file "'.file.'" not ended with .f, might not be a filelist, please notice'
             endif
         else
-            echohl ErrorMsg | echo "Your vim has no support for GUI browse!!! Please close s:at_cf_flist_browse" | echohl None
+            echohl ErrorMsg | echo "Your vim has no support for GUI browse!!! Please close s:atv_cd_flist_browse" | echohl None
         endif
     else
         "find global filelist
-        if s:at_cf_flistfile != ''
-            let file = s:at_cf_flistfile
+        if s:atv_cd_flist_file != ''
+            let file = s:atv_cd_flist_file
         endif
         "find filelist by comment
         if file == ''
@@ -6889,7 +6889,7 @@ endfunction
 "   1.browse 
 "     browse tag file
 "   2.
-"     global variable s:at_cf_tags
+"     global variable s:atv_cd_tags_file
 "   3.
 "     Lines look like: 
 "     verilog-library-flags:("-t filename")
@@ -6904,19 +6904,19 @@ endfunction
 "---------------------------------------------------
 function s:GetTags()
     let file = ''
-    if s:at_cf_tags_browse == 1 
+    if s:atv_cd_tags_browse == 1 
         if has("browse")
             let file = browse(0,'Select Your Tags','./','')
             if file !~ 'tag'
                 echo 'file "'.file.'" not match tag, might not be a tag, please notice'
             endif
         else
-            echohl ErrorMsg | echo "Your vim has no support for GUI browse!!! Please close s:at_cf_tags_browse" | echohl None
+            echohl ErrorMsg | echo "Your vim has no support for GUI browse!!! Please close s:atv_cd_tags_browse" | echohl None
         endif
     else
         "find global tags
-        if s:at_cf_tags!= ''
-            let file = s:at_cf_tags
+        if s:atv_cd_tags_file != ''
+            let file = s:atv_cd_tags_file
         endif
         "find tags by comment
         if file == ''
