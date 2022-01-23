@@ -75,7 +75,6 @@ function s:LoadTemplate(...) "{{{
 	let templateFileList = []
 
 	let t_path = g:atv_snippet_template_path
-    echo 'dddddddddddddddddddddddd----path====='.t_path
 	if type == ""
 		call s:AddTemplateFile(templateFileList,t_path,'*.'.extension)
 		call s:AddTemplateFile(templateFileList,t_path,'*.'.ftype)

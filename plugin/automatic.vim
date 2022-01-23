@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/01/07 01:11
+" Last Modified:  2022/01/23 18:22
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -398,10 +398,18 @@ endfunction
 function AutoInst(mode)
     try
         "Get directory list by scaning line
-        let [dirlist,rec,vlist,flist,tlist] = s:GetVerilogLib()
+        let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
 
-        "Get file-dir dictionary 
-        let files = s:GetFileDirDicFromList(dirlist,rec)
+        "Get file-dir dictionary from library
+        let files = s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
+        
+        "Get file-dir dictionary from filelist
+        "let file = s:GetFileList()
+        "let files = s:GetFileDirDicFromFlist(file)
+
+        "Get file-dir dictionary from filelist
+        let file = s:GetTags()
+        "let files = s:GetFileDirDicFromTags(file)
 
         "Get module-file dictionary
         let modules = s:GetModuleFileDict(files)
@@ -451,7 +459,7 @@ function AutoInst(mode)
                 let io_seqs = s:GetIO(lines,'seq')
                 let io_names = s:GetIO(lines,'name')
             else
-                echohl ErrorMsg | echo "file: ".module_name.".v does not exist in cur dir ".getcwd() | echohl None
+                echohl ErrorMsg | echo "file ".module_name.".v does not exist in cur dir ".getcwd() | echohl None
                 return
             endif
 
@@ -538,10 +546,10 @@ endfunction
 function AutoPara(mode)
     try
         "Get directory list by scaning line
-        let [dirlist,rec,vlist,flist,tlist] = s:GetVerilogLib()
+        let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
 
         "Get file-dir dictionary 
-        let files = s:GetFileDirDicFromList(dirlist,rec)
+        let files = s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
 
         "Get module-file dictionary
         let modules = s:GetModuleFileDict(files)
@@ -661,10 +669,10 @@ endfunction
 function AutoParaValue(mode)
     try
         "Get directory list by scaning line
-        let [dirlist,rec,vlist,flist,tlist] = s:GetVerilogLib()
+        let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
 
         "Get file-dir dictionary 
-        let files = s:GetFileDirDicFromList(dirlist,rec)
+        let files = s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
 
         "Get module-file dictionary
         let modules = s:GetModuleFileDict(files)
@@ -5814,9 +5822,9 @@ function s:GetAllSig(lines,mode)
     "    0     1            2           3             4            5
     "   [seqs, signal_name, lines,      module_names, conn_widths, resolved]
     "Get directory list by scaning line
-    let [dirlist,rec,vlist,flist,tlist] = s:GetVerilogLib()
+    let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
     "Get file-dir dictionary 
-    let files = s:GetFileDirDicFromList(dirlist,rec)
+    let files = s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
 
     "Get module-file dictionary
     let modules = s:GetModuleFileDict(files)
@@ -5982,6 +5990,8 @@ endfunction
 "   +------------------------------------------------------------------------+------------------------------+
 "   | verilog-library-flags:("+incdir+dir3")                                 | add the directory dir3       |
 "   +------------------------------------------------------------------------+------------------------------+
+"   | verilog-library-flags:("-Idir4")                                       | add the directory dir4       |
+"   +------------------------------------------------------------------------+------------------------------+
 "   | verilog-library-flags:("+libext+.v .sv")                               | add the extension .v         |
 "   +------------------------------------------------------------------------+------------------------------+
 "   | verilog-library-flags:("-v filename")                                  | add file of filename         |
@@ -5998,14 +6008,14 @@ endfunction
 " e.g.
 "   1.name:dir 
 "     dirlist and recursive flag
-"       dirlist = ['test','.','dir','dir2','dir3']
+"       dirlist = ['test','.','dir','dir2','dir3','dir4']
 "       rec = 1
 "   2.name:file
 "     vlist
 "       vlist = ['/some/path/technology.v','/some/path/tech2.v']
 "   3.name:ext
 "     extension for file
-"       ext = ['.v','.sv']
+"       elist = ['.v','.sv']
 "   4.name:flist
 "     filelist to get verilog file
 "       flist = ['../filelist/ctags_filelist.f']
@@ -6058,71 +6068,55 @@ function s:GetVerilogLib()
         
         "verilog-library-flags
         if line =~ 'verilog-library-flags:(.*)'
-            let flags = matchstr(line,'verilog-library-flags:(\zs.*\ze)')
-            let quote_list = []
-            if flags =~ '-y'
-                "//verilog-library-flags:("-y dir ./dir2/test/" "-y otherdir")
-                call substitute(flags,'"\zs-y.\{-}\ze"','\=add(quote_list,submatch(0))','g')
-                for ydir in quote_list
-                    let ydir = substitute(ydir,'-y','','g')
+            let quote = matchstr(line,'verilog-library-flags:("\zs.*\ze")')
+            let matchflags = '\('.   '-y'           . '\|' .
+                                    \'+incdir+'     . '\|' .
+                                    \'-I'           . '\|' .
+                                    \'-v'           . '\|' .
+                                    \'+libext+'     . '\|' .
+                                    \'-f'           . '\|' .
+                                    \'-t'           . '\)'
+            let flag_list = split(quote,matchflags.'\(\s*[^ \-+]\+\)\{1,\}\zs')
+            for flag in flag_list
+                if flag =~ '^\s*-y'
+                    let ydir = substitute(flag,'-y','','g')
                     call substitute(ydir,'\zs\S\+\ze','\=add(dirlist,submatch(0))','g')
-                endfor
-            elseif flags =~ '+incdir+'
-                "verilog-library-flags:("+incdir+dir3 dir4")
-                call substitute(flags,'"\zs+incdir+.\{-}\ze"','\=add(quote_list,submatch(0))','g')
-                for incdir in quote_list
-                    let incdir = substitute(incdir,'+incdir+','','g')
+                elseif flag =~ '^\s*+incdir+'
+                    let incdir = substitute(flag,'+incdir+','','g')
                     call substitute(incdir,'\zs\S\+\ze','\=add(dirlist,submatch(0))','g')
-                endfor
-            endif
-            let flags = substitute(flags,'"\zs-y.\{-}\ze"','','g')
-            
-            if flags =~ '-v'
-                "verilog-library-flags:("-v filename filename1" "-v filename2")
-                call substitute(flags,'"\zs-v.\{-}\ze"','\=add(quote_list,submatch(0))','g')
-                for vfile in quote_list
-                    let vfile = substitute(vfile,'-v','','g')
+                elseif flag =~ '^\s*-I'
+                    let idir = substitute(flag,'-I','','g')
+                    call substitute(idir,'\zs\S\+\ze','\=add(dirlist,submatch(0))','g')
+                elseif flag =~ '^\s*-v'
+                    let vfile = substitute(flag,'-v','','g')
                     call substitute(vfile,'\zs\S\+\ze','\=add(vlist,submatch(0))','g')
-                endfor
-            endif
-
-            if flags =~ '+libext+'
-                "verilog-library-flags:("+libext+.v")
-                call substitute(flags,'"\zs+libext+.\{-}\ze"','\=add(quote_list,submatch(0))','g')
-                for ext in quote_list
-                    let ext = substitute(ext,'+libext+','','g')
+                elseif flag =~ '^\s*+libext+'
+                    let ext = substitute(flag,'+libext+','','g')
                     call substitute(ext,'\zs\S\+\ze','\=add(elist,submatch(0))','g')
-                endfor
-            endif
-
-            if flags =~ '-f'
-                "verilog-library-flags:("-f filename")
-                call substitute(flags,'"\zs-f.\{-}\ze"','\=add(quote_list,submatch(0))','g')
-                for file in quote_list
-                    let file = substitute(file,'-f','','g')
+                elseif flag =~ '^\s*-f'
+                    let file = substitute(flag,'-f','','g')
                     call substitute(file,'\zs\S\+\ze','\=add(flist,submatch(0))','g')
-                endfor
-            endif
-
-            if flags =~ '-t'
-                "verilog-library-flags:("-t filename")
-                call substitute(flags,'"\zs-t.\{-}\ze"','\=add(quote_list,submatch(0))','g')
-                for file in quote_list
-                    let file = substitute(file,'-t','','g')
+                elseif flag =~ '^\s*-t'
+                    let file = substitute(flag,'-t','','g')
                     call substitute(file,'\zs\S\+\ze','\=add(tlist,submatch(0))','g')
-                endfor
-            endif
+                endif
+            endfor
         endif
-        
     endfor
 
+    "filter duplicate
+    call uniq(dirlist)
+    call uniq(vlist)
+    call uniq(elist)
+    call uniq(flist)
+    call uniq(tlist)
+
+    "expand directories{{{4
     "default
     let dir = '.'       
     if dirlist == [] 
         let dirlist = [dir]
     endif
-
-    "expand directories{{{4
     let exp_dirlist = []
     for dir in dirlist
         "expand directories in SYSTEM VARIABLE (e.g. $VIM -> F:/Vim)
@@ -6143,7 +6137,7 @@ function s:GetVerilogLib()
     endfor
     let vlist = exp_vlist
     "}}}4
-
+    
     "expand filelist{{{4
     let exp_flist = []
     for file in flist
@@ -6164,7 +6158,7 @@ function s:GetVerilogLib()
     let tlist = exp_tlist
     "}}}4
     
-    return [dirlist,str2nr(rec),vlist,flist,tlist]
+    return [dirlist,str2nr(rec),vlist,elist,flist,tlist]
 
 endfunction
 "}}}3
@@ -6189,16 +6183,24 @@ endfunction
 "   filelist
 "   e.g. ./filelist.f
 "---------------------------------------------------
+let s:atv_cd_flist_browse_file = ''
+let s:atv_cd_flist_selected_file = ''
 function s:GetFileList()
     let file = ''
     if s:atv_cd_flist_browse == 1 
-        if has("browse")
-            let file = browse(0,'Select Your Filelist','./','')
-            if file !~ '.f$'
-                echo 'file "'.file.'" not ended with .f, might not be a filelist, please notice'
+        if s:atv_cd_flist_browse_file == ''
+            if has("browse")
+                let file = browse(0,'Select Your Filelist','./','')
+                if file !~ '.f$'
+                    echo 'file "'.file.'" not ended with .f, might not be a filelist, please notice'
+                endif
+                let s:atv_cd_flist_browse_file = file
+            else
+                echohl ErrorMsg | echo "Your vim has no support for GUI browse!!! Please close s:atv_cd_flist_browse" | echohl None
             endif
         else
-            echohl ErrorMsg | echo "Your vim has no support for GUI browse!!! Please close s:atv_cd_flist_browse" | echohl None
+            "already browse, don't re-browse again
+            let file = s:atv_cd_flist_browse_file
         endif
     else
         "find global filelist
@@ -6207,7 +6209,7 @@ function s:GetFileList()
         endif
         "find filelist by comment
         if file == ''
-            let [dirlist,rec,vlist,flist,tlist] = s:GetVerilogLib()
+            let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
             if flist != []
                 let file = flist[0]
             endif
@@ -6230,7 +6232,14 @@ function s:GetFileList()
     else
         let file = expand(file)
         let file = fnamemodify(file,':p')
-        echo 'file "'.file.'" selected as filelist'
+        if file != s:atv_cd_flist_selected_file 
+            "not selected
+            echo 'file "'.file.'" selected as filelist'
+            let s:atv_cd_flist_selected_file = file
+        else
+            "already selected, don't echo filelist again unless it's changed
+            let file = s:atv_cd_flist_selected_file
+        endif
     endif
 
     return file
@@ -6258,16 +6267,24 @@ endfunction
 "   tags 
 "   e.g. ./tags
 "---------------------------------------------------
+let s:atv_cd_tags_browse_file = ''
+let s:atv_cd_tags_selected_file = ''
 function s:GetTags()
     let file = ''
     if s:atv_cd_tags_browse == 1 
-        if has("browse")
-            let file = browse(0,'Select Your Tags','./','')
-            if file !~ 'tag'
-                echo 'file "'.file.'" not match tag, might not be a tag, please notice'
+        if s:atv_cd_tags_browse_file == ''
+            if has("browse")
+                let file = browse(0,'Select Your Tags','./','')
+                if file !~ 'tag'
+                    echo 'file "'.file.'" not match tag, might not be a tag, please notice'
+                endif
+                let s:atv_cd_tags_browse_file = file
+            else
+                echohl ErrorMsg | echo "Your vim has no support for GUI browse!!! Please close s:atv_cd_tags_browse" | echohl None
             endif
         else
-            echohl ErrorMsg | echo "Your vim has no support for GUI browse!!! Please close s:atv_cd_tags_browse" | echohl None
+            "already browse, don't re-browse again
+            let file = s:atv_cd_tags_browse_file
         endif
     else
         "find global tags
@@ -6276,7 +6293,7 @@ function s:GetTags()
         endif
         "find tags by comment
         if file == ''
-            let [dirlist,rec,vlist,flist,tlist] = s:GetVerilogLib()
+            let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
             if tlist !=[]
                 let file = tlist[0]
             endif
@@ -6295,7 +6312,14 @@ function s:GetTags()
     else
         let file = expand(file)
         let file = fnamemodify(file,':p')
-        echo 'file "'.file.'" selected as tags'
+        if file != s:atv_cd_tags_selected_file 
+            "not selected
+            echo 'file "'.file.'" selected as tags'
+            let s:atv_cd_tags_selected_file = file
+        else
+            "already selected, don't echo tags again unless it's changed
+            let file = s:atv_cd_tags_selected_file
+        endif
     endif
 
     return file
@@ -6304,38 +6328,187 @@ endfunction
 "}}}3
 
 "GetFileDirDict 获取文件名文件夹关系{{{3
+
+"GetFileDirDicFromFlist 从File List获取{{{4
 "--------------------------------------------------
-" Function : GetFileDirDicFromList
+" Function : GetFileDirDicFromFlist
+" Input: 
+"   file : filelist file with absolute directory
+" Description:
+"   get file-dir dictionary from filelist
+"   flist e.g.
+"       -v lib_file
+"       -y lib_dir
+"       +libext+lib_ext
+"       +incdir+lib_dir
+"       ../rtl/test.v
+" Output:
+"   files  : file-dir dictionary(.v file)
+"          e.g  ALU.v -> ./hdl/core
+"---------------------------------------------------
+function s:GetFileDirDicFromFlist(file)
+    let files = {}
+    "get from filelist, no recursive
+    let dirlist =[]
+    let vlist = []
+    let elist = []
+    let rec = 0
+    "read filelist file
+    let flist_dir = fnamemodify(a:file,':p:h')
+    let lines = readfile(a:file)
+    for line in lines
+        "skip comment
+        if line =~ '^\s*\/\/'
+            continue
+        endif
+        let matchflags = '\('.   '-y'           . '\|' .
+                                \'+incdir+'     . '\|' .
+                                \'-v'           . '\|' .
+                                \'+libext+'     . '\)'
+        let flag_list = split(line,matchflags.'\(\s*[^ \-+]\+\)\{1,\}\zs')
+        for flag in flag_list
+            if flag =~ '^\s*-y'
+                let ydir = substitute(flag,'-y','','g')
+                call substitute(ydir,'\zs\S\+\ze','\=add(dirlist,submatch(0))','g')
+            elseif flag =~ '^\s*+incdir+'
+                let incdir = substitute(flag,'+incdir+','','g')
+                call substitute(incdir,'\zs\S\+\ze','\=add(dirlist,submatch(0))','g')
+            elseif flag =~ '^\s*-v'
+                let vfile = substitute(flag,'-v','','g')
+                call substitute(vfile,'\zs\S\+\ze','\=add(vlist,submatch(0))','g')
+            elseif flag =~ '^\s*+libext+'
+                let ext = substitute(flag,'+libext+','','g')
+                call substitute(ext,'\zs\S\+\ze','\=add(elist,submatch(0))','g')
+            elseif flag != ''
+                if filereadable(flist_dir.'/'.flag)
+                    let vfile = flist_dir.'/'.flag
+                    let vfile = expand(vfile)
+                    let vfile = fnamemodify(vfile,':p')
+                    let dir = fnamemodify(vfile,':p:h')
+                    let file = fnamemodify(vfile,':p:t')
+                    call extend (files,{file : dir})
+                else
+                    echohl ErrorMsg | echo "No file ".vfile." exist!"| echohl None
+                endif
+            endif
+        endfor
+    endfor
+
+    "filter duplicate
+    call uniq(dirlist)
+    call uniq(vlist)
+    call uniq(elist)
+
+    "expand directories{{{5
+    "default
+    let dir = '.'       
+    if dirlist == [] 
+        let dirlist = [dir]
+    endif
+    let exp_dirlist = []
+    for dir in dirlist
+        "expand directories in SYSTEM VARIABLE (e.g. $VIM -> F:/Vim)
+        let dir = expand(dir)
+        "expand directories to full path(e.g. ./ -> /usr/share/vim/vim74 )
+        let dir = substitute(fnamemodify(dir,':p'),'\/$','','')
+        call add(exp_dirlist,dir)
+    endfor
+    let dirlist = exp_dirlist
+    "}}}5
+
+    "expand verilog list{{{5
+    let exp_vlist = []
+    for file in vlist
+        let file = expand(file)
+        let file = fnamemodify(file,':p')
+        call add(exp_vlist,file)
+    endfor
+    let vlist = exp_vlist
+    "}}}5
+
+    "find file from vlist
+    for vfile in vlist
+        if filereadable(vfile)
+            let dir = fnamemodify(vfile,':p:h')
+            let file = fnamemodify(vfile,':p:t')
+            call extend (files,{file : dir})
+        else
+            echohl ErrorMsg | echo "No file ".vfile." exist!"| echohl None
+        endif
+    endfor
+
+    "find file from dirlist(recursively)
+    for dir in dirlist
+        let files = s:GetFileDirDicFromLibRec(dir,0,files,elist)
+    endfor
+    return files
+endfunction
+"}}}4
+
+"GetFileDirDicFromTags 从Tags获取{{{4
+"--------------------------------------------------
+" Function : GetFileDirDicFromTags
+" Input: 
+"   file : tags file with absolute directory
+" Description:
+"   get file-dir dictionary from filelist
+"   tags e.g.
+"   ALU    ../src/aaa/bbb/ccc/ALU.v    /^module ALU($/;"    m
+"   
+" Output:
+"   files  : file-dir dictionary(.v file)
+"---------------------------------------------------
+
+"}}}4
+
+"GetFileDirDicFromLib 从Verilog Library获取{{{4
+"--------------------------------------------------
+" Function : GetFileDirDicFromLib
 " Input: 
 "   dirlist: directory list
 "   rec: recursively
+"   vlist : verilog file list
+"   elist : extension list
 " Description:
 "   get file-dir dictionary from dirlist
 " Output:
 "   files  : file-dir dictionary(.v file)
 "          e.g  ALU.v -> ./hdl/core
 "---------------------------------------------------
-function s:GetFileDirDicFromList(dirlist,rec)
+function s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
     let files = {}
+    "find file from vlist
+    for vfile in a:vlist
+        if filereadable(vfile)
+            let dir = fnamemodify(vfile,':p:h')
+            let file = fnamemodify(vfile,':p:t')
+            call extend (files,{file : dir})
+        else
+            echohl ErrorMsg | echo "No file ".vfile." exist!"| echohl None
+        endif
+    endfor
+
+    "find file from dirlist(recursively)
     for dir in a:dirlist
-        let files = s:GetFileDirDic(dir,a:rec,files)
+        let files = s:GetFileDirDicFromLibRec(dir,a:rec,files,a:elist)
     endfor
     return files
 endfunction
 
 "--------------------------------------------------
-" Function: GetFileDirDic
+" Function: GetFileDirDicFromLibRec
 " Input: 
 "   dir : directory
 "   rec : recursive
 "   files : dictionary to store
+"   elist : extension list
 " Description:
 "   rec = 1, recursively get inst-file dictionary (.v or .sv file) 
 "   rec = 0, normally get inst-file dictionary (.v or .sv file)
 " Output:
 "   files : files-directory dictionary(.v or .sv file)
 "---------------------------------------------------
-function s:GetFileDirDic(dir,rec,files)
+function s:GetFileDirDicFromLibRec(dir,rec,files,elist)
     "let filelist = readdir(a:dir,{n -> n =~ '.v$\|.sv$'})
     let filedirlist = glob(a:dir.'/'.'*',0,1)
     let idx = 0
@@ -6345,26 +6518,35 @@ function s:GetFileDirDic(dir,rec,files)
         let idx = idx + 1
     endwhile
 
-    let filelist = filter(copy(filedirlist),'v:val =~ "\\.v$" || v:val =~ "\\.sv$"')
+    "filter file with extesion .v/.sv/other specify extension
+    let filter_str = 'v:val =~ ' . ' ''\.v$'' ' 
+               \. '|| v:val =~ ' . ' ''\.sv$'' '
+    "echo ' ''\.v$'' ' ---> '\.v$'
+    for ext in a:elist
+        let filter_str  = filter_str . '|| v:val =~ ' . ' ''\' . ext . '$'' ' 
+    endfor
+    let filelist = filter(copy(filedirlist),filter_str)
 
     for file in filelist
         if has_key(a:files,file)
-            echohl ErrorMsg | echo "Same file ".file." exist in both ".a:dir." and ".a:files[file]."! Only use one as directory"| echohl None
+            "echohl ErrorMsg | echo "Same file ".file." exist in both ".a:dir." and ".a:files[file]."! Only use one as directory"| echohl None
+        else
+            call extend (a:files,{file : a:dir})
         endif
-        call extend (a:files,{file : a:dir})
     endfor
 
     if a:rec
         "for item in readdir(a:dir)
         for item in filedirlist
             if isdirectory(a:dir.'/'.item)
-                call s:GetFileDirDic(a:dir.'/'.item,1,a:files)
+                call s:GetFileDirDicFromLibRec(a:dir.'/'.item,1,a:files,a:elist)
             endif
         endfor
     endif
     return a:files
 
 endfunction
+"}}}4
 
 "}}}3
 
@@ -7252,9 +7434,9 @@ function RtlTree() "{{{2
         "Get tags from top module and search down
         try
             "Get directory list by scaning line
-            let [dirlist,rec,vlist,flist,tlist] = s:GetVerilogLib()
+            let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
             "Get file-dir dictionary & module-file dictionary ahead of all process
-            let s:top_files = s:GetFileDirDicFromList(dirlist,rec)
+            let s:top_files = s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
             let s:top_modules = s:GetModuleFileDict(s:top_files)
         endtry
 
