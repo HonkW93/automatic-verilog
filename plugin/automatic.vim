@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/01/23 18:22
+" Last Modified:  2022/01/26 22:42
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -85,7 +85,7 @@ let s:atd_st_prefix = repeat(' ',s:atd_st_pos)
 "}}}2
 
 "CrossDir 跨文件夹配置{{{2
-let s:atv_cd_mode = 0                                                   "0:normal 1:filelist 2:tags
+let s:atv_cd_mode = get(g:,'atv_cd_mode',0)                             "0:normal 1:filelist 2:tags
 "filelist
 let s:atv_cd_flist_browse = get(g:,'atv_cd_flist_browse',1)             "browse filelist file
 let s:atv_cd_flist_file = get(g:,'atv_cd_flist_file','')                "flistfile like ./filelist.f
@@ -397,22 +397,9 @@ endfunction
 "---------------------------------------------------
 function AutoInst(mode)
     try
-        "Get directory list by scaning line
-        let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
 
-        "Get file-dir dictionary from library
-        let files = s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
-        
-        "Get file-dir dictionary from filelist
-        "let file = s:GetFileList()
-        "let files = s:GetFileDirDicFromFlist(file)
-
-        "Get file-dir dictionary from filelist
-        let file = s:GetTags()
-        "let files = s:GetFileDirDicFromTags(file)
-
-        "Get module-file dictionary
-        let modules = s:GetModuleFileDict(files)
+        "Get module-file-dir dictionary
+        let [files,modules] = s:GetModuleFileDirDic()
 
         "Record current position
         let orig_idx = line('.')
@@ -459,7 +446,7 @@ function AutoInst(mode)
                 let io_seqs = s:GetIO(lines,'seq')
                 let io_names = s:GetIO(lines,'name')
             else
-                echohl ErrorMsg | echo "file ".module_name.".v does not exist in cur dir ".getcwd() | echohl None
+                echohl ErrorMsg | echo "No file with module name ".module_name." exist in cur dir ".getcwd() | echohl None
                 return
             endif
 
@@ -545,14 +532,8 @@ endfunction
 "---------------------------------------------------
 function AutoPara(mode)
     try
-        "Get directory list by scaning line
-        let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
-
-        "Get file-dir dictionary 
-        let files = s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
-
-        "Get module-file dictionary
-        let modules = s:GetModuleFileDict(files)
+        "Get module-file-dir dictionary
+        let [files,modules] = s:GetModuleFileDirDic()
 
         "Record current position
         let orig_idx = line('.')
@@ -668,14 +649,8 @@ endfunction
 "---------------------------------------------------
 function AutoParaValue(mode)
     try
-        "Get directory list by scaning line
-        let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
-
-        "Get file-dir dictionary 
-        let files = s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
-
-        "Get module-file dictionary
-        let modules = s:GetModuleFileDict(files)
+        "Get module-file-dir dictionary
+        let [files,modules] = s:GetModuleFileDirDic()
 
         "Record current position
         let orig_idx = line('.')
@@ -5966,8 +5941,55 @@ function s:GetAllSig(lines,mode)
 endfunction
 "}}}3
 
-"Others
-"{{{3 GetVerilogLib 获取v文件搜索位置
+"Universal-GetModules 获取模块-文件名-文件夹位置的关系
+
+"{{{3 GetModuleFileDirDic 获取模块-文件名-文件夹位置的关系
+"--------------------------------------------------
+" Function: GetModuleFileDirDic
+" Input: 
+"   1.mode 
+"     0 : normal,automatic get 
+"     1 : filelist 
+"     2 : tags
+" Description:
+"   Get module-file-dir dictionary
+" e.g
+"   files  : file-dir dictionary(.v file)
+"          e.g  ALU.v -> ./hdl/core
+"   modules: module-file dictionary
+"          e.g  ALU -> ALU.v
+" Output:
+"   [files,modules]
+"---------------------------------------------------
+function s:GetModuleFileDirDic()
+    "by tags
+    if s:atv_cd_mode == 2
+        "Get module-file-dir dictionary from tags
+        let file = s:GetTags()
+        let [files,modules] = s:GetModuleFileDirDicFromTags(file)
+    else
+        "by normal
+        if s:atv_cd_mode == 0
+            "Get directory list by scaning line
+            let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
+            "Get file-dir dictionary from library
+            let files = s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
+        "by file list
+        elseif s:atv_cd_mode == 1
+            "Get file-dir dictionary from filelist
+            let file = s:GetFileList()
+            let files = s:GetFileDirDicFromFlist(file)
+        else
+            echohl ErrorMsg | echo "Error mode input for GetModuleFileDirDic"| echohl None
+        endif
+        "Get module-file dictionary
+        let modules = s:GetModuleFileDict(files)
+    endif
+    return [files,modules]
+endfunction
+"}}}3
+
+"{{{3 GetVerilogLib 获取verilog文件搜索位置
 "--------------------------------------------------
 " Function: GetVerilogLib
 " Input: 
@@ -6320,6 +6342,8 @@ function s:GetTags()
             "already selected, don't echo tags again unless it's changed
             let file = s:atv_cd_tags_selected_file
         endif
+        "automatic set tag file for user
+        execute "set tags=".file
     endif
 
     return file
@@ -6327,9 +6351,94 @@ function s:GetTags()
 endfunction
 "}}}3
 
-"GetFileDirDict 获取文件名文件夹关系{{{3
+"GetFileDirDicFromLib 从Verilog Library获取文件名-文件夹关系{{{3
+"--------------------------------------------------
+" Function : GetFileDirDicFromLib
+" Input: 
+"   dirlist: directory list
+"   rec: recursively
+"   vlist : verilog file list
+"   elist : extension list
+" Description:
+"   get file-dir dictionary from dirlist
+" Output:
+"   files  : file-dir dictionary(.v file)
+"          e.g  ALU.v -> ./hdl/core
+"---------------------------------------------------
+function s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
+    let files = {}
+    "find file from vlist
+    for vfile in a:vlist
+        if filereadable(vfile)
+            let dir = fnamemodify(vfile,':p:h')
+            let file = fnamemodify(vfile,':p:t')
+            call extend (files,{file : dir})
+        else
+            echohl ErrorMsg | echo "No file ".vfile." exist!"| echohl None
+        endif
+    endfor
 
-"GetFileDirDicFromFlist 从File List获取{{{4
+    "find file from dirlist(recursively)
+    for dir in a:dirlist
+        let files = s:GetFileDirDicFromLibRec(dir,a:rec,files,a:elist)
+    endfor
+    return files
+endfunction
+
+"--------------------------------------------------
+" Function: GetFileDirDicFromLibRec
+" Input: 
+"   dir : directory
+"   rec : recursive
+"   files : dictionary to store
+"   elist : extension list
+" Description:
+"   rec = 1, recursively get inst-file dictionary (.v or .sv file) 
+"   rec = 0, normally get inst-file dictionary (.v or .sv file)
+" Output:
+"   files : files-directory dictionary(.v or .sv file)
+"---------------------------------------------------
+function s:GetFileDirDicFromLibRec(dir,rec,files,elist)
+    "let filelist = readdir(a:dir,{n -> n =~ '.v$\|.sv$'})
+    let filedirlist = glob(a:dir.'/'.'*',0,1)
+    let idx = 0
+    while idx <len(filedirlist)
+        let file = fnamemodify(filedirlist[idx],':t')
+        let filedirlist[idx] = file
+        let idx = idx + 1
+    endwhile
+
+    "filter file with extesion .v/.sv/other specify extension
+    let filter_str = 'v:val =~ ' . ' ''\.v$'' ' 
+               \. '|| v:val =~ ' . ' ''\.sv$'' '
+    "echo ' ''\.v$'' ' ---> '\.v$'
+    for ext in a:elist
+        let filter_str  = filter_str . '|| v:val =~ ' . ' ''\' . ext . '$'' ' 
+    endfor
+    let filelist = filter(copy(filedirlist),filter_str)
+
+    for file in filelist
+        if has_key(a:files,file)
+            "echohl ErrorMsg | echo "Same file ".file." exist in both ".a:dir." and ".a:files[file]."! Only use one as directory"| echohl None
+        else
+            call extend (a:files,{file : a:dir})
+        endif
+    endfor
+
+    if a:rec
+        "for item in readdir(a:dir)
+        for item in filedirlist
+            if isdirectory(a:dir.'/'.item)
+                call s:GetFileDirDicFromLibRec(a:dir.'/'.item,1,a:files,a:elist)
+            endif
+        endfor
+    endif
+    return a:files
+
+endfunction
+"}}}3
+
+"GetFileDirDicFromFlist 从File List获取文件名-文件夹关系{{{3
 "--------------------------------------------------
 " Function : GetFileDirDicFromFlist
 " Input: 
@@ -6443,111 +6552,47 @@ function s:GetFileDirDicFromFlist(file)
     endfor
     return files
 endfunction
-"}}}4
+"}}}3
 
-"GetFileDirDicFromTags 从Tags获取{{{4
+"GetModuleFileDirDicFromTags 从Tags获取{{{3
 "--------------------------------------------------
-" Function : GetFileDirDicFromTags
+" Function : GetModuleFileDirDicFromTags
 " Input: 
 "   file : tags file with absolute directory
 " Description:
 "   get file-dir dictionary from filelist
 "   tags e.g.
 "   ALU    ../src/aaa/bbb/ccc/ALU.v    /^module ALU($/;"    m
-"   
 " Output:
 "   files  : file-dir dictionary(.v file)
+"   modules: module-file dictionary
 "---------------------------------------------------
-
-"}}}4
-
-"GetFileDirDicFromLib 从Verilog Library获取{{{4
-"--------------------------------------------------
-" Function : GetFileDirDicFromLib
-" Input: 
-"   dirlist: directory list
-"   rec: recursively
-"   vlist : verilog file list
-"   elist : extension list
-" Description:
-"   get file-dir dictionary from dirlist
-" Output:
-"   files  : file-dir dictionary(.v file)
-"          e.g  ALU.v -> ./hdl/core
-"---------------------------------------------------
-function s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
+function s:GetModuleFileDirDicFromTags(file)
     let files = {}
-    "find file from vlist
-    for vfile in a:vlist
-        if filereadable(vfile)
-            let dir = fnamemodify(vfile,':p:h')
-            let file = fnamemodify(vfile,':p:t')
-            call extend (files,{file : dir})
-        else
-            echohl ErrorMsg | echo "No file ".vfile." exist!"| echohl None
-        endif
-    endfor
-
-    "find file from dirlist(recursively)
-    for dir in a:dirlist
-        let files = s:GetFileDirDicFromLibRec(dir,a:rec,files,a:elist)
-    endfor
-    return files
-endfunction
-
-"--------------------------------------------------
-" Function: GetFileDirDicFromLibRec
-" Input: 
-"   dir : directory
-"   rec : recursive
-"   files : dictionary to store
-"   elist : extension list
-" Description:
-"   rec = 1, recursively get inst-file dictionary (.v or .sv file) 
-"   rec = 0, normally get inst-file dictionary (.v or .sv file)
-" Output:
-"   files : files-directory dictionary(.v or .sv file)
-"---------------------------------------------------
-function s:GetFileDirDicFromLibRec(dir,rec,files,elist)
-    "let filelist = readdir(a:dir,{n -> n =~ '.v$\|.sv$'})
-    let filedirlist = glob(a:dir.'/'.'*',0,1)
-    let idx = 0
-    while idx <len(filedirlist)
-        let file = fnamemodify(filedirlist[idx],':t')
-        let filedirlist[idx] = file
-        let idx = idx + 1
-    endwhile
-
-    "filter file with extesion .v/.sv/other specify extension
-    let filter_str = 'v:val =~ ' . ' ''\.v$'' ' 
-               \. '|| v:val =~ ' . ' ''\.sv$'' '
-    "echo ' ''\.v$'' ' ---> '\.v$'
-    for ext in a:elist
-        let filter_str  = filter_str . '|| v:val =~ ' . ' ''\' . ext . '$'' ' 
-    endfor
-    let filelist = filter(copy(filedirlist),filter_str)
-
-    for file in filelist
-        if has_key(a:files,file)
-            "echohl ErrorMsg | echo "Same file ".file." exist in both ".a:dir." and ".a:files[file]."! Only use one as directory"| echohl None
-        else
-            call extend (a:files,{file : a:dir})
-        endif
-    endfor
-
-    if a:rec
-        "for item in readdir(a:dir)
-        for item in filedirlist
-            if isdirectory(a:dir.'/'.item)
-                call s:GetFileDirDicFromLibRec(a:dir.'/'.item,1,a:files,a:elist)
+    let modules = {}
+    "read filelist file
+    let tags_dir = fnamemodify(a:file,':p:h')
+    let lines = readfile(a:file)
+    for line in lines
+        if line =~ '^\w\+\t'
+            let module = matchstr(line,'^\zs\w\+\ze\t')
+            let line = substitute(line,'^\w\+\t','','')
+            let file = substitute(line,'\(^\S\+\)\(.*$\)','\=submatch(1)','')
+            if filereadable(tags_dir.'/'.file)
+                let vfile = tags_dir.'/'.file
+                let vfile = expand(vfile)
+                let vfile = fnamemodify(vfile,':p')
+                let dir = fnamemodify(vfile,':p:h')
+                let file = fnamemodify(vfile,':p:t')
+                call extend(files,{file : dir})
+                call extend(modules,{module : file})
+            else
+                echohl ErrorMsg | echo "No file ".file." exist!"| echohl None
             endif
-        endfor
-    endif
-    return a:files
-
+        endif
+    endfor
+    return [files,modules]
 endfunction
-"}}}4
-
 "}}}3
 
 "GetModuleFileDict 获取模块名和文件名关系{{{3
@@ -6585,6 +6630,7 @@ function s:GetModuleFileDict(files)
 endfunction
 "}}}3
 
+"Others
 "SkipCommentLine 跳过注释行{{{3
 "--------------------------------------------------
 " Function: SkipCommentLine
