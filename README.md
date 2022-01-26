@@ -32,7 +32,17 @@ Plugin 'HonkW93/automatic-verilog'
 
  ## 2. 特性
 
-### 2.1 自动化
+### 2.1 时序图
+
+- 支持时序图绘制（`TimeWave`）
+
+### 2.2 代码段
+
+- 支持快速插入代码段（`Snippet`）
+- 支持自动生成标准文件头（`Header`）
+- 支持快速注释（`Comment`）
+
+### 2.3 自动化
 
 - 自动例化（`AutoInst`）
 - 自动参数（`AutoPara`）
@@ -41,7 +51,7 @@ Plugin 'HonkW93/automatic-verilog'
 - 自动定义（`AutoDef`） 
 - 自动声明（`AutoArg`）
 
-### 2.2 Rtl 树
+### 2.4 Rtl 树
 
 - 通过`RtlTree`浏览`Rtl`结构
 
