@@ -1,6 +1,184 @@
 # 使用手册
 
-包含部分功能的操作步骤和一些特性。使用前请按照快速上手的安装步骤保证脚本正确安装。
+使用手册包含操作步骤和一些特性。使用前请按照快速上手的安装步骤保证脚本正确安装。
+
+## 时序图-TimeWave
+
+---
+
+> 绘制简单的时序图
+
+![TimeWaveDemo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/timewave-demo.gif)
+
+### 操作步骤
+
+> 关于`Leader`请参考[Leaders / Learn Vimscript the Hard Way (stevelosh.com)](https://learnvimscriptthehardway.stevelosh.com/chapters/06.html)或[Vim快捷键和前缀键Leader-Vim入门教程(29) | vim教程网 (vimjc.com)](https://vimjc.com/vim-leader.html)
+>
+> `vim`默认`Leader`为`\`。所以默认不配置，绘制时钟`clk`的快捷键即为`\clk`。
+>
+> 作者习惯的`Leader`为`;`。所以作者绘制时钟`clk`的快捷键是`;clk`
+
+1. 绘制时序图
+
+   - 绘制时钟`clk`：使用快捷键生成时钟信号。默认快捷键为`<Leader>clk`。
+   
+   - 绘制单线`sig`：使用快捷键生成单线信号。默认快捷键为`<Leader>sig`。
+   
+   - 绘制总线`bus`：使用快捷键生成总线信号。默认快捷键为`<Leader>bus`。
+
+   - 绘制间隔`blk`：使用快捷键生成空间隔行。默认快捷键为`<Leader>blk`。
+
+   - 绘制翻转`neg`：使用快捷键生成翻转标记。默认快捷键为`<Leader>neg`。
+
+   - 翻转信号`inv`：按时钟沿翻转当前的`sig`/`bus`信号。默认快捷键为`<Leader>inv`。翻转，即是根据现在信号`sig`的状态创造一个新的`0/1`状态（可以理解为上升沿触发，或者下降沿触发）。总线`bus`的翻转同理。
+
+2. 属性配置
+
+   可配置属性如下：
+
+   - `g:atv_timewave_sig_offset`：信号的偏移量，默认为13。
+   - `g:atv_timewave_clk_period`：时钟周期宽度，默认为8。
+   - `g:atv_timewave_clk_num`：时钟个数，默认为16。
+   - `g：atv_timewave_cq_trans`：信号第一个上升沿（或下降沿，根据末端是否有`neg`标志决定）距离时钟的距离，即信号**延迟**，默认为1。
+
+   可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（以`clk_num`为例）
+
+   ```javascript
+   let g:atv_timewave_clk_num = 32
+   ```
+
+   ![TimeWaveConfig](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/timewave_config.png)
+
+3. 快捷键重设
+
+   如果希望自行设定快捷键，可配置快捷键如下：
+
+   - `<Plug>Atv_Timewave_AddClk;`：绘制时钟`clk`
+   - `<Plug>Atv_Timewave_AddSig;`：绘制单线`sig`
+   - `<Plug>Atv_Timewave_AddBus;`：绘制总线`bus`
+   - `<Plug>Atv_Timewave_AddBlk;`：绘制间隔`blk`
+   - `<Plug>Atv_Timewave_AddNeg;`：绘制翻转`neg`
+   - `<Plug>Atv_Timewave_Invert;`：翻转信号`inv`
+
+   可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（以绘制时钟`clk`为例，配置快捷键为`;clock`）
+
+   ```javascript
+   map ;clock <Plug>Atv_Timewave_AddClk;
+   ```
+
+## 代码段-Snippet
+
+---
+
+> ⚠️注意：旧版代码中代码段功能的配置项与新版不同（不兼容），请升版至新版后根据下述配置项重新进行配置。
+>
+> 快速生成代码段
+
+1. 自动生成文件头
+
+   ![HeaderDemo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/header_demo.gif)
+
+   1. 使用快捷键快速生成文件头。默认快捷键为`<Leader>hd`。生成的文件头包含如下内容：
+
+      - 文件头标记`+FHDR`以及`-FHDR`，用于标记文件头起始，请勿删除
+
+      - 文件名`Project Name`，配置参数为`g:atv_snippet_project`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（以`project`为例，假设项目名为`FPGA_Design`）。
+
+        ```javascript
+        let g:atv_snippet_project = 'FPGA_Design'
+        ```
+
+      - 公司名`Company Name`，配置参数为`g:atv_snippet_company`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
+
+      - 器件名`Device Name`，配置参数为`g:atv_snippet_device`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
+
+      - 作者名`Author Name`，配置参数为`g:atv_snippet_author`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
+
+      - 电邮名`Email Name`，配置参数为`g:atv_snippet_email`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
+
+      - 网站名`Website Name`，配置参数为`g:atv_snippet_website`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
+
+      - 生成时间`Created On`，根据当前时间自动生成，必生成项。
+
+      - 修改时间`Last Modified`，根据每一次更改自动更新，必生成项，且在修改文件时自动更新
+
+      - 文件名`File Name`，根据当前文件名自动生成。必生成项。
+
+      - 公司名`Company Name`，配置参数为`g:atv_snippet_company`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。此项会生成公司版权声明。配置方法同上。
+
+      - 修改历史`History`，自动生成初版的历史声明。
+
+   2. 快捷键
+
+      默认快捷键为`<Leader>hd`。如果希望自行设定快捷键，可配置快捷键如下：
+
+      - `<Plug>Atv_Timewave_AddClk;`
+
+      可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（配置快捷键为`;header`）
+
+      ```javascript
+      map ;header <Plug>Atv_Snippet_AddHeader;
+      ```
+
+2. 自动快速注释
+
+   ![CommentDemo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/cmt_demo.gif)
+
+   1. 快速注释分为三种，均可实现注释/取消注释的切换：
+
+      - 当行修改为注释
+
+        使用快捷键快速注释或取消注释当前行。
+
+      - 选中行改为注释
+
+        使用快捷键快速注释或取消注释`visual`模式下的选中行。
+
+      - 行末尾添加注释
+
+        使用快捷键快速在尾部添加注释。
+
+   2. 快捷键
+
+      - 当行修改为注释
+
+        默认快捷键为`<Leader>//`。如果希望自行设定快捷键，可配置快捷键如下：
+
+        - `<Plug>Atv_Snippet_AutoComment;`
+
+        可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（配置快捷键为`;cmt`）
+
+        ```javascript
+        nmap ;cmt <Plug>Atv_Snippet_AutoComment;
+        ```
+
+      - 选中行改为注释
+
+        默认快捷键为`<Leader>//`（与上一项相同，因为模式不同）。如果希望自行设定快捷键，可配置快捷键如下：
+
+        - `<Plug>Atv_Snippet_AutoComment2;`
+
+        可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（配置快捷键为`;cmt`）
+
+        ```javascript
+        vmap ;cmt <Plug>Atv_Snippet_AutoComment2;
+        ```
+
+      - 行末尾添加注释
+
+        默认快捷键为`<Leader>/e`。如果希望自行设定快捷键，可配置快捷键如下：
+
+        - `<Plug>Atv_Snippet_AddCurLineComment;`
+
+        配置方法同当行修改为注释。
+
+   3. 添加项
+
+      快速注释会添加作者名，采用的配置参数为`g:atv_snippet_author`。配置方法见生成文件头部分的说明。
+
+3. 自动生成快捷代码段
+
+   内容待添加。
 
 ## 自动例化-AutoInst
 
@@ -59,7 +237,7 @@
 
 3. 快捷键
 
-   - 默认键盘快捷键为`<S-F3>`，可在脚本`automatic.vim`中如下位置`配置`快捷键
+   - 默认键盘快捷键为`<S-F3>`（`Shift+F3`），可在脚本`automatic.vim`中如下位置`配置`快捷键
 
    ```javascript
    if !hasmapto(':call AutoInst(0)<ESC>')
@@ -152,9 +330,9 @@
 
 3. 快捷键
 
-   - `AutoPara`默认键盘快捷键为`<S-F4>`，可在脚本`automatic.vim`中如下位置`配置`快捷键
+   - `AutoPara`默认键盘快捷键为`<S-F4>`（`Shift+F4`），可在脚本`automatic.vim`中如下位置`配置`快捷键
 
-   - `AutoParaValue`默认键盘快捷键为`<S-F5>`，可在脚本`automatic.vim`中如下位置`配置`快捷键
+   - `AutoParaValue`默认键盘快捷键为`<S-F5>`（`Shift+F5`），可在脚本`automatic.vim`中如下位置`配置`快捷键
 
      ```javascript
      if !hasmapto(':call AutoPara(0)<ESC>')
@@ -238,6 +416,8 @@
 
    支持特殊的`parameter`连续多个的写法，例如`parameter A = 1, B = 5, C = 6`。
 
+
+
 ## 自动寄存器-AutoReg
 
 ---
@@ -279,7 +459,7 @@
 
 3. 快捷键
 
-   - 默认键盘快捷键为`<S-F6>`，可在脚本`automatic.vim`中如下位置`配置`快捷键
+   - 默认键盘快捷键为`<S-F6>`（`Shift+F6`），可在脚本`automatic.vim`中如下位置`配置`快捷键
 
      ```javascript
      if !hasmapto(':call AutoReg()<ESC>')
@@ -359,6 +539,7 @@
    ```
 
 
+
 ## 自动线网-AutoWire
 
 ---
@@ -380,7 +561,7 @@
 
 3. 快捷键
 
-   - 默认键盘快捷键为`<S-F7>`，可在脚本`automatic.vim`中如下位置`配置`快捷键
+   - 默认键盘快捷键为`<S-F7>`（`Shift+F7`），可在脚本`automatic.vim`中如下位置`配置`快捷键
 
      ```javascript
      if !hasmapto(':call AutoWire()<ESC>')
@@ -459,6 +640,7 @@
    ```
 
 
+
 ## 自动定义-AutoDef
 
 ---
@@ -471,7 +653,7 @@
 
 ### 操作步骤
 
-1. 写标志为`/*autodef*/`。快捷键配置位置为
+1. 写标志为`/*autodef*/`。默认键盘快捷键为`<S-F8>`（`Shift+F8`）。快捷键配置位置为
 
    ```javascript
    if !hasmapto(':call AutoDef()<ESC>')
@@ -506,6 +688,7 @@
    ```
 
    ![atd_move](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/atd_move.gif)
+
 
 
 ## 自动声明-AutoArg
@@ -575,7 +758,7 @@
 
 3. 快捷键
 
-   - 默认键盘快捷键为`<S-F2>`，可在脚本`automatic.vim`中如下位置`配置`快捷键
+   - 默认键盘快捷键为`<S-F2>`（`Shift+F2`），可在脚本`automatic.vim`中如下位置`配置`快捷键
 
      ```javascript
      if !hasmapto(':call AutoArg()<ESC>')
@@ -635,6 +818,7 @@
    ![io_clasf](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/io_clasf.gif)
 
 
+
 ## 树状拓扑-RtlTree
 
 ---
@@ -642,6 +826,8 @@
 > 通过Rtl树观察代码结构
 >
 > 此功能完全参考zhangguo的脚本[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)，只进行`tags`生成的`vimscript`集成以及文件名跨文件夹的重构。同时，此功能开启后由于自动生成`tags`，因此可以通过`<C-]>`进行模块的快速跳转。
+>
+> ⚠️注意：此功能纯移植，可能存在`BUG`，以后有时间考虑重构，但不是现在
 
 ![callout_rtl](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/callout_rtl.gif)
 
@@ -669,7 +855,8 @@
 
      ![fastkey](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/fastkey.gif)
 
-   
+
+
 
 ## 跨文件夹-CrossDir
 
@@ -708,6 +895,7 @@
    如果不配置跨文件夹的选项，默认会以打开`vim`的位置作为搜索顶层往下递归搜索相关`.v`或`.sv`文件。
 
    注意不要在`桌面`或者`盘符根目录`等位置打开文件并使用脚本，否则搜索可能会卡死。（暂时不考虑修复为自动切换地址到文件位置，因为与`RtlTree`部分功能冲突）
+
 
 
 ## 位置对齐-Align

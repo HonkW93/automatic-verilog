@@ -19,8 +19,8 @@
 - [x] 支持`/*autoinstparam*/`下方端口重刷（参考`emacs verilog-mode`）
 - [x] 支持修改端口后不重刷
 - [x] 支持配置为`.A(A)`或者`.A(5)`的写法(`/*autoinstparam*/`及`/*autoinstparam_value*/`，参考`emacs verilog-mode`）
-- [ ] 支持新增端口自动添加`//PARA_NEW`（参考原脚本）
-- [ ] 支持删除端口自动添加`//PARA_DEL`（参考原脚本）
+- [x] 支持新增端口自动添加`//PARA_NEW`（参考原脚本）
+- [x] 支持删除端口自动添加`//PARA_DEL`（参考原脚本）
 - [x] 支持例化注释，`` `ifdef``及`` `endif``
 - [x] 支持`parameter`连续多个的写法，例如`parameter A = 1, B = 5, C = 6`
 - [ ] ...
@@ -60,13 +60,13 @@
 
 ## 优化
 
-- [ ] 脚本文件按功能分离
-- [ ] 配置方式优化（参考[vim-syntastic](https://github.com/vim-syntastic/syntastic)）
+- [x] 脚本文件按功能分离
+- [x] 配置方式优化（参考[vim-syntastic](https://github.com/vim-syntastic/syntastic)）
 - [ ] 减少全局函数使用（参考`help`，使用`command`/`hasmapto`/`<Plugin>`/`<SID>`等方法映射函数，尽量避免全局函数）
-- [ ] 代码生成插件`snippet.vim`独立后集成[load_template](https://github.com/vim-scripts/load_template)
+- [x] 代码生成插件`snippet.vim`独立后集成[load_template](https://github.com/vim-scripts/load_template)
 - [ ] `vim`文档添加`vim-doc`
 - [ ] `docsify`文档添加英文支持
-- [ ] 基于[Learn Vimscript the Hard Way](https://learnvimscriptthehardway.stevelosh.com/)的部分优化
+- [x] 基于[Learn Vimscript the Hard Way](https://learnvimscriptthehardway.stevelosh.com/)的部分优化
 - [ ] ...
 
 ## 修复
