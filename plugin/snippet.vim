@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/01/07 01:09
+" Last Modified:  2022/01/27 23:13
 " File:           snippet.vim
 " Note:           Snippet function partly from zhangguo's vimscript,partly from load_template
 "------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ function s:AddHeader() "{{{1
     if line =~ '// +FHDR'               "Do not add header if existed
         return
     endif
-    let filename = expand("%")
+    let filename = expand("%:t")
     let timelen = strlen(strftime("%Y/%m/%d"))
     let authorlen = strlen(g:atv_snippet_author)
     let lnum = 0
