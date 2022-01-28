@@ -36,10 +36,10 @@
 
    可配置属性如下：
 
-   - `g:atv_timewave_sig_offset`：信号的偏移量，默认为13。
-   - `g:atv_timewave_clk_period`：时钟周期宽度，默认为8。
-   - `g:atv_timewave_clk_num`：时钟个数，默认为16。
-   - `g：atv_timewave_cq_trans`：信号第一个上升沿（或下降沿，根据末端是否有`neg`标志决定）距离时钟的距离，即信号**延迟**，默认为1。
+   - `g:atv_timewave_sig_offset`：信号的偏移量，默认为`13`。
+   - `g:atv_timewave_clk_period`：时钟周期宽度，默认为`8`。
+   - `g:atv_timewave_clk_num`：时钟个数，默认为`16`。
+   - `g：atv_timewave_cq_trans`：信号第一个上升沿（或下降沿，根据末端是否有`neg`标志决定）距离时钟的距离，即信号**延迟**，默认为`1`。
 
    可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（以`clk_num`为例）
 
@@ -74,111 +74,182 @@
 >
 > 快速生成代码段
 
-1. 自动生成文件头
+### 生成文件头
 
-   ![HeaderDemo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/header_demo.gif)
+![HeaderDemo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/header_demo.gif)
 
-   1. 使用快捷键快速生成文件头。默认快捷键为`<Leader>hd`。生成的文件头包含如下内容：
+1. 使用快捷键快速生成文件头。默认快捷键为`<Leader>hd`。生成的文件头包含如下内容：
 
-      - 文件头标记`+FHDR`以及`-FHDR`，用于标记文件头起始，请勿删除
+   - 文件头标记`+FHDR`以及`-FHDR`，用于标记文件头起始，请勿删除
 
-      - 文件名`Project Name`，配置参数为`g:atv_snippet_project`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（以`project`为例，假设项目名为`FPGA_Design`）。
+   - 文件名`Project Name`，配置参数为`g:atv_snippet_project`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（以`project`为例，假设项目名为`FPGA_Design`）。
 
-        ```javascript
-        let g:atv_snippet_project = 'FPGA_Design'
-        ```
+     ```javascript
+     let g:atv_snippet_project = 'FPGA_Design'
+     ```
 
-      - 公司名`Company Name`，配置参数为`g:atv_snippet_company`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
+   - 公司名`Company Name`，配置参数为`g:atv_snippet_company`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
 
-      - 器件名`Device Name`，配置参数为`g:atv_snippet_device`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
+   - 器件名`Device Name`，配置参数为`g:atv_snippet_device`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
 
-      - 作者名`Author Name`，配置参数为`g:atv_snippet_author`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
+   - 作者名`Author Name`，配置参数为`g:atv_snippet_author`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
 
-      - 电邮名`Email Name`，配置参数为`g:atv_snippet_email`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
+   - 电邮名`Email Name`，配置参数为`g:atv_snippet_email`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
 
-      - 网站名`Website Name`，配置参数为`g:atv_snippet_website`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
+   - 网站名`Website Name`，配置参数为`g:atv_snippet_website`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
 
-      - 生成时间`Created On`，根据当前时间自动生成，必生成项。
+   - 生成时间`Created On`，根据当前时间自动生成，必生成项。
 
-      - 修改时间`Last Modified`，根据每一次更改自动更新，必生成项，且在修改文件时自动更新
+   - 修改时间`Last Modified`，根据每一次更改自动更新，必生成项，且在修改文件时自动更新
 
-      - 文件名`File Name`，根据当前文件名自动生成。必生成项。
+   - 文件名`File Name`，根据当前文件名自动生成。必生成项。
 
-      - 公司名`Company Name`，配置参数为`g:atv_snippet_company`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。此项会生成公司版权声明。配置方法同上。
+   - 公司名`Company Name`，配置参数为`g:atv_snippet_company`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。此项会生成公司版权声明。配置方法同上。
 
-      - 修改历史`History`，自动生成初版的历史声明。
+   - 修改历史`History`，自动生成初版的历史声明。
 
-   2. 快捷键
+2. 快捷键
 
-      默认快捷键为`<Leader>hd`。如果希望自行设定快捷键，可配置快捷键如下：
+   默认快捷键为`<Leader>hd`。如果希望自行设定快捷键，可配置快捷键如下：
 
-      - `<Plug>Atv_Timewave_AddClk;`
+   - `<Plug>Atv_Snippet_AddHeader;`
 
-      可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（配置快捷键为`;header`）
+   可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（配置快捷键为`;header`）
 
-      ```javascript
-      map ;header <Plug>Atv_Snippet_AddHeader;
-      ```
+   ```javascript
+   map ;header <Plug>Atv_Snippet_AddHeader;
+   ```
 
-2. 自动快速注释
+### 快速注释
 
-   ![CommentDemo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/cmt_demo.gif)
+![CommentDemo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/cmt_demo.gif)
 
-   1. 快速注释分为三种，均可实现注释/取消注释的切换：
+1. 快速注释分为三种，均可实现注释/取消注释的切换：
 
-      - 当行修改为注释
+   - 当行修改为注释
 
-        使用快捷键快速注释或取消注释当前行。
+     使用快捷键快速注释或取消注释当前行。
 
-      - 选中行改为注释
+   - 选中行改为注释
 
-        使用快捷键快速注释或取消注释`visual`模式下的选中行。
+     使用快捷键快速注释或取消注释`visual`模式下的选中行。
 
-      - 行末尾添加注释
+   - 行末尾添加注释
 
-        使用快捷键快速在尾部添加注释。
+     使用快捷键快速在尾部添加注释。
 
-   2. 快捷键
+2. 快捷键
 
-      - 当行修改为注释
+   - 当行修改为注释
 
-        默认快捷键为`<Leader>//`。如果希望自行设定快捷键，可配置快捷键如下：
+     默认快捷键为`<Leader>//`。如果希望自行设定快捷键，可配置快捷键如下：
 
-        - `<Plug>Atv_Snippet_AutoComment;`
+     - `<Plug>Atv_Snippet_AutoComment;`
 
-        可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（配置快捷键为`;cmt`）
+     可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（配置快捷键为`;cmt`）
 
-        ```javascript
-        nmap ;cmt <Plug>Atv_Snippet_AutoComment;
-        ```
+     ```javascript
+     nmap ;cmt <Plug>Atv_Snippet_AutoComment;
+     ```
 
-      - 选中行改为注释
+   - 选中行改为注释
 
-        默认快捷键为`<Leader>//`（与上一项相同，因为模式不同）。如果希望自行设定快捷键，可配置快捷键如下：
+     默认快捷键为`<Leader>//`（与上一项相同，因为模式不同）。如果希望自行设定快捷键，可配置快捷键如下：
 
-        - `<Plug>Atv_Snippet_AutoComment2;`
+     - `<Plug>Atv_Snippet_AutoComment2;`
 
-        可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（配置快捷键为`;cmt`）
+     可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（配置快捷键为`;cmt`）
 
-        ```javascript
-        vmap ;cmt <Plug>Atv_Snippet_AutoComment2;
-        ```
+     ```javascript
+     vmap ;cmt <Plug>Atv_Snippet_AutoComment2;
+     ```
 
-      - 行末尾添加注释
+   - 行末尾添加注释
 
-        默认快捷键为`<Leader>/e`。如果希望自行设定快捷键，可配置快捷键如下：
+     默认快捷键为`<Leader>/e`。如果希望自行设定快捷键，可配置快捷键如下：
 
-        - `<Plug>Atv_Snippet_AddCurLineComment;`
+     - `<Plug>Atv_Snippet_AddCurLineComment;`
 
-        配置方法同当行修改为注释。
+     配置方法同当行修改为注释。
 
-   3. 添加项
+3. 添加项
 
-      快速注释会添加作者名，采用的配置参数为`g:atv_snippet_author`。配置方法见生成文件头部分的说明。
+   快速注释会添加作者名，采用的配置参数为`g:atv_snippet_author`。配置方法见生成文件头部分的说明。
 
-3. 自动生成快捷代码段
+### 快捷always
 
-   内容待添加。
+![AlwaysDemo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/always_demo.gif)
+
+操作方法类似自动生成文件头，使用快捷键快速生成`always`块。默认快捷键为`<Leader>al`。同时对于`Gvim`可以使用菜单栏生成的方式。快速生成的`always`块分为以下几种类型：
+
+- `AlBpp`：`always block posedge clock posedge reset`
+
+- `AlBpn`：`always block posedge clock negedge reset`
+
+- `AlB`：`always block *`
+
+- `AlBnn`：`always block negedge clock negedge reset`
+
+- `AlBn`：`always block negedge clock`
+
+- `AlBp`：`always block posedge clock`
+
+1. 快捷键
+
+   默认快捷键只能生成`AlBpp`对应的代码段。如果希望自行设定快捷键，可配置快捷键如下：
+
+   - `<Plug>Atv_Snippet_AlBpp;`：生成`always block posedge clock posedge reset`
+   - `<Plug>Atv_Snippet_AlBpn;`：生成`always block posedge clock negedge reset`
+   - `<Plug>Atv_Snippet_AlB;`：生成`always block *`
+   - `<Plug>Atv_Snippet_AlBnn;`：生成`always block negedge clock negedge reset`
+   - `<Plug>Atv_Snippet_AlBn;`：生成`always block negedge clock`
+   - `<Plug>Atv_Snippet_AlBp;`：生成`always block posedge clock`
+
+   可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（以生成`always block *`为例，配置快捷键为`A*`）生成块中的的文字可配置，可配置项如下：
+
+   ```javascript
+   map A* <Plug>Atv_Snippet_AlB;
+   ```
+
+
+2. 自定义文字
+
+   可配置部分文字如下：
+
+   - 部分`always`块中的`clock`参数，配置参数为`g:atv_snippet_clk`，默认配置为`'clk'`。
+
+     可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（假设配置时钟为`sys_clk`）。
+
+   ```javascript
+   let g:atv_snippet_clk = 'sys_clk'
+   ```
+
+   - 部分`always`块中的`reset`参数，配置参数为`g:atv_snippet_rst`，默认配置为`'rst'`。配置方法同上。
+   - 部分`always`块中的`reset_n`参数，配置参数为`g:atv_snippet_rst_n`，默认配置为`'rst_n'`。配置方法同上。
+
+3. 前缀空格
+
+   可配置生成代码段的前缀空格数，默认为`4`。
+
+   可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（假设配置为不要空格，即空格数为`0`）。
+
+   ```javascript
+   let g:atv_snippet_st_pos = 0
+   ```
+
+![AlwaysConfig](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/always_config.png)
+
+### 加载模板
+
+集成`load_template`插件。请参考[vim-scripts/load_template: Loading templates as html,makefile,class ... and you can make template yourself! (github.com)](https://github.com/vim-scripts/load_template)
+
+### 新文件自动载入
+
+新建`.v`文件时会自动载入预设模板（`AutoTemplate`），如不需要此功能请在`.vimrc(or _vimrc)`中关闭如下配置：
+
+```javascript
+let g:att_en = 0
+```
 
 ## 自动例化-AutoInst
 
