@@ -935,7 +935,9 @@ let g:att_en = 0
 
 > 使用`AutoInst`、`AutoPara`、`AutoParaValue`、`AutoWire`、`AutoDef`、`RtlTree`等功能时，可能例化的模块不在当前文件夹下，而在上一层或下一层文件夹的某个位置，此时需要进行配置
 
-1. 跨文件夹设置
+跨文件夹可以通过三种方式进行设置：`verilog-library`(默认，仿`verilog-mode`)、`filelist`、`tags`。
+
+1. `verilog-library`设置（默认）
 
    在代码中添加如下格式的内容`声明`文件夹即可保证代码文件被搜索到：
 
@@ -958,16 +960,56 @@ let g:att_en = 0
      > ⚠️注意
      >
      > 如果使用递归搜索，请勿采用重叠的文件夹，否则递归会报错；例如上述例子中，`"."` 当前文件夹递归搜索包含`"./aaa/bbb/ccc"`子文件夹，若此时使用递归搜索则重复调用时会报错。
-
+   >
+     > 如果不配置跨文件夹的选项，默认会以打开`vim`的位置作为搜索顶层往下**递归**搜索相关`.v`或`.sv`文件。
+     >
+     > 注意不要在`桌面`或者`盘符根目录`等位置打开文件并使用脚本，否则搜索可能会卡死。（暂时不考虑修复为自动切换地址到文件位置，因为与`RtlTree`部分功能冲突）
+   
      ![CrossDir](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/cross_dir.gif)
 
-2. 默认位置
+   同时，参考[Verilog-Mode:verilog-library-extensions](https://veripool.org/verilog-mode/help/#verilog-library-extensions)可以设置其他选项：
 
-   如果不配置跨文件夹的选项，默认会以打开`vim`的位置作为搜索顶层往下递归搜索相关`.v`或`.sv`文件。
+   > -f filename     																						 	 在指定位置读文件，采用相对或绝对路径均可。
+   > ~~-F filename     Reads relative verilog-library-flags from the filename.~~		 取消，均使用`-f`
+   > +incdir+dir     Adds the directory to verilog-library-directories.					添加搜索文件夹
+   > -Idir           Adds the directory to verilog-library-directories.                         添加搜索文件夹
+   > -y dir          Adds the directory to verilog-library-directories.                        添加搜索文件夹
+   > +libext+.v      Adds the extensions to verilog-library-extensions.                 添加扩展名(例如`'.vo'`)
+   > -v filename     Adds the filename to verilog-library-files.                              添加指定文件(例如`'test.v'`)
+   >
+   > filename        Adds the filename to verilog-library-files.
+   >                 This is not recommended, -v is a better choice.
 
-   注意不要在`桌面`或者`盘符根目录`等位置打开文件并使用脚本，否则搜索可能会卡死。（暂时不考虑修复为自动切换地址到文件位置，因为与`RtlTree`部分功能冲突）
+   ```verilog
+   -f filename     Reads absolute verilog-library-flags from the filename.
+   +incdir+dir     Adds the directory to verilog-library-directories.
+   -Idir           Adds the directory to verilog-library-directories.
+   -y dir          Adds the directory to verilog-library-directories.
+   +libext+.v      Adds the extensions to verilog-library-extensions.
+   -v filename     Adds the filename to verilog-library-files.
+   filename        Adds the filename to verilog-library-files.
+                   This is not recommended, -v is a better choice.
+   ```
+
+   举例，使用`-y`、`+incdir+`设置搜索路径，使用`-f`设置搜索文件，使用`+libext+`设置扩展名
+
+   ```verilog
+   // Local Variables:
+   // verilog-library-flags:("-y dir -y otherdir")
+   // verilog-library-flags:("+incdir+dir")
+   // verilog-library-flags:("-f test.v")
+   // verilog-library-flags:(" +libext+.vo")
+   // End:
+   ```
 
 
+2. `filelist`设置
+
+   内容待添加。
+
+3. `tags`设置
+
+   内容待添加。
 
 ## 位置对齐-Align
 
