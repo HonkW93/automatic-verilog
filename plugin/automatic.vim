@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/01/26 22:42
+" Last Modified:  2022/02/15 23:29
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -21,6 +21,7 @@
 " 2021/8/1      HonkW           1.1.6                   Add modified verision of RtlTree
 " 2021/9/14     HonkW           1.2.4                   Prototype of AutoDef
 " 2021/11/20    HonkW           1.2.5                   Prototype of AutoArg
+" 2022/2/15     HonkW           1.2.6                   Prototype of filelist & tags support
 " For vim version 7.x or above
 "-----------------------------------------------------------------------------
 
@@ -114,6 +115,7 @@ let s:ati_incl_ifdef = get(g:,'ati_incl_ifdef',1)           "include ifdef like 
 let s:ati_95_support = get(g:,'ati_95_support',0)           "Support Verilog-1995
 let s:ati_tail_not_align = get(g:,'ati_tail_not_align',0)   "don't do alignment in tail when autoinst
 let s:ati_add_dir = get(g:,'ati_add_dir',0)                 "add //Instance ...directory...
+let s:ati_io_dir_name = get(g:,'ati_io_dir_name','input output inout') "default io_dir name, can be changed to 'I O IO'
 "}}}2
 
 "AutoPara 自动参数配置{{{2
@@ -1406,7 +1408,7 @@ function s:GetIO(lines,mode)
             "}}}5
             
             " input/output ports{{{5
-            elseif line =~ '^\s*'. s:VlogTypePorts || line =~ '^(\s*'.s:VlogTypePorts
+            elseif line =~ '^\s*'. s:VlogTypePorts || line =~ '^\s*(\s*'.s:VlogTypePorts || line =~ '^\s*,\s*'.s:VlogTypePorts
                 let wait_port = 0
                 "delete abnormal
                 if line =~ '\<signed\>\|\<unsigned\>'
@@ -2046,6 +2048,14 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             endif
             "io_dir
             let io_dir = value[2]
+            let io_dir_name_list = split(s:ati_io_dir_name)
+            if io_dir == 'input'
+                let io_dir = io_dir_name_list[0]
+            elseif io_dir == 'output'
+                let io_dir = io_dir_name_list[1]
+            elseif io_dir == 'inout'
+                let io_dir = io_dir_name_list[2]
+            endif
 
             "Draw IO by config
             "empty list, default
