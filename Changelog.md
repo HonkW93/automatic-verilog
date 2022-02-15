@@ -1,6 +1,21 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.6] - 2022-02-15
+
+### Fixed
+
+- A few bugs fixed
+
+  一些小`bug`修复，具体参考`commit`的内容
+
+### Added
+
+- Add `filelist`&`tags` for cross directory
+
+  新增跨文件夹支持`filelist`及`tags`载入，包括多种可配置模式
+
+
 ## [1.2.5.1] - 2021-12-2
 
 ### Changed
