@@ -11,7 +11,7 @@
 - [x] 支持例化注释，`` `ifdef``及`` `endif``
 - [x] 支持`verilog-1995`写法
 - [x] 支持添加例化模块全局地址`//Instance ...directory...`
-- [ ] 支持自定义配置添加的内容（`input/output -> I/O`）
+- [x] 支持自定义配置添加的内容（`input/output -> I/O`）
 - [ ] ...
 
 ### 自动参数-AutoPara
@@ -48,8 +48,8 @@
 ### 跨文件夹-CrossDir
 
 - [x] 支持跨文件夹搜索.v文件进行例化，支持文件夹递归（参考`emacs verilog-mode`）
-- [ ] 支持载入`filelist`跨文件夹（参考`emacs verilog-mode`，新增`browse`模式添加）![](data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iOTAiIGhlaWdodD0iMjAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgcHJlc2VydmVBc3BlY3RSYXRpbz0ieE1pZFlNaWQiPgogIDxsaW5lYXJHcmFkaWVudCBpZD0iYSIgeDI9IjAiIHkyPSIxMDAlIj4KICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2JiYiIgc3RvcC1vcGFjaXR5PSIuMSIvPgogICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLW9wYWNpdHk9Ii4xIi8+CiAgPC9saW5lYXJHcmFkaWVudD4KCiAgPHJlY3Qgcng9IjQiIHg9IjAiIHdpZHRoPSI5MCIgaGVpZ2h0PSIyMCIgZmlsbD0iIzQyOGJjYSIvPgogIDxyZWN0IHJ4PSI0IiB4PSIwIiB3aWR0aD0iOTAiIGhlaWdodD0iMjAiIGZpbGw9IiM1NTUiIC8+CiAgPHJlY3Qgcng9IjQiIHg9IjAiIHdpZHRoPSIyNy4wIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZjBhZDRlIiAvPgogIAogIDxyZWN0IHJ4PSI0IiB3aWR0aD0iOTAiIGhlaWdodD0iMjAiIGZpbGw9InVybCgjYSkiIC8+CgogIAoKICA8ZyBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iRGVqYVZ1IFNhbnMsVmVyZGFuYSxHZW5ldmEsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSI+CiAgICA8dGV4dCB4PSI0NS4wIiB5PSIxNSIgZmlsbD0iIzAxMDEwMSIgZmlsbC1vcGFjaXR5PSIuMyI+CiAgICAgIDMwJQogICAgPC90ZXh0PgogICAgPHRleHQgeD0iNDUuMCIgeT0iMTQiPgogICAgICAzMCUKICAgIDwvdGV4dD4KICA8L2c+Cjwvc3ZnPg==)
-- [ ] 支持载入`tags`跨文件夹![](data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iOTAiIGhlaWdodD0iMjAiIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgcHJlc2VydmVBc3BlY3RSYXRpbz0ieE1pZFlNaWQiPgogIDxsaW5lYXJHcmFkaWVudCBpZD0iYSIgeDI9IjAiIHkyPSIxMDAlIj4KICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2JiYiIgc3RvcC1vcGFjaXR5PSIuMSIvPgogICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLW9wYWNpdHk9Ii4xIi8+CiAgPC9saW5lYXJHcmFkaWVudD4KCiAgPHJlY3Qgcng9IjQiIHg9IjAiIHdpZHRoPSI5MCIgaGVpZ2h0PSIyMCIgZmlsbD0iIzQyOGJjYSIvPgogIDxyZWN0IHJ4PSI0IiB4PSIwIiB3aWR0aD0iOTAiIGhlaWdodD0iMjAiIGZpbGw9IiM1NTUiIC8+CiAgPHJlY3Qgcng9IjQiIHg9IjAiIHdpZHRoPSIxOC4wIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZDk1MzRmIiAvPgogIAogIDxyZWN0IHJ4PSI0IiB3aWR0aD0iOTAiIGhlaWdodD0iMjAiIGZpbGw9InVybCgjYSkiIC8+CgogIAoKICA8ZyBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iRGVqYVZ1IFNhbnMsVmVyZGFuYSxHZW5ldmEsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSI+CiAgICA8dGV4dCB4PSI0NS4wIiB5PSIxNSIgZmlsbD0iIzAxMDEwMSIgZmlsbC1vcGFjaXR5PSIuMyI+CiAgICAgIDIwJQogICAgPC90ZXh0PgogICAgPHRleHQgeD0iNDUuMCIgeT0iMTQiPgogICAgICAyMCUKICAgIDwvdGV4dD4KICA8L2c+Cjwvc3ZnPg==)
+- [x] 支持载入`filelist`跨文件夹（参考`emacs verilog-mode`，新增`browse`模式添加）
+- [x] 支持载入`tags`跨文件夹
 
 ### 树状拓扑-RtlTree
 
@@ -62,11 +62,11 @@
 
 - [x] 脚本文件按功能分离
 - [x] 配置方式优化（参考[vim-syntastic](https://github.com/vim-syntastic/syntastic)）
-- [ ] 减少全局函数使用（参考`help`，使用`command`/`hasmapto`/`<Plugin>`/`<SID>`等方法映射函数，尽量避免全局函数）
+- [x] 减少全局函数使用（参考`help`，使用`command`/`hasmapto`/`<Plugin>`/`<SID>`等方法映射函数，尽量避免全局函数）
 - [x] 代码生成插件`snippet.vim`独立后集成[load_template](https://github.com/vim-scripts/load_template)
+- [x] 基于[Learn Vimscript the Hard Way](https://learnvimscriptthehardway.stevelosh.com/)的部分优化
 - [ ] `vim`文档添加`vim-doc`
 - [ ] `docsify`文档添加英文支持
-- [x] 基于[Learn Vimscript the Hard Way](https://learnvimscriptthehardway.stevelosh.com/)的部分优化
 - [ ] ...
 
 ## 修复
