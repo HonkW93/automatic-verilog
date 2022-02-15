@@ -889,46 +889,6 @@ let g:att_en = 0
    ![io_clasf](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/io_clasf.gif)
 
 
-
-## 树状拓扑-RtlTree
-
----
-
-> 通过Rtl树观察代码结构
->
-> 此功能完全参考zhangguo的脚本[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)，只进行`tags`生成的`vimscript`集成以及文件名跨文件夹的重构。同时，此功能开启后由于自动生成`tags`，因此可以通过`<C-]>`进行模块的快速跳转。
->
-> ⚠️注意：此功能纯移植，可能存在`BUG`，以后有时间考虑重构，但不是现在
-
-![callout_rtl](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/callout_rtl.gif)
-
-### 操作步骤
-
-1. 打开`Rtl`
-
-   命令行输入`RtlTree`（或直接使用缩略的`Rtl`）确认即可
-
-   ```javascript
-   :RtlTree
-   ```
-
-2. 跳转
-
-   - 鼠标操作
-
-     单击跳转至例化位置，双击跳转至模块内部
-
-     ![mouse](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/mouse.gif)
-
-   - 键盘操作
-
-     单击`~`，`-`，`+`位置跳转至模块内部，单击同一行其他位置跳转至例化位置
-
-     ![fastkey](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/fastkey.gif)
-
-
-
-
 ## 跨文件夹-CrossDir
 
 ---
@@ -936,6 +896,12 @@ let g:att_en = 0
 > 使用`AutoInst`、`AutoPara`、`AutoParaValue`、`AutoWire`、`AutoDef`、`RtlTree`等功能时，可能例化的模块不在当前文件夹下，而在上一层或下一层文件夹的某个位置，此时需要进行配置
 
 跨文件夹可以通过三种方式进行设置：`verilog-library`(默认，仿`verilog-mode`)、`filelist`、`tags`。
+
+跨文件夹的方式可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（`0:normal 1:filelist 2:tags`，假设配置为`tags`）
+
+```javascript
+let g:atv_cd_mode = 2  "0:normal 1:filelist 2:tags
+```
 
 1. `verilog-library`设置（默认）
 
@@ -960,56 +926,133 @@ let g:att_en = 0
      > ⚠️注意
      >
      > 如果使用递归搜索，请勿采用重叠的文件夹，否则递归会报错；例如上述例子中，`"."` 当前文件夹递归搜索包含`"./aaa/bbb/ccc"`子文件夹，若此时使用递归搜索则重复调用时会报错。
-   >
+     >
+     > 
+     >
      > 如果不配置跨文件夹的选项，默认会以打开`vim`的位置作为搜索顶层往下**递归**搜索相关`.v`或`.sv`文件。
      >
      > 注意不要在`桌面`或者`盘符根目录`等位置打开文件并使用脚本，否则搜索可能会卡死。（暂时不考虑修复为自动切换地址到文件位置，因为与`RtlTree`部分功能冲突）
-   
+
      ![CrossDir](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/cross_dir.gif)
 
    同时，参考[Verilog-Mode:verilog-library-extensions](https://veripool.org/verilog-mode/help/#verilog-library-extensions)可以设置其他选项：
-
-   > -f filename     																						 	 在指定位置读文件，采用相对或绝对路径均可。
+   
+   `verilog-mode`的设置选项：
+   
+   ```
+       -f filename     Reads absolute verilog-library-flags from the filename.
+       -F filename     Reads relative verilog-library-flags from the filename.
+       +incdir+dir     Adds the directory to verilog-library-directories.
+       -Idir           Adds the directory to verilog-library-directories.
+       -y dir          Adds the directory to verilog-library-directories.
+    +libext+.v      Adds the extensions to verilog-library-extensions.
+       -v filename     Adds the filename to verilog-library-files.
+       filename        Adds the filename to verilog-library-files.
+                       This is not recommended, -v is a better choice.
+   ```
+   
+   本插件的实际使用的设置选项：
+   
+   > -f filename     																						 	 在指定位置读`filelist`，采用相对或绝对路径均可。
    > ~~-F filename     Reads relative verilog-library-flags from the filename.~~		 取消，均使用`-f`
-   > +incdir+dir     Adds the directory to verilog-library-directories.					添加搜索文件夹
+   >
+> -t filename     																						 	 新增，在指定位置读`tags`，采用相对或绝对路径均可。
+   >
+> +incdir+dir     Adds the directory to verilog-library-directories.					添加搜索文件夹
+   >
    > -Idir           Adds the directory to verilog-library-directories.                         添加搜索文件夹
+   >
    > -y dir          Adds the directory to verilog-library-directories.                        添加搜索文件夹
+   >
    > +libext+.v      Adds the extensions to verilog-library-extensions.                 添加扩展名(例如`'.vo'`)
+   >
    > -v filename     Adds the filename to verilog-library-files.                              添加指定文件(例如`'test.v'`)
    >
-   > filename        Adds the filename to verilog-library-files.
-   >                 This is not recommended, -v is a better choice.
-
-   ```verilog
-   -f filename     Reads absolute verilog-library-flags from the filename.
-   +incdir+dir     Adds the directory to verilog-library-directories.
-   -Idir           Adds the directory to verilog-library-directories.
-   -y dir          Adds the directory to verilog-library-directories.
-   +libext+.v      Adds the extensions to verilog-library-extensions.
-   -v filename     Adds the filename to verilog-library-files.
-   filename        Adds the filename to verilog-library-files.
-                   This is not recommended, -v is a better choice.
-   ```
-
+   > filename        Adds the filename to verilog-library-files.                               添加指定文件(推荐直接使用 -v )
+   
    举例，使用`-y`、`+incdir+`设置搜索路径，使用`-f`设置搜索文件，使用`+libext+`设置扩展名
-
+   
    ```verilog
    // Local Variables:
    // verilog-library-flags:("-y dir -y otherdir")
    // verilog-library-flags:("+incdir+dir")
-   // verilog-library-flags:("-f test.v")
-   // verilog-library-flags:(" +libext+.vo")
+   // verilog-library-flags:("-v test.v")
+   // verilog-library-flags:("+libext+.vo")
    // End:
    ```
 
 
 2. `filelist`设置
 
-   内容待添加。
+   使用`filelist`进行跨文件夹请先配置`atv_cd_mode = 1`。配置方式见本章节开头内容。
+
+   默认在第一次进行跨文件夹操作时（例如`AutoInst`或`AutoDef`时）载入`filelist`，载入方式分为四种：
+
+   1. 浏览（`browse`）
+
+      如果`g:atv_cd_flist_browse = 1`（默认），那么采取浏览选择的方式载入`filelist`。
+
+      如果配置`g:atv_cd_flist_browse = 0`，那么采取如下三种方式载入`filelist`。
+
+   2. 配置`global`参数`g:atv_cd_flist_file`（`config`）
+
+      可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（假设配置为`./filelist.f`）
+
+      ```javascript
+      let g:atv_cd_flist_file = './filelist.f'
+      ```
+
+   3. 通过`verilog-library`设置（`library`）
+
+      在代码中添加如下格式的内容`声明filelist`位置保证其被搜索到：
+
+      ```verilog
+      // Local Variables:
+      // verilog-library-flags:("-f ./filelist.f")
+      // End:
+      ```
+
+   4. 自动选取当前文件夹下的.f文件（`auto`）
+
+   以上四种方式由上至下保持先后顺序，找到一个即载入，不会通过另外的方式继续搜索`filelist`。
+
+   `filelist`载入后跨文件夹会通过`filelist`文件定义的位置自动进行跨文件夹的相关搜索。
 
 3. `tags`设置
 
-   内容待添加。
+   使用`tags`进行跨文件夹请先配置`atv_cd_mode = 2`。配置方式见本章节开头内容。
+   
+   默认在第一次进行跨文件夹操作时（例如`AutoInst`或`AutoDef`时）载入`tags`，载入方式分为四种：
+   
+   1. 浏览（`browse`）
+   
+      如果`g:atv_cd_tags_browse = 1`（默认），那么采取浏览选择的方式载入`tags`。
+   
+      如果配置`g:atv_cd_tags_browse = 0`，那么采取如下三种方式载入`tags`。
+   
+   2. 配置`global`参数`g:atv_cd_tags_file`（`config`）
+   
+      可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（假设配置为`./tags`）
+   
+      ```javascript
+      let g:atv_cd_tags_file = './tags'
+      ```
+   
+   3. 通过`verilog-library`设置（`library`）
+   
+      在代码中添加如下格式的内容`声明tags`位置保证其被搜索到：
+   
+      ```verilog
+      // Local Variables:
+      // verilog-library-flags:("-t ./tags")
+      // End:
+      ```
+   
+   4. 自动选取当前文件夹下的`tags`文件（`auto`）
+   
+   以上四种方式由上至下保持先后顺序，找到一个即载入，不会通过另外的方式继续搜索`tags`。
+   
+   `tags`载入后跨文件夹会通过`tags`文件定义的位置自动进行跨文件夹的相关搜索。
 
 ## 位置对齐-Align
 
@@ -1091,3 +1134,40 @@ let g:att_en = 0
      
 
 - `AutoReg`、`AutoWire`、`AutoDef`及`AutoArg`的行尾对齐与`AutoInst`以及`AutoPara`类似
+
+## 树状拓扑-RtlTree
+
+---
+
+> 通过Rtl树观察代码结构
+>
+> 此功能完全参考zhangguo的脚本[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)，只进行`tags`生成的`vimscript`集成以及文件名跨文件夹的重构。同时，此功能开启后由于自动生成`tags`，因此可以通过`<C-]>`进行模块的快速跳转。
+>
+> ⚠️注意：此功能纯移植，可能存在`BUG`，以后有时间考虑重构，但不是现在
+
+![callout_rtl](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/callout_rtl.gif)
+
+### 操作步骤
+
+1. 打开`Rtl`
+
+   命令行输入`RtlTree`（或直接使用缩略的`Rtl`）确认即可
+
+   ```javascript
+   :RtlTree
+   ```
+
+2. 跳转
+
+   - 鼠标操作
+
+     单击跳转至例化位置，双击跳转至模块内部
+
+     ![mouse](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/mouse.gif)
+
+   - 键盘操作
+
+     单击`~`，`-`，`+`位置跳转至模块内部，单击同一行其他位置跳转至例化位置
+
+     ![fastkey](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/fastkey.gif)
+
