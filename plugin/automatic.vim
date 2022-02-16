@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/02/15 23:29
+" Last Modified:  2022/02/16 23:46
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -115,6 +115,7 @@ let s:ati_incl_ifdef = get(g:,'ati_incl_ifdef',1)           "include ifdef like 
 let s:ati_95_support = get(g:,'ati_95_support',0)           "Support Verilog-1995
 let s:ati_tail_not_align = get(g:,'ati_tail_not_align',0)   "don't do alignment in tail when autoinst
 let s:ati_add_dir = get(g:,'ati_add_dir',0)                 "add //Instance ...directory...
+let s:ati_add_dir_keep = get(g:,'ati_add_dir_keep',0)       "directory keep original format(ENV VAR like $HOME)
 let s:ati_io_dir_name = get(g:,'ati_io_dir_name','input output inout') "default io_dir name, can be changed to 'I O IO'
 "}}}2
 
@@ -451,6 +452,9 @@ function AutoInst(mode)
                 let dir = files[file]
                 "read file
                 let lines = readfile(dir.'/'.file)
+                if s:ati_add_dir_keep == 1
+                    let dir = s:ati_add_dirs[dir]
+                endif
                 let add_dir = dir.'/'.file
                 "io sequences
                 let io_seqs = s:GetIO(lines,'seq')
@@ -6067,6 +6071,7 @@ function s:GetVerilogLib()
     "dir
     let dirlist = [] 
     let rec = 1
+    let s:ati_add_dirs = {} "s:ati_add_dirs -> {F:/vim -> $VIM}
     "verilog file
     let vlist = [] 
     "extension
@@ -6157,6 +6162,7 @@ function s:GetVerilogLib()
     if dirlist == [] 
         let dirlist = [dir]
     endif
+
     let exp_dirlist = []
     for dir in dirlist
         "expand directories in SYSTEM VARIABLE (e.g. $VIM -> F:/Vim)
@@ -6164,6 +6170,10 @@ function s:GetVerilogLib()
         "expand directories to full path(e.g. ./ -> /usr/share/vim/vim74 )
         let dir = substitute(fnamemodify(dir,':p'),'\/$','','')
         call add(exp_dirlist,dir)
+    endfor
+    "record expand dir dictionary as ati_add_dirs
+    for idx in range(len(dirlist))
+        call extend(s:ati_add_dirs,{exp_dirlist[idx]:dirlist[idx]})
     endfor
     let dirlist = exp_dirlist
     "}}}4
