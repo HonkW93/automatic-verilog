@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/02/16 23:46
+" Last Modified:  2022/02/17 21:42
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -453,7 +453,12 @@ function AutoInst(mode)
                 "read file
                 let lines = readfile(dir.'/'.file)
                 if s:ati_add_dir_keep == 1
-                    let dir = s:ati_add_dirs[dir]
+                    for exp_dir in keys(s:ati_add_dirs)
+                        if dir =~ escape(exp_dir,'\/')
+                            let dir = substitute(dir,escape(exp_dir,'\/'),s:ati_add_dirs[exp_dir],'')
+                            break
+                        endif
+                    endfor
                 endif
                 let add_dir = dir.'/'.file
                 "io sequences
