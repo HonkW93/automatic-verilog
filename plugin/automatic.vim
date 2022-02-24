@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/02/17 21:42
+" Last Modified:  2022/02/24 19:50
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -5823,13 +5823,9 @@ function s:GetAllSig(lines,mode)
     "   list of width_names
     "    0     1            2           3             4            5
     "   [seqs, signal_name, lines,      module_names, conn_widths, resolved]
-    "Get directory list by scaning line
-    let [dirlist,rec,vlist,elist,flist,tlist] = s:GetVerilogLib()
-    "Get file-dir dictionary 
-    let files = s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
+    "Get module-file-dir dictionary
+    let [files,modules] = s:GetModuleFileDirDic()
 
-    "Get module-file dictionary
-    let modules = s:GetModuleFileDict(files)
     "Get iwire
     "remove io, declared register and register from them
     let iwire_width_names = s:GetiWire(a:lines,files,modules,reg_width_names,decl_reg,io_names)
@@ -6652,10 +6648,23 @@ function s:GetModuleFileDict(files)
         "find module in ./hdl/core/ALU.v
         let lines = readfile(dir.'/'.file)  
         let module = ''
+        let module_flag = 0
         for line in lines
             if line =~ '^\s*module\s*\w\+'
                 let module = matchstr(line,'^\s*module\s*\zs\w\+')
                 break
+            elseif line =~ '^\s*module\s*$'
+                let module_flag = 1
+                continue
+            elseif module_flag == 1
+                if line =~ '^\s*$' || line =~ '^\s*\/\/'
+                    continue
+                elseif line =~ '^\s*\w\+'
+                    let module = matchstr(line,'^\s*\zs\w\+') 
+                    break
+                else
+                    break
+                endif
             endif
         endfor
         if module == ''

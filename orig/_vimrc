@@ -96,7 +96,7 @@ Plug 'tpope/vim-commentary'                         "quick comment
 Plug 'tpope/vim-speeddating'                        "consolidate <C-A> and <C-X> for date
 Plug 'tpope/vim-repeat'                             "use . to repeat all tpop plug
 Plug 'easymotion/vim-easymotion'                    "fast move
-Plug 'HonkW93/automatic-verilog', { 'branch': 'dev' }                    "self-made automatic verilog plug
+Plug 'HonkW93/automatic-verilog'                    "self-made automatic verilog plug
 " function
 Plug 'vim-scripts/AutoComplPop'                     "automatic completion
 Plug 'dense-analysis/ale'                           "ALE-Asynchronous Lint Engine for syntax check
