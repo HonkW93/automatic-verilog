@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/02/24 19:50
+" Last Modified:  2022/03/07 00:27
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -5925,7 +5925,6 @@ function s:GetAllSig(lines,mode)
 "                    \" name==" . name . repeat(" ",32-strlen(name)).
 "                    \" dtype==" . type . repeat(" ",8-strlen(type)).
 "                    \" width==" . width . repeat(" ",16-strlen(width)).
-"                    \" resolved==" . resolved . repeat(" ",8-strlen(resolved))
 "    endfor
 "
 "    for name in keys(reg_sigs)
@@ -6151,11 +6150,13 @@ function s:GetVerilogLib()
     endfor
 
     "filter duplicate
-    call uniq(dirlist)
-    call uniq(vlist)
-    call uniq(elist)
-    call uniq(flist)
-    call uniq(tlist)
+    if exists('*uniq')
+        call uniq(dirlist)
+        call uniq(vlist)
+        call uniq(elist)
+        call uniq(flist)
+        call uniq(tlist)
+    endif
 
     "expand directories{{{4
     "default
