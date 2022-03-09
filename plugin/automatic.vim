@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/03/07 00:27
+" Last Modified:  2022/03/09 21:38
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -1125,7 +1125,7 @@ function s:DrawArg(io_seqs)
                 "comma
                 let last_port = value[6]
                 if last_port == 1
-                    let comma = ' '         "space
+                    let comma = ' '      "space
                 else
                     let comma = ','      "comma exists
                 endif
@@ -1195,12 +1195,7 @@ function s:DrawArg(io_seqs)
                 endif
 
                 "comma
-                let last_port = value[6]
-                if last_port == 1
-                    let comma = ' '         "space
-                else
-                    let comma = ','      "comma exists
-                endif
+                let comma = ','      "comma exists
 
                 "get line
                 let line = name.name2comma.comma
