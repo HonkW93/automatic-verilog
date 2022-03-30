@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/03/09 21:38
+" Last Modified:  2022/03/30 21:42
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -1800,7 +1800,7 @@ function s:GetInstModuleName()
             call search('\(\/\/.*\)\@<![^ \/]','bW')
             "parameter exists
             if getline('.')[col('.')-1] == ')'
-                if searchpair('(','',')','bW') > 0
+                if searchpair('(','',')','bW','getline(".")=~"^\\s*\/\/"') > 0
                     let index = line('.')
                     let col = col('.')
                 else
@@ -2681,7 +2681,7 @@ function s:GetParaModuleName()
 
             if wait_semicolon_pair == 1
                 "search for pair ()
-                if searchpair('(','',')') > 0
+                if searchpair('(','',')','','getline(".")=~"^\\s*\/\/"') > 0
                     let index = line('.')
                     let col = col('.')
                 else
@@ -2700,7 +2700,7 @@ function s:GetParaModuleName()
 
                 "find position of module_name
                 call cursor(index,col)
-                call searchpair('(','',')','bW')
+                call searchpair('(','',')','bW','getline(".")=~"^\\s*\/\/"')
                 call search('\w\+','b')
 
                 "get module_name
