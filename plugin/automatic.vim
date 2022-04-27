@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/03/30 21:42
+" Last Modified:  2022/04/27 22:06
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -2181,6 +2181,7 @@ function s:GetPara(lines,mode)
 
     "wait for parameter 
     let wait_module = 1
+    let wait_hash_flag = 1
     let wait_left_braket = 1
     let wait_port_para = 1
     let wait_right_braket = 1
@@ -2214,6 +2215,10 @@ function s:GetPara(lines,mode)
 
         "find #(
         if wait_module == 0 && line =~ '#\s*('
+            let wait_left_braket = 0
+        elseif wait_module == 0 && line =~ '#\s*$'
+            let wait_hash_flag = 0
+        elseif line =~ '^\s*(' && wait_hash_flag==0
             let wait_left_braket = 0
         endif
 
