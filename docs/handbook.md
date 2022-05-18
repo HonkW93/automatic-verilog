@@ -14,27 +14,28 @@
 
 > 关于`Leader`请参考[Leaders / Learn Vimscript the Hard Way (stevelosh.com)](https://learnvimscriptthehardway.stevelosh.com/chapters/06.html)或[Vim快捷键和前缀键Leader-Vim入门教程(29) | vim教程网 (vimjc.com)](https://vimjc.com/vim-leader.html)
 >
-> `vim`默认`Leader`为`\`。所以默认不配置，绘制时钟`clk`的快捷键即为`\clk`。
->
-> 作者习惯的`Leader`为`;`。所以作者绘制时钟`clk`的快捷键是`;clk`
+> `vim`默认`Leader`为`\`。所以默认不配置，绘制时钟`clk`的快捷键即为`\clk`。作者习惯的`Leader`为`;`。所以作者绘制时钟`clk`的快捷键是`;clk`
 
 1. 绘制时序图
 
+   <details>
+   
+   <summary>绘制信号</summary>
+
    - 绘制时钟`clk`：使用快捷键生成时钟信号。默认快捷键为`<Leader>clk`。
-   
    - 绘制单线`sig`：使用快捷键生成单线信号。默认快捷键为`<Leader>sig`。
-   
    - 绘制总线`bus`：使用快捷键生成总线信号。默认快捷键为`<Leader>bus`。
-
    - 绘制间隔`blk`：使用快捷键生成空间隔行。默认快捷键为`<Leader>blk`。
-
    - 绘制翻转`neg`：使用快捷键生成翻转标记。默认快捷键为`<Leader>neg`。
-
    - 翻转信号`inv`：按时钟沿翻转当前的`sig`/`bus`信号。默认快捷键为`<Leader>inv`。翻转，即是根据现在信号`sig`的状态创造一个新的`0/1`状态（可以理解为上升沿触发，或者下降沿触发）。总线`bus`的翻转同理。
+
+   </details>
 
 2. 属性配置
 
-   可配置属性如下：
+   <details>
+   
+   <summary>可配属性</summary>
 
    - `g:atv_timewave_sig_offset`：信号的偏移量，默认为`13`。
    - `g:atv_timewave_clk_period`：时钟周期宽度，默认为`8`。
@@ -49,8 +50,14 @@
 
    ![TimeWaveConfig](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/timewave_config.png)
 
-3. 快捷键重设
+   </details>
 
+3. 快捷键
+
+   <details>
+   
+   <summary>快捷键</summary>
+   
    如果希望自行设定快捷键，可配置快捷键如下：
 
    - `<Plug>Atv_Timewave_AddClk;`：绘制时钟`clk`
@@ -66,22 +73,28 @@
    map ;clock <Plug>Atv_Timewave_AddClk;
    ```
 
+   </details>
+
 ## 代码段-Snippet
 
 ---
 
 > ⚠️注意：旧版代码中代码段功能的配置项与新版不同（不兼容），请升版至新版后根据下述配置项重新进行配置。
 >
-> 快速生成代码段
 
-### 生成文件头
+### 快速生成文件头
 
 ![HeaderDemo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/header_demo.gif)
 
-1. 使用快捷键快速生成文件头。默认快捷键为`<Leader>hd`。生成的文件头包含如下内容：
+1. 文件头内容
+
+   <details>
+   
+   <summary>文件头</summary>
+   
+   文件头可配置内容如下：
 
    - 文件头标记`+FHDR`以及`-FHDR`，用于标记文件头起始，请勿删除
-
    - 文件名`Project Name`，配置参数为`g:atv_snippet_project`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（以`project`为例，假设项目名为`FPGA_Design`）。
 
      ```javascript
@@ -89,27 +102,24 @@
      ```
 
    - 公司名`Company Name`，配置参数为`g:atv_snippet_company`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
-
    - 器件名`Device Name`，配置参数为`g:atv_snippet_device`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
-
    - 作者名`Author Name`，配置参数为`g:atv_snippet_author`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
-
    - 电邮名`Email Name`，配置参数为`g:atv_snippet_email`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
-
    - 网站名`Website Name`，配置参数为`g:atv_snippet_website`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。配置方法同上。
-
    - 生成时间`Created On`，根据当前时间自动生成，必生成项。
-
    - 修改时间`Last Modified`，根据每一次更改自动更新，必生成项，且在修改文件时自动更新
-
    - 文件名`File Name`，根据当前文件名自动生成。必生成项。
-
    - 公司名`Company Name`，配置参数为`g:atv_snippet_company`。假设不需要此选项请配置为`''`，如不配置则自动采用默认配置。此项会生成公司版权声明。配置方法同上。
-
    - 修改历史`History`，自动生成初版的历史声明。
+
+   </details>
 
 2. 快捷键
 
+   <details>
+   
+   <summary>快捷键</summary>
+   
    默认快捷键为`<Leader>hd`。如果希望自行设定快捷键，可配置快捷键如下：
 
    - `<Plug>Atv_Snippet_AddHeader;`
@@ -120,26 +130,33 @@
    map ;header <Plug>Atv_Snippet_AddHeader;
    ```
 
+   </details>
+
 ### 快速注释
 
 ![CommentDemo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/cmt_demo.gif)
 
-1. 快速注释分为三种，均可实现注释/取消注释的切换：
+1. 快速注释分为三种
+
+   <details>
+
+   <summary>快速注释</summary>
 
    - 当行修改为注释
-
      使用快捷键快速注释或取消注释当前行。
-
    - 选中行改为注释
-
      使用快捷键快速注释或取消注释`visual`模式下的选中行。
-
    - 行末尾添加注释
-
      使用快捷键快速在尾部添加注释。
+     
+
+   </details>
 
 2. 快捷键
-
+   <details>
+   
+   <summary>快捷键</summary>
+   
    - 当行修改为注释
 
      默认快捷键为`<Leader>//`。如果希望自行设定快捷键，可配置快捷键如下：
@@ -171,14 +188,21 @@
      - `<Plug>Atv_Snippet_AddCurLineComment;`
 
      配置方法同当行修改为注释。
+   </details>
 
 3. 添加项
 
-   快速注释会添加作者名，采用的配置参数为`g:atv_snippet_author`。配置方法见生成文件头部分的说明。
+   快速注释会添加作者名，采用的配置参数为`g:atv_snippet_author`。配置方法见快速生成文件头部分的说明。
 
-### 快捷always
+### 快速always
 
 ![AlwaysDemo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/always_demo.gif)
+
+> 当前快速always载入的模板暂不支持定制，使用方式也比较固定，后续根据使用人数可能考虑修改为自定义的方式。
+
+   <details>
+
+   <summary>快速always</summary>
 
 操作方法类似自动生成文件头，使用快捷键快速生成`always`块。默认快捷键为`<Leader>al`。同时对于`Gvim`可以使用菜单栏生成的方式。快速生成的`always`块分为以下几种类型：
 
@@ -238,18 +262,24 @@
    ```
 
 ![AlwaysConfig](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/always_config.png)
+     
+   </details>
 
 ### 加载模板
 
-集成`load_template`插件。请参考[vim-scripts/load_template: Loading templates as html,makefile,class ... and you can make template yourself! (github.com)](https://github.com/vim-scripts/load_template)
+集成`load_template`插件。请参考[vim-scripts/load_template](https://github.com/vim-scripts/load_template)
 
-### 新文件自动载入
+### 新文件
 
-新建`.v`文件时会自动载入预设模板（`AutoTemplate`），如不需要此功能请在`.vimrc(or _vimrc)`中关闭如下配置：
+> 当前新文件载入的模板暂不支持定制，后续根据使用人数可能考虑添加。
+
+如需要此功能请在`.vimrc(or _vimrc)`中打开如下配置（默认关闭），新建`.v`文件时自动载入预设模板（`AutoTemplate`）
 
 ```javascript
-let g:att_en = 0
+let g:atv_snippet_att_en = 0
 ```
+
+
 
 ## 自动例化-AutoInst
 
@@ -263,14 +293,16 @@ let g:att_en = 0
 
 1. 写标志`/*autoinst*/`
 
+   <details>
+   
+   <summary>写标志</summary>
+
    将要例化的模块写为如下格式：`module_name inst_name(/*autoinst*/);`
 
    > ⚠️注意
    >
    > - 格式末尾必须要有分号`;`
    > - 注意格式可不在同一行，只要`(/*autoinst*/)`包含在括号内，括号外为`module_name inst_name`即可；支持端口处带`parameter`的写法。
-
-   
 
    **e.g.**
 
@@ -298,80 +330,97 @@ let g:att_en = 0
        /*autoinst*/
    );
    ```
+   
+   </details>
+
 
 2. 自动例化
+   
+   <details>
+   
+   <summary>自动例化</summary>
 
-   - 使用菜单栏点击`AutoInst(0)`或在命令行输入`:call AutoInst(0)`确认，进行`/*autoinst*/`当前模块自动例化，注意例化时光标必须置于`/*autoinst*/`所在行之前的位置（即在当前行或上一行，若在当前行则必须在`/*autoinst*/`所在列之前）；
+   - 使用菜单栏点击`AutoInst(0)`或在命令行输入`:call AutoInst(0)`确认，进行`/*autoinst*/`**当前模块**自动例化，注意例化时光标必须置于`/*autoinst*/`所在行之前的位置（即在当前行或上一行，若在当前行则必须在`/*autoinst*/`所在列之前）；
 
-   - 使用菜单栏点击`AutoInst(1)`或在命令行输入`:call AutoInst(1)`确认，进行`/*autoinst*/`所有模块自动例化；
+   - 使用菜单栏点击`AutoInst(1)`或在命令行输入`:call AutoInst(1)`确认，进行`/*autoinst*/`**所有模块**自动例化；
    - 上述操作也可以使用快捷键完成。
+   
+   </details>
 
 3. 快捷键
 
-   - 默认键盘快捷键为`<S-F3>`（`Shift+F3`），可在脚本`automatic.vim`中如下位置`配置`快捷键
+   <details>
+   
+   <summary>快捷键</summary>
 
-   ```javascript
-   if !hasmapto(':call AutoInst(0)<ESC>')
-       map <S-F3>      :call AutoInst(0)<ESC>
-   endif
-   ```
-
-   - 同时，为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;ati`）
+   - 默认键盘快捷键为`<S-F3>`（`Shift+F3`），为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;ati`）
 
    ```javascript
    map ;ati      :call AutoInst(0)<ESC>
    ```
-
-4. 添加标志
-
-   通过配置脚本参数，可以添加一些`AutoInst`相关的标志：<code>//INST_NEW</code>、<code>//INST_DEL</code>、<code>io_dir</code>、注释<code>//</code>以及宏定义<code>`ifedf</code>
    
-   > - 例化时默认自动在尾部添加`io_dir`，即端口类型`input/output/inout`
-   > - 例化时默认若有端口更新，自动在该端口尾部添加`//INST_NEW`
-   > - 例化时默认若有端口被删除，自动在所有端口例化之后添加`//INST_DEL`
-   > - 例化时修改过端口连线的则保留，否则自动刷新
-   > - 例化时默认添加`//`类型注释
-   > - 例化时默认添加<code>`ifdef</code>类型的宏定义，包括<code>ifdef/elsif/else/endif</code>
-   > - 例化时默认不添加例化模块文件所在位置<code>dir</code>，如打开此配置会在例化模块之前一行添加`//Instance`+`dir`以显示例化模块所在的文件夹地址
+   </details>
+
+4. 配置参数 
    
-   可在脚本`automatic.vim`中如下位置`配置`相关参数选择添加/不添加以上内容
+   <details>
+   
+   <summary>配置参数</summary>
+   
+   通过配置脚本参数，可以
+   
+   1. 配置例化位置
+   2. 添加一些`AutoInst`相关的标志：<code>//INST_NEW</code>、<code>//INST_DEL</code>、<code>io_dir</code>、注释<code>//</code>以及宏定义<code>`ifedf</code>
+   
+   > - 例化时默认的对齐位置，请参考[位置对齐-Align](#位置对齐-Align)
+   > - 例化时默认自动在尾部添加`io_dir`，即端口类型`input/output/inout`（`g:atv_autoinst_io_dir`）
+   > - 例化时默认若有端口更新，自动在该端口尾部添加`//INST_NEW`（`g:atv_autoinst_inst_new`）
+   > - 例化时默认若有端口被删除，自动在所有端口例化之后添加`//INST_DEL`（`g:atv_autoinst_inst_del`）
+   > - 例化时修改过端口连线的则保留，否则自动刷新（`g:atv_autoinst_keep_chg`）
+   > - 例化时默认添加`//`类型注释（`g:atv_autoinst_incl_cmnt`）
+   > - 例化时默认添加<code>`ifdef</code>类型的宏定义，包括<code>ifdef/elsif/else/endif</code>（<code>g:atv_autoinst_incl_ifdef</code>）
+   > - 例化时支持`verilog-95`的写法（`g:atv_autoinst_95_support`）
+   > - 例化时默认不添加例化模块文件所在位置<code>dir</code>，打开此配置会在例化模块之前一行添加`//Instance`+`dir`以显示例化模块所在的文件夹地址（`g:atv_autoinst_add_dir`）
+   > - 例化时若添加了例化模块文件所在位置<code>dir</code>，使用原有的环境变量（如果有，例如`$HOME`）表述而不展开为详细目录（`g:atv_autoinst_add_dir_keep`）
+   
+   可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
    
    ```javascript
-   "AutoInst 自动例化配置{{{2
-   let s:ati_io_dir = get(g:,'ati_io_dir',1)                   "add //input or //output in the end of instance
-   let s:ati_inst_new = get(g:,'ati_inst_new',1)               "add //INST_NEW if port has been newly added to the module
-   let s:ati_inst_del = get(g:,'ati_inst_del',1)               "add //INST_DEL if port has been deleted from the module
-   let s:ati_keep_chg = get(g:,'ati_keep_chg',1)               "keep changed inst io
-   let s:ati_incl_cmnt = get(g:,'ati_incl_cmnt',1)             "include comment line of // (/*...*/ will always be ignored)
-   let s:ati_incl_ifdef = get(g:,'ati_incl_ifdef',1)           "include ifdef like `ifdef `endif
-   let s:ati_95_support = get(g:,'ati_95_support',0)           "Support Verilog-1995
-   let s:ati_tail_not_align = get(g:,'ati_tail_not_align',0)   "don't do alignment in tail when autoinst
-   let s:ati_add_dir = get(g:,'ati_add_dir',0)                 "add //Instance ...directory...
-   "}}}2
-   ```
-   
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（以`io_dir`为例）
-   
-   ```javascript
-   let g:ati_io_dir = 0
+   let g:atv_autoinst_st_pos = 8
+   let g:atv_autoinst_name_pos = 64 
+   let g:atv_autoinst_sym_pos = 128
+   let g:atv_autoinst_io_dir = 1
+   let g:atv_autoinst_io_dir_name = 'I O IO' 
+   let g:atv_autoinst_inst_new = 0
+   let g:atv_autoinst_inst_del = 0
+   let g:atv_autoinst_keep_chg = 1
+   let g:atv_autoinst_incl_cmnt = 0
+   let g:atv_autoinst_incl_ifdef = 0
+   let g:atv_autoinst_95_support = 1
+   let g:atv_autoinst_tail_nalign = 1
+   let g:atv_autoinst_add_dir = 1
+   let g:atv_autoinst_add_dir_keep = 1
    ```
    
    ![ati_mark_demo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/ati_mark_demo.gif)
    
+   </details>
+
 5. 重刷
+
+   <details>
+   
+   <summary>重刷</summary>
 
    - 自动保留`/*autoinst*/`上方的例化端口，只对其余端口进行自动例化。
 
-   - 同时，如果配置`ati_keep_chg=1`，若端口连线更改，则不进行重刷，只进行端口对齐操作。
-
-   > 例化时默认`ati_keep_chg=1`（`let s:ati_keep_chg = get(g:,'ati_keep_chg',1)`），即若更改过端口连线，则不进行重刷
-
-   
-
    ![name&reinst](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/name&reinst.gif)
 
-   ![reinst_with_conn_change](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/reinst_with_conn_change.gif)
+   - 如果配置`g:atv_autoinst_keep_chg=1`（默认为1），若端口连线更改，则不进行重刷，只进行端口对齐操作。
 
+   ![reinst_with_conn_change](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/reinst_with_conn_change.gif)
+   
+   </details>
 
 
 
@@ -394,59 +443,65 @@ let g:att_en = 0
 
 1. 写标志`/*autoinstparam*/`或`/*autoinstparam_value*/`
 
-   整体操作与`AutoInst`一致，参考[AutoInst](#autoinst)
+   整体操作与`AutoInst`一致，参考[AutoInst](#自动例化-AutoInst)
 
 2. 自动例化参数
 
-   整体操作与`AutoInst`一致，参考[AutoInst](#autoinst)
+   整体操作与`AutoInst`一致，参考[AutoInst](#自动例化-AutoInst)
 
 3. 快捷键
 
-   - `AutoPara`默认键盘快捷键为`<S-F4>`（`Shift+F4`），可在脚本`automatic.vim`中如下位置`配置`快捷键
+   <details>
+   
+   <summary>快捷键</summary>
+   
+   - `AutoPara`默认键盘快捷键为`<S-F4>`（`Shift+F4`）
 
-   - `AutoParaValue`默认键盘快捷键为`<S-F5>`（`Shift+F5`），可在脚本`automatic.vim`中如下位置`配置`快捷键
+   - `AutoParaValue`默认键盘快捷键为`<S-F5>`（`Shift+F5`）
 
-     ```javascript
-     if !hasmapto(':call AutoPara(0)<ESC>')
-         map <S-F4>      :call AutoPara(0)<ESC>
-     endif
-     if !hasmapto(':call AutoParaValue(0)<ESC>')
-         map <S-F5>      :call AutoParaValue(0)<ESC>
-     endif
-     ```
-
-   - 同时，为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atp`）
-
+   - 为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atp`和`;atpv`）
+   
      ```javascript
      map ;atp      :call AutoPara(0)<ESC>
+     map ;atpv     :call AutoParaValue(0)<ESC>
      ```
-
-4. 添加标志添加标志
-
-   通过配置脚本参数，可以添加一些`AutoInst`相关的标志：`//PARA_NEW` `//PARA_DEL`，注释`//`以及宏定义<code>ifedf</code>,并支持配置使用`端口`参数例化或使用`所有`参数进行例化。在脚本`automatic.vim`中如下位置`配置`相关参数选择不添加`//PARA_NEW` `//PARA_DEL`，并可通过配置`ONLY_PORT`确定使用哪种参数进行例化。
-
-   > 当前添加注释`//`以及宏定义<code>ifedf</code>在`AutoPara`中只支持使用`端口`参数例化，使用`所有`参数进行例化的会添加无用的注释`//`以及宏定义<code>ifedf</code>，请使用者注意。
-   >
-   > 另外，注释`//`以及宏定义<code>ifedf</code>只针对`AutoPara`，不论如何配置，`AutoParaValue`均不添加注释`//`以及宏定义<code>ifedf</code>
-
    
+   </details>
+
+4. 配置参数
+
+   <details>
+   
+   <summary>配置参数</summary>
+   
+   通过配置脚本参数，可以
+
+   1. 配置例化位置
+   2. 添加一些`AutoPara`相关的标志：`//PARA_NEW` `//PARA_DEL`，注释`//`以及宏定义<code>ifedf</code>等
+   
+> - 例化时默认的对齐位置，请参考[位置对齐-Align](http://localhost:3000/#/handbook?id=位置对齐-align)
+   > - 例化时配置使用`端口`参数例化或使用`所有`参数进行例化。（`g:atv_autopara_only_port`）
+> - 例化时默认若有参数更新，自动在该端口尾部添加`//PARA_NEW`（`g:atv_autopara_para_new`）
+   > - 例化时默认若有参数被删除，自动在所有端口例化之后添加`//PARA_DEL`（`g:atv_autopara_para_del`）
+   > - 例化时修改过参数连线的则保留，否则自动刷新（`g:atv_autopara_keep_chg`）
+   > - 例化时默认添加`//`类型注释（`g:atv_autopara_incl_cmnt`）
+   > - 例化时默认添加``ifdef`类型的宏定义，包括`ifdef/elsif/else/endif`（`g:atv_autopara_incl_ifdef`）
+   >   - 当前添加注释`//`以及宏定义<code>ifedf</code>在`AutoPara`中只支持使用`端口`参数例化，使用`所有`参数进行例化的会添加无用的注释`//`以及宏定义<code>ifedf</code>，请使用者注意。
+   >   - 另外，注释`//`以及宏定义<code>ifedf</code>只针对`AutoPara`，不论如何配置，`AutoParaValue`均不添加注释`//`以及宏定义<code>ifedf</code>
+
+   可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
 
    ```javascript
-   "AutoPara 自动参数配置{{{2
-   let s:atp_only_port = get(g:,'atp_only_port',0)             "add only port parameter definition,ignore parameter = value; definition
-   let s:atp_para_new = get(g:,'atp_para_new',1)               "add //PARA_NEW if parameter has been newly added to the module
-   let s:atp_para_del = get(g:,'atp_para_del',1)               "add //PARA_DEL if parameter has been deleted from the module
-   let s:atp_keep_chg = get(g:,'atp_keep_chg',1)               "keep changed parameter
-   let s:atp_incl_cmnt = get(g:,'atp_incl_cmnt',0)             "include comment line of // (/*...*/ will always be ignored)
-   let s:atp_incl_ifdef = get(g:,'atp_incl_ifdef',0)           "include ifdef like `ifdef `endif
-   let s:atp_tail_not_align = get(g:,'atp_tail_not_align',0)   "don't do alignment in tail when autopara
-   "}}}2
-   ```
-
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（以`only_port`为例）
-
-   ```javascript
-   let g:atp_only_port = 1
+   let g:atv_autopara_st_pos = 4
+let g:atv_autopara_name_pos = 64 
+   let g:atv_autopara_sym_pos = 128
+let g:atv_autopara_only_port = 1
+   let g:atv_autopara_para_new = 0
+   let g:atv_autopara_para_del = 0
+   let g:atv_autopara_keep_chg = 1
+let g:atv_autopara_incl_cmnt = 1
+   let g:atv_autopara_incl_ifdef = 1
+let g:atv_autopara_tail_nalign = 1
    ```
 
    例化`端口`参数（`ONLY_PORT=1`）的例子：
@@ -456,9 +511,9 @@ let g:att_en = 0
    #(
        parameter BMAN=3, 
        parameter AMAN=45   ,
-       parameter WIDTH = 16    , 
+    parameter WIDTH = 16    , 
        parameter TIME_INTERVAL = 4'd11
-   )
+)
    ```
 
    例化`所有`参数（`ONLY_PORT=0`）的例子：
@@ -479,10 +534,11 @@ let g:att_en = 0
        parameter CNT3 = 16'h55  ;
    ```
 
+   </details>
 
 5. 重刷
 
-   与`AutoInst`一致，参考[AutoInst](#autoinst)
+   整体与`AutoInst`一致，参考[AutoInst](#自动例化-AutoInst)
 
 6. 连续声明
 
@@ -502,6 +558,10 @@ let g:att_en = 0
 
 1. 写标志`/*autoreg*/`
 
+   <details>
+   
+   <summary>写标志</summary>
+   
    在一个空白行内写入：`/*autoreg*/`
 
    > ⚠️注意
@@ -523,47 +583,47 @@ let g:att_en = 0
    //multiple spaces
                /*autoreg*/ any_character
    ```
+   
+   </details>
 
 2. 自动生成`reg`
+   
+   <details>
+   
+   <summary>自动生成</summary>
 
    - 使用菜单栏点击`AutoReg()`或在命令行输入`:call AutoReg()`确认，在当前文本`/*autoreg*/`下方自动生成`reg`，例化时光标位置随意，只要保证当前文本含有包含`/*autoreg*/`的行即可；
+
    - 上述操作也可以使用快捷键完成。
+   
+   </details>
+
 
 3. 快捷键
 
-   - 默认键盘快捷键为`<S-F6>`（`Shift+F6`），可在脚本`automatic.vim`中如下位置`配置`快捷键
+   <details>
+   
+   <summary>快捷键</summary>
 
-     ```javascript
-     if !hasmapto(':call AutoReg()<ESC>')
-         map <S-F6>      :call AutoReg()<ESC>
-     endif
-     ```
-
-   - 同时，为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atr`）
-
-     ```javascript
-     map ;atr      :call AutoReg()<ESC>
-     ```
-
-4. 添加标志
-
-   默认添加`//REG_NEW` `//REG_DEL`。与`AutoInst`以及`AutoPara`一致，参考[AutoInst](#autoinst)。可在脚本`automatic.vim`中如下位置`配置`相关参数选择不添加以上内容
+   默认键盘快捷键为`<S-F6>`（`Shift+F6`），为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atr`）
 
    ```javascript
-   "AutoReg 自动寄存器配置{{{2
-   let s:atr_reg_new = get(g:,'atr_reg_new',1)                 "add //REG_NEW if register has been newly added to the module
-   let s:atr_reg_del = get(g:,'atr_reg_del',1)                 "add //REG_DEL if register has been deleted from the module
-   ...
-   "}}}2
+   map ;atr      :call AutoReg()<ESC>
    ```
+   
+   </details>
 
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（以`reg_new`为例）
 
-   ```javascript
-   let g:atr_reg_new = 0
-   ```
+4. 配置参数
+
+   与`AutoDef`统一，参考[AutoDef](#自动定义-AutoDef)
+
 
 5. 重刷
+
+   <details>
+   
+   <summary>重刷</summary>
 
    - 自动保留`/*autoreg*/`范围外的`reg`。即，在`//Start of automatic reg`以及`//End of automatic reg`行之外）不重刷，只对其余端口进行自动生成`reg`。
 
@@ -571,46 +631,7 @@ let g:att_en = 0
 
    ![rereg](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/rereg.gif)
 
-   
-
-6. 无法解析
-
-   如果解析出当前变量为`reg`型，但解析其位宽等信息失败时，可在尾部添加标志位，即`//unresolved`，代表解析变量失败。
-
-   可在脚本`automatic.vim`中如下位置`配置`相关参数选择添加以上内容，默认不添加。
-
-   ```javascript
-   "AutoReg 自动寄存器配置{{{2
-   ...
-   let s:atr_unresolved_flag = get(g:,'atr_unresolved_flag',0) "add //unresolved if reg is unresolved
-   ...
-   "}}}2
-   ```
-
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
-
-   ```javascript
-   let g:atr_unresolved_flag = 1
-   ```
-
-7. 去除`input/output/inout`
-
-   解析为`reg`型变量自动过滤已经在`input/output/inout`端口处声明过的变量（即在端口处声明的变量默认不会自动声明`reg`）。但如果是`verilog-1995`的写法可能存在依旧需要声明的情况，这时可在脚本`automatic.vim`中如下位置`配置`相关参数选择不自动过滤。
-
-   ```javascript
-   "AutoReg 自动寄存器配置{{{2
-   ...
-   let s:atr_remove_io = get(g:,'atr_remove_io',0)             "remove declared io from autoreg
-   "}}}2
-   ```
-
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
-
-   ```javascript
-   let g:atr_remove_io = 1
-   ```
-
-
+   </details>
 
 ## 自动线网-AutoWire
 
@@ -624,93 +645,37 @@ let g:att_en = 0
 
 1. 写标志`/*autowire*/`
 
-   与`AutoReg`一致，参考[AutoReg](#autoreg)
+   与`AutoReg`一致，参考[AutoReg](#自动寄存器-AutoReg)
 
 2. 自动生成`wire`
 
+   <details>
+   
+   <summary>自动生成</summary>
+
    - 使用菜单栏点击`AutoWire()`或在命令行输入`:call AutoWire()`确认，在当前文本`/*autowire*/`下方自动生成`wire`，例化时光标位置随意，只要保证当前文本含有包含`/*autowire*/`的行即可；
+
    - 上述操作也可以使用快捷键完成。
+   
+   </details>
 
 3. 快捷键
 
-   - 默认键盘快捷键为`<S-F7>`（`Shift+F7`），可在脚本`automatic.vim`中如下位置`配置`快捷键
+    <details>
 
-     ```javascript
-     if !hasmapto(':call AutoWire()<ESC>')
-         map <S-F7>      :call AutoWire()<ESC>
-     endif
-     ```
+    <summary>快捷键</summary>
 
-   - 同时，为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atw`）
-
+    默认键盘快捷键为`<S-F7>`（`Shift+F7`），为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atw`）
+   
      ```javascript
      map ;atw      :call AutoWire()<ESC>
      ```
 
+    </details>
 
-4. 添加标志
+4. 配置参数
 
-   默认添加`//WIRE_NEW` `//WIRE_DEL`。与`AutoInst`以及`AutoPara`一致，参考[AutoInst](#autoinst)。可在脚本`automatic.vim`中如下位置`配置`相关参数选择不添加以上内容
-
-   ```javascript
-   "AutoWire 自动线网配置{{{2
-   let s:atw_wire_new = get(g:,'atw_wire_new',1)               "add //WIRE_NEW if wire has been newly added to the module
-   let s:atw_wire_del = get(g:,'atw_wire_del',1)               "add //WIRE_DEL if wire has been deleted from the module
-   ...
-   "}}}2
-   ```
-
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（以`wire_new`为例）
-
-   ```javascript
-   let g:atw_wire_new = 0
-   ```
-
-5. 无法解析
-
-   如果解析出当前变量为`wire`型，但解析其位宽等信息失败，解析信号例化模块失败，获取例化模块相关信号失败等情况时，可在尾部添加标志位，即`//unresolved`，代表解析变量失败。
-
-   可在脚本`automatic.vim`中如下位置`配置`相关参数选择添加以上内容，默认不添加。
-
-   ```javascript
-   "AutoWire 自动线网配置{{{2
-   ...
-   let s:atw_unresolved_flag = get(g:,'atw_unresolved_flag',0) "add //unresolved if wire is unresolved
-   ...
-   "}}}2
-   ```
-
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
-
-   ```javascript
-   let g:atw_unresolved_flag = 1
-   ```
-
-6. 去除`input/output/inout`
-
-   解析为`wire`型变量自动过滤已经在`input/output/inout`端口处声明过的变量（即在端口处声明的变量默认不会自动声明`wire`）。但如果是`verilog-1995`的写法可能存在依旧需要声明的情况，这时可在脚本`automatic.vim`中如下位置`配置`相关参数选择不自动过滤。
-
-   ```javascript
-   "AutoReg 自动寄存器配置{{{2
-   ...
-   let s:atw_remove_io = get(g:,'atw_remove_io',0)             "remove declared io from autoreg
-   "}}}2
-   ```
-
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
-
-   ```javascript
-   let g:atw_remove_io = 1
-   ```
-
-7. 单行例化
-
-   `AutoWire`支持单行例化`wire`的检索，举例：
-
-   ```verilog
-   module_name u_inst_name ( .test( a ), .test1( b ), .test2( c ));
-   ```
-
+   与`AutoDef`统一，参考[AutoDef](#自动定义-AutoDef)
 
 
 ## 自动定义-AutoDef
@@ -719,49 +684,77 @@ let g:att_en = 0
 
 > 自动定义所有信号列表
 >
-> 可参考[AutoReg](#autoreg)与[AutoWire](#autowire)，`AutoDef`功能上等于`AutoReg`+`AutoWire`。
+> 可参考[AutoReg](#自动寄存器-AutoReg)与[AutoWire](#自动线网-AutoWire)，`AutoDef`功能上等于`AutoReg`+`AutoWire`。
 
 ![autodef](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/autodef.gif)
 
 ### 操作步骤
 
-1. 写标志为`/*autodef*/`。默认键盘快捷键为`<S-F8>`（`Shift+F8`）。快捷键配置位置为
-
-   ```javascript
-   if !hasmapto(':call AutoDef()<ESC>')
-       map <S-F8>      :call AutoDef()<ESC>
-   endif
-   ```
-
-   同时，为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atd`）
+1. 写标志为`/*autodef*/`。默认键盘快捷键为`<S-F8>`（`Shift+F8`）。为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atd`）
 
    ```javascript
    map ;atd      :call AutoDef()<ESC>
    ```
+   
+   其余步骤及注意事项参考[AutoReg](#自动寄存器-AutoReg)与[AutoWire](#自动线网-AutoWire)。
 
-   其余步骤及注意事项参考[AutoReg](#autoreg)与[AutoWire](#autowire)。
+2. 配置参数
 
-2. 移动变量
+   <details>
+   
+   <summary>配置参数</summary>
 
-   将`/*autodef*/`范围外的所有已经声明的变量（`reg`或者`wire`）移动到`/*autodef*/`自动定义的变量之后。
-
-   可在脚本`automatic.vim`中如下位置`配置`相关参数选择开启，默认关闭。
-
-   ```javascript
-   "AutoDef 自动定义配置{{{2
-   let s:atd_move = get(g:,'atd_move',0)                       "move declared define(reg/wire) from other parts to places down below autodef
-   "}}}2
-   ```
-
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
+   可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置。
 
    ```javascript
-   let g:atd_move = 1
+   let g:atv_autodef_st_pos = 4
+   let g:atv_autodef_name_pos = 64 
+   let g:atv_autodef_sym_pos = 128
+   let g:atv_autodef_reg_new = 1
+   let g:atv_autodef_reg_del = 1
+   let g:atv_autodef_wire_new = 1
+   let g:atv_autodef_wire_del = 1
+   let g:atv_autodef_unresolved_flag = 1
+   let g:atv_autodef_reg_rmv_io = 1
+   let g:atv_autodef_wire_rmv_io = 1
+   let g:atv_autodef_mv = 1
+   let g:atv_autodef_tail_nalign = 1
    ```
+
+   - 生成时默认的对齐位置，请参考[位置对齐-Align](#位置对齐-Align)
+
+   - 生成时配置使用`端口`参数例化或使用`所有`参数进行例化。（`g:atv_autopara_only_port`）
+
+   - 生成时默认若有信号更新，自动在该端口尾部添加`//REG_NEW ` or `//WIRE_NEW`（`g:atv_autodef_reg_new` or `g:atv_autodef_wire_new`）
+
+   - 生成时默认若有信号被删除，自动在所有端口例化之后添加`//REG_DEL` or `//WIRE_DEL`（`g:atv_autopara_para_del`or `g:atv_autodef_wire_del`）
+
+   - 生成时默认解析变量失败不添加标志位（`g:atv_autodef_unresolved_flag`）
+
+     - 如果解析出当前变量为`reg`型，但解析其位宽等信息失败时，可在尾部添加标志位，即`//unresolved`，代表解析变量失败。
+     - 如果解析出当前变量为`wire`型，但解析其位宽等信息失败，解析信号例化模块失败，获取例化模块相关信号失败等情况时，可在尾部添加标志位，即`//unresolved`，代表解析变量失败。
+
+   - 生成时默认去除`input/output/inout`信号
+
+     - 如果解析为`reg`型变量自动过滤已经在`input/output/inout`端口处声明过的变量（即在端口处声明的变量默认不会自动声明`reg`）。但如果是`verilog-1995`的写法可能存在依旧需要声明的情况，这时可在脚本`automatic.vim`中`配置`选择不自动过滤。（`g:atv_autodef_reg_rmv_io`）
+     - 如果解析为`wire`型变量自动过滤已经在`input/output/inout`端口处声明过的变量（即在端口处声明的变量默认不会自动声明`wire`）。但如果是`verilog-1995`的写法可能存在依旧需要声明的情况，这时可在脚本`automatic.vim`中`配置`选择不自动过滤。（`g:atv_autodef_wire_rmv_io`）
+
+   - 生成时默认不移动变量（`g:atv_autodef_mv`）
+
+     可以配置将`/*autodef*/`范围外的所有已经声明的变量（`reg`或者`wire`）移动到`/*autodef*/`自动定义的变量之后。
 
    ![atd_move](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/atd_move.gif)
 
+   </details>
 
+
+3. 单行例化
+
+   `AutoWire`支持单行例化`wire`的检索，举例：
+
+   ```verilog
+   module_name u_inst_name ( .test( a ), .test1( b ), .test2( c ));
+   ```
 
 ## 自动声明-AutoArg
 
@@ -771,26 +764,28 @@ let g:att_en = 0
 
 ![autoarg](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/autoarg.gif)
 
-0. 打开`95-support`
+### 操作步骤
 
-   `AutoArg`为`verilog-1995`写法，必须打开相关配置，可在脚本`automatic.vim`中如下位置`配置`相关参数
+1. 打开`95-support`
 
-   ```javascript
-   "AutoInst 自动例化配置{{{2
-   ...
-   let s:ati_95_support = get(g:,'ati_95_support',1)           "Support Verilog-1995
-   ...
-   "}}}2
-   ```
+   <details>
 
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
+   <summary>95-support</summary>
+   
+    `AutoArg`为`verilog-1995`写法，必须打开相关配置，可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
 
-   ```javascript
-   let g:ati_95_support = 1
-   ```
+    ```javascript
+    let g:atv_autoinst_95_support = 1
+    ```
 
-1. 写标志`/*autoarg*/`
+   </details>
 
+2. 写标志`/*autoarg*/`
+
+   <details>
+
+   <summary>写标志</summary>
+   
    将要自动声明的端口写为如下格式：`module module_name (/*autoarg*/);`
 
    > ⚠️注意
@@ -798,22 +793,16 @@ let g:att_en = 0
    > - 格式末尾必须要有分号`;`
    > - 注意格式可不在同一行，只要`(/*autoarg*/)`包含在括号内即可。
 
-   
-
    **e.g.**
 
    ```verilog
    module fetch  ( /*autoarg*/ );
    ```
 
-   
-
    ```verilog
    module mem (
            /*autoarg*/);
    ```
-
-   
 
    ```verilog
    module writeback
@@ -823,72 +812,67 @@ let g:att_en = 0
    );
    ```
 
-2. 自动声明
+   </details>
 
+3. 自动声明
+
+   <details>
+
+   <summary>自动声明</summary>
+   
    - 使用菜单栏点击`AutoArg()`或在命令行输入`:call AutoArg()`确认，进行`/*autoarg*/`当前模块自动声明，注意例化时光标必须置于`/*autoarg*/`所在行之前的位置（即在当前行或上一行，若在当前行则必须在`/*autoarg*/`所在列之前）；
+
    - 上述操作也可以使用快捷键完成。
 
-3. 快捷键
+   </details>
 
-   - 默认键盘快捷键为`<S-F2>`（`Shift+F2`），可在脚本`automatic.vim`中如下位置`配置`快捷键
+4. 快捷键
 
-     ```javascript
-     if !hasmapto(':call AutoArg()<ESC>')
-         map <S-F2>      :call AutoArg()<ESC>
-     endif
-     ```
+   <details>
 
-   - 同时，为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;ata`）
+   <summary>快捷键</summary>
+   
+   - 默认键盘快捷键为`<S-F2>`（`Shift+F2`），为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;ata`）
 
      ```javascript
      map ;ata      :call AutoArg()<ESC>
      ```
 
-4. 自动换行
+   </details>
 
-   默认多个端口一行，到最大宽度后自动进行换行。可在脚本`automatic.vim`中如下位置`配置`相关参数选择不自动换行，默认自动换行。
+5. 配置参数
+   
+   <details>
 
-   ```javascript
-   "AutoArg 自动声明配置{{{2
-   let s:ata_mode = get(g:,'ata_mode',1)                          "mode 0,no wrap; mode 1 wrap around
-   ...
-   "}}}2
-   ```
-
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
+   <summary>配置参数</summary>
+   
+   可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置。
 
    ```javascript
-   let g:ata_mode = 0
+   let g:atv_autoarg_st_pos = 8
+   let g:atv_autoarg_sym_pos =  64 
+   let g:atv_autoarg_mode =  0 
+   let g:atv_autoarg_io_clsf =  0 
+   let g:atv_autoarg_tail_nalign =  0 
    ```
 
-   自动换行：
+   - 生成时默认的对齐位置，请参考
+   
+   - 生成时默认自动换行，默认多个端口一行，到最大宽度后自动进行换行，最大宽度设置参考[位置对齐-Align](#位置对齐-Align)。（`g:atv_autoarg_mode`）
+   
+     - 自动换行（`g:atv_autoarg_mode=1`）
+   
+       ![autoarg](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/autoarg.gif)
+   
+     - 不自动换行：（`g:atv_autoarg_mode=0`）
+   
+       ![nowrap](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/nowrap.gif)
+   
+   - 生成时默认端口按`input/output/inout`自动进行分类。（`g:atv_autoarg_io_clsf`）
+   
+     ![io_clasf](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/io_clasf.gif)
 
-   ![autoarg](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/autoarg.gif)
-
-   不自动换行：
-
-   ![nowrap](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/nowrap.gif)
-
-5. 自动分类
-
-   默认端口按`input/output/inout`自动进行分类。可在脚本`automatic.vim`中如下位置`配置`相关参数选择不进行自动分类，默认自动分类。
-
-   ```javascript
-   "AutoArg 自动声明配置{{{2
-   ...
-   let s:ata_io_clsf = get(g:,'ata_io_clsf',1)                    "input/output/inout classified
-   ...
-   "}}}2
-   ```
-
-   也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
-
-   ```javascript
-   let g:ata_io_clsf = 0
-   ```
-
-   ![io_clasf](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/io_clasf.gif)
-
+   </details>
 
 ## 跨文件夹-CrossDir
 
@@ -901,24 +885,28 @@ let g:att_en = 0
 跨文件夹的方式可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（`0:normal 1:filelist 2:tags`，假设配置为`tags`）
 
 ```javascript
-let g:atv_cd_mode = 2  "0:normal 1:filelist 2:tags
+let g:atv_crossdir_mode = 2    "0:normal 1:filelist 2:tags
 ```
 
 1. `verilog-library`设置（默认）
 
-   在代码中添加如下格式的内容`声明`文件夹即可保证代码文件被搜索到：
+   <details>
 
+   <summary>verilog-library</summary>
+   
+   在代码中添加如下格式的内容`声明`文件夹即可保证代码文件被搜索到：
+   
    ```verilog
    //Local Variables:
    //verilog-library-directories:("." "./aaa/bbb/ccc")
    //verilog-library-directories-recursive:0
-   //End:
+//End:
    ```
 
    - `verilog-library-directories`为要选择的文件夹，文件夹之间以空格隔开；
 
    - `verilog-library-directories-recursive`为是否进行文件夹递归搜索，即搜索所有选择文件夹及其子文件夹；
-
+   
      > 假设需要选择当前文件夹以及其下所有子文件夹作为例化搜索的对象，则配置为：
      >
      > `//verilog-library-directories:(".")`
@@ -931,15 +919,15 @@ let g:atv_cd_mode = 2  "0:normal 1:filelist 2:tags
      > 
      >
      > 如果不配置跨文件夹的选项，默认会以打开`vim`的位置作为搜索顶层往下**递归**搜索相关`.v`或`.sv`文件。
-     >
+  >
      > 注意不要在`桌面`或者`盘符根目录`等位置打开文件并使用脚本，否则搜索可能会卡死。（暂时不考虑修复为自动切换地址到文件位置，因为与`RtlTree`部分功能冲突）
 
      ![CrossDir](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/cross_dir.gif)
 
    同时，参考[Verilog-Mode:verilog-library-extensions](https://veripool.org/verilog-mode/help/#verilog-library-extensions)可以设置其他选项：
-   
+
    `verilog-mode`的设置选项：
-   
+
    ```
        -f filename     Reads absolute verilog-library-flags from the filename.
        -F filename     Reads relative verilog-library-flags from the filename.
@@ -951,9 +939,9 @@ let g:atv_cd_mode = 2  "0:normal 1:filelist 2:tags
        filename        Adds the filename to verilog-library-files.
                        This is not recommended, -v is a better choice.
    ```
-   
+
    本插件的实际使用的设置选项：
-   
+
    > -f filename     																						 	 在指定位置读`filelist`，采用相对或绝对路径均可。
    > ~~-F filename     Reads relative verilog-library-flags from the filename.~~		 取消，均使用`-f`
    >
@@ -982,25 +970,32 @@ let g:atv_cd_mode = 2  "0:normal 1:filelist 2:tags
    // End:
    ```
 
+   </details>
+
+
 
 2. `filelist`设置
 
-   使用`filelist`进行跨文件夹请先配置`atv_cd_mode = 1`。配置方式见本章节开头内容。
+   <details>
+
+   <summary>filelist</summary>
+   
+   使用`filelist`进行跨文件夹请先配置`g:atv_crossdir_mode = 1`。配置方式见本章节开头内容。
 
    默认在第一次进行跨文件夹操作时（例如`AutoInst`或`AutoDef`时）载入`filelist`，载入方式分为四种：
 
    1. 浏览（`browse`）
 
-      如果`g:atv_cd_flist_browse = 1`（默认），那么采取浏览选择的方式载入`filelist`。
+      如果`g:atv_crossdir_flist_browse = 1`（默认），那么采取浏览选择的方式载入`filelist`。
 
-      如果配置`g:atv_cd_flist_browse = 0`，那么采取如下三种方式载入`filelist`。
+      如果配置`g:atv_crossdir_flist_browse = 0`，那么采取如下三种方式载入`filelist`。
 
-   2. 配置`global`参数`g:atv_cd_flist_file`（`config`）
+   2. 配置`global`参数`g:atv_crossdir_flist_file`（`config`）
 
       可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（假设配置为`./filelist.f`）
 
       ```javascript
-      let g:atv_cd_flist_file = './filelist.f'
+      let g:atv_crossdir_flist_file = '../filelist/ctags_filelist.f'
       ```
 
    3. 通过`verilog-library`设置（`library`）
@@ -1019,24 +1014,30 @@ let g:atv_cd_mode = 2  "0:normal 1:filelist 2:tags
 
    `filelist`载入后跨文件夹会通过`filelist`文件定义的位置自动进行跨文件夹的相关搜索。
 
+   </details>
+
 3. `tags`设置
 
-   使用`tags`进行跨文件夹请先配置`atv_cd_mode = 2`。配置方式见本章节开头内容。
+   <details>
+
+   <summary>tags</summary>
+   
+   使用`tags`进行跨文件夹请先配置`g:atv_crossdir_mode = 2`。配置方式见本章节开头内容。
    
    默认在第一次进行跨文件夹操作时（例如`AutoInst`或`AutoDef`时）载入`tags`，载入方式分为四种：
    
    1. 浏览（`browse`）
    
-      如果`g:atv_cd_tags_browse = 1`（默认），那么采取浏览选择的方式载入`tags`。
+      如果`g:atv_crossdir_tags_browse = 1`（默认），那么采取浏览选择的方式载入`tags`。
    
-      如果配置`g:atv_cd_tags_browse = 0`，那么采取如下三种方式载入`tags`。
+      如果配置`g:atv_crossdir_tags_browse = 0`，那么采取如下三种方式载入`tags`。
    
-   2. 配置`global`参数`g:atv_cd_tags_file`（`config`）
+   2. 配置`global`参数`g:atv_crossdir_tags_file`（`config`）
    
       可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置（假设配置为`./tags`）
    
       ```javascript
-      let g:atv_cd_tags_file = './tags'
+      let g:atv_crossdir_tags_file = '../filelist/tags'
       ```
    
    3. 通过`verilog-library`设置（`library`）
@@ -1055,6 +1056,8 @@ let g:atv_cd_mode = 2  "0:normal 1:filelist 2:tags
    
    `tags`载入后跨文件夹会通过`tags`文件定义的位置自动进行跨文件夹的相关搜索。
 
+   </details>
+
 ## 位置对齐-Align
 
 ---
@@ -1063,78 +1066,85 @@ let g:atv_cd_mode = 2  "0:normal 1:filelist 2:tags
 
 1. 对齐位置
 
-   可在脚本`automatic.vim`中如下位置`配置`相关参数选择使用自动函数时的对齐位置（下列为`AutoInst`相关配置，其他函数`AutoArg`、`AutoPara`、`AutoReg`、`AutoWire`、`AutoDef`、`AutoArg`配置同理，同时也可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置）
+   <details>
+
+   <summary>对齐位置</summary>
+   
+   可通过在`.vimrc(or _vimrc)`中配置相关`global`参数选择使用自动函数时的对齐位置（下列为`AutoInst`相关配置，其他函数`AutoArg`、`AutoPara`、`AutoReg`、`AutoWire`、`AutoDef`、`AutoArg`配置同理）
 
    ```javascript
-   "AutoInst {{{3
-   "start position
-   let s:ati_st_pos = 4
-   let s:ati_st_prefix = repeat(' ',s:ati_st_pos)
-   "name position
-   let s:ati_name_pos_max = 32 
-   "symbol position
-   let s:ati_sym_pos_max = 64 
-   "}}}3
+   "AutoInst
+   let g:atv_autoinst_st_pos = 8
+   let g:atv_autoinst_name_pos = 64 
+   let g:atv_autoinst_sym_pos = 128
+   
+   "AutoPara
+   let g:atv_autopara_st_pos = 4
+   let g:atv_autopara_name_pos = 64 
+   let g:atv_autopara_sym_pos = 128
+   
+   "AutoReg&AutoWire&AutoDef
+   let g:atv_autodef_st_pos = 4
+   let g:atv_autodef_name_pos = 64 
+   let g:atv_autodef_sym_pos = 128
+   
+   "AutoArg
+   let g:atv_autoarg_st_pos = 8
+   let g:atv_autoarg_sym_pos =  64 
    ```
 
    `st_pos`：起始位置`start position`
 
-   `name_pos_max`：信号名对齐位置`name max position`
+   `name_pos`：信号名对齐位置`name position`
 
-   `sym_pos_max`：第二个括号对齐位置`symbol max position`
+   `sym_pos`：第二个括号对齐位置`symbol position`
 
    如果信号长度过长（长于设定的对齐位置），则会按照`最长信号长度+4`为新的对齐位置进行对齐。
 
    ![autopara](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/pos.png)
 
-   
+   </details>
 
 2. 行尾对齐
+
+   <details>
+
+   <summary>行尾对齐</summary>
+   
 
    可在脚本`automatic.vim`中如下位置`配置`相关参数选择进行行尾对齐/不对齐（默认0，进行行尾对齐）
 
    ```javascript
-   "AutoInst 自动例化配置{{{2
-   ......
-   let s:ati_tail_not_align = get(g:,'ati_tail_not_align',0)   "don't do alignment in tail when autoinst
-   "}}}2
-   "AutoPara 自动参数配置{{{2
-   ......
-   let s:atp_tail_not_align = get(g:,'atp_tail_not_align',0)   "don't do alignment in tail when autopara
-   "}}}2
-   "AutoReg 自动寄存器配置{{{2
-   ......
-   let s:atr_tail_not_align = get(g:,'atr_tail_not_align',0)   "don't do alignment in tail when autoreg
-   "}}}2
-   "AutoWire 自动线网配置{{{2
-   ......
-   let s:atw_tail_not_align = get(g:,'atw_tail_not_align',0)   "don't do alignment in tail when autowire
-   "}}}2
+   "AutoInst 行尾不对齐
+   let g:atv_autoinst_tail_nalign = 1
+   "AutoPara 行尾不对齐
+   let g:atv_autopara_tail_nalign = 1
+   "AutoReg&AutoWire&AutoDef 行尾不对齐
+   let g:atv_autodef_tail_nalign = 1
+   "AutoArg 行尾不对齐,仅在不自动换行，即g:atv_autoarg_mode=0时有效
+   let g:atv_autoarg_tail_nalign =  0 
    ```
 
-
-
    - `AutoInst`行尾对齐
+   
+   ![image-20210612222934861](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/image-20210612222934861.png)
+   
+   - - `AutoInst`行尾不对齐
+   
+   ![image-20210612222827132](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/image-20210612222827132.png)
+   
+   - `AutoPara`的行尾对齐
+   
+   ![image-20210612223220307](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/image-20210612223220307.png)
+   
+   - `AutoPara`的行尾不对齐
+   
+   ![image-20210612223427942](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/image-20210612223427942.png)
 
-     ![image-20210612222934861](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/image-20210612222934861.png)
+   - `AutoReg`、`AutoWire`、`AutoDef`及`AutoArg`的行尾对齐与`AutoInst`以及`AutoPara`类似
+   
+   </details>
 
-     
-
-- `AutoInst`行尾不对齐
-
-  ![image-20210612222827132](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/image-20210612222827132.png)
-
-- `AutoPara`的行尾对齐
-
-  ![image-20210612223220307](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/image-20210612223220307.png)
-
-- `AutoPara`的行尾不对齐
-
-  ![image-20210612223427942](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/image-20210612223427942.png)
-
-     
-
-- `AutoReg`、`AutoWire`、`AutoDef`及`AutoArg`的行尾对齐与`AutoInst`以及`AutoPara`类似
 
 ## 树状拓扑-RtlTree
 

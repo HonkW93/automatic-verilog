@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/01/27 23:13
+" Last Modified:  2022/05/18 21:42
 " File:           snippet.vim
 " Note:           Snippet function partly from zhangguo's vimscript,partly from load_template
 "------------------------------------------------------------------------------
@@ -35,7 +35,7 @@ let g:_ATV_SNIPPET_DEFAULTS = {
             \'clk':         'clk',        
             \'rst':         'rst',
             \'rst_n':       'rst_n',    
-            \'att_en':      1
+            \'att_en':      0
             \}
 
 for s:key in keys(g:_ATV_SNIPPET_DEFAULTS)
