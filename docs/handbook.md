@@ -329,6 +329,7 @@ let g:att_en = 0
    > - 例化时默认自动在尾部添加`io_dir`，即端口类型`input/output/inout`
    > - 例化时默认若有端口更新，自动在该端口尾部添加`//INST_NEW`
    > - 例化时默认若有端口被删除，自动在所有端口例化之后添加`//INST_DEL`
+   > - 例化时修改过端口连线的则保留，否则自动刷新
    > - 例化时默认添加`//`类型注释
    > - 例化时默认添加<code>`ifdef</code>类型的宏定义，包括<code>ifdef/elsif/else/endif</code>
    > - 例化时默认不添加例化模块文件所在位置<code>dir</code>，如打开此配置会在例化模块之前一行添加`//Instance`+`dir`以显示例化模块所在的文件夹地址
@@ -969,9 +970,9 @@ let g:atv_cd_mode = 2  "0:normal 1:filelist 2:tags
    > -v filename     Adds the filename to verilog-library-files.                              添加指定文件(例如`'test.v'`)
    >
    > filename        Adds the filename to verilog-library-files.                               添加指定文件(推荐直接使用 -v )
-   
+
    举例，使用`-y`、`+incdir+`设置搜索路径，使用`-f`设置搜索文件，使用`+libext+`设置扩展名
-   
+
    ```verilog
    // Local Variables:
    // verilog-library-flags:("-y dir -y otherdir")
