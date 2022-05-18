@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/04/27 22:06
+" Last Modified:  2022/05/11 21:20
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -1433,7 +1433,7 @@ function s:GetIO(lines,mode)
                 let io_dir = matchstr(line,s:VlogTypePorts)
 
                 "width
-                let width = matchstr(line,'\[.*\]')                 
+                let width = matchstr(line,'\[.\{-\}\]')                 
                 let width = substitute(width,'\s*','','g')          "delete redundant space
                 let width1 = matchstr(width,'\v\[\zs\S+\ze:.*\]')   
                 let width2 = matchstr(width,'\v\[.*:\zs\S+\ze\]')   
@@ -1458,10 +1458,16 @@ function s:GetIO(lines,mode)
                 "name
                 let line = substitute(line,io_dir,'','')
                 let line = substitute(line,'\<reg\>\|\<wire\>','','')
-                let line = substitute(line,'\[.*\]','','')
+                let line = substitute(line,'\[.\{-\}\]','','')
                 let name = matchstr(line,'\w\+')
                 if name == ''
                     let name = 'NULL'
+                endif
+
+                "ignore list like input [7:0] a[7:0];
+                if line =~ '\[.*\]'
+                    let width1 = 'c0'
+                    let width2 = 'c0'
                 endif
 
                 "dict       [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
