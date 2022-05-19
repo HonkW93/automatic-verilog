@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/05/18 20:52
+" Last Modified:  2022/05/19 20:24
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -51,10 +51,5 @@ if g:atv_personal_keys == 1
 endif
 "}}}1
 
-source $VIMRUNTIME/plugin/automatic/crossdir.vim
-source $VIMRUNTIME/plugin/automatic/autoarg.vim
-source $VIMRUNTIME/plugin/automatic/autoinst.vim
-source $VIMRUNTIME/plugin/automatic/autopara.vim
-source $VIMRUNTIME/plugin/automatic/autodef.vim
-source $VIMRUNTIME/plugin/automatic/rtl.vim
+runtime! plugin/automatic/*.vim
 
