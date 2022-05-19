@@ -22,11 +22,11 @@
 
 ### 自动化
 
-- **AutoInst**
-- **AutoPara & AutoParaValue**
-- **AutoReg**
-- **AutoWire**
-- **AutoDef**
+- **AutoInst**-自动例化
+- **AutoPara & AutoParaValue**-自动参数
+- **AutoReg**-自动寄存器
+- **AutoWire**-自动线网
+- **AutoDef**-自动定义
 
 ### Rtl树
 

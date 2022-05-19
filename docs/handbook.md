@@ -727,7 +727,7 @@ let g:atv_autopara_tail_nalign = 1
 
    - 生成时默认若有信号更新，自动在该端口尾部添加`//REG_NEW ` or `//WIRE_NEW`（`g:atv_autodef_reg_new` or `g:atv_autodef_wire_new`）
 
-   - 生成时默认若有信号被删除，自动在所有端口例化之后添加`//REG_DEL` or `//WIRE_DEL`（`g:atv_autopara_para_del`or `g:atv_autodef_wire_del`）
+   - 生成时默认若有信号被删除，自动在所有端口例化之后添加`//REG_DEL` or `//WIRE_DEL`（`g:atv_autodef_reg_del` or `g:atv_autodef_wire_del`）
 
    - 生成时默认解析变量失败不添加标志位（`g:atv_autodef_unresolved_flag`）
 
