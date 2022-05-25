@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/05/17 22:53
+" Last Modified:  2022/05/25 23:15
 " File:           autopara.vim
 " Note:           AutoPara function self-made
 "------------------------------------------------------------------------------
@@ -935,11 +935,19 @@ endfunction
 "       /*autoinstparam*/)
 "   inst_name
 "
+"   e.g. 2
+"   module_name #(/*autoinstparam*/)inst_name();
+"   --------------> after KillAutoPara
+"
+"   module_name #(/*autoinstparam*/)
+"   inst_name();
+"
 " Output:
 "   line after kill
 "   kill untill inst_name
 "---------------------------------------------------
 function s:KillAutoPara(inst_name) 
+    let prefix = s:st_prefix
     let orig_idx = line('.')
     let orig_col = col('.')
     let idx = line('.')
@@ -949,8 +957,17 @@ function s:KillAutoPara(inst_name)
         if line =~')\s*$'
             return
         else
+            "single line
+            if line =~ a:inst_name
+                let redundant = matchstr(line,a:inst_name.'.*$')
+                let line = substitute(line,escape(redundant,'/*'),'','')
+                call setline(idx,line)
+                call append(idx,prefix.redundant)
+                return
             "keep current line
-            let line = substitute(line,'\*/.*$','\*/)','')
+            else
+                let line = substitute(line,'\*/.*$','\*/)','')
+            endif
             call setline(idx,line)
             "if current line not end with ')', multi-line
             let idx = idx + 1
