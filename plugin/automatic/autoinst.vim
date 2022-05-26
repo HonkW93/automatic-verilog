@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/05/18 00:20
+" Last Modified:  2022/05/26 00:23
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -267,6 +267,7 @@ function g:AutoVerilog_GetIO(lines,mode)
     let seq = 0
     let wait_module = 1
     let wait_port = 1
+    let func_flag = 0
     let io_seqs = {}
 
     "get io seqs from line {{{3
@@ -288,6 +289,19 @@ function g:AutoVerilog_GetIO(lines,mode)
             continue
         endif
 
+        "skip function & endfunction
+        if line =~ '^\s*function'
+            let func_flag = 1
+        endif
+        if func_flag == 1
+            if line =~ 'endfunction\s*$'
+                let func_flag = 0
+            else
+                continue
+            endif
+        endif
+
+
         "no port definition, never record io_seqs
         if wait_port == 1 && line =~ ')\s*;' && len(io_seqs) > 0
             let seq = 0
@@ -295,7 +309,6 @@ function g:AutoVerilog_GetIO(lines,mode)
         endif
 
         if wait_module == 0
-
             "null line{{{4
             if line =~ '^\s*$'
                 "if two adjacent lines are both null lines, delete last line
@@ -368,10 +381,6 @@ function g:AutoVerilog_GetIO(lines,mode)
                 let line = substitute(line,io_dir,'','')
                 let line = substitute(line,'\<reg\>\|\<wire\>','','')
                 let line = substitute(line,'\[.\{-\}\]','','')
-                let name = matchstr(line,'\w\+')
-                if name == ''
-                    let name = 'NULL'
-                endif
 
                 "ignore list like input [7:0] a[7:0];
                 if line =~ '\[.*\]'
@@ -379,10 +388,18 @@ function g:AutoVerilog_GetIO(lines,mode)
                     let width2 = 'c0'
                 endif
 
-                "dict       [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
-                let value = [type,seq,     io_dir, width1, width2, name,        0,         '']
-                call extend(io_seqs, {seq : value})
-                let seq = seq + 1
+                "for types like input aa,bb,cc;
+                let names = split(line,',')
+                for name in names
+                    let name = matchstr(name,'\w\+')
+                    if name == ''
+                        let name = 'NULL'
+                    endif
+                    "dict       [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
+                    let value = [type,seq,     io_dir, width1, width2, name,        0,         '']
+                    call extend(io_seqs, {seq : value})
+                    let seq = seq + 1
+                endfor
             endif
             "}}}4
 
