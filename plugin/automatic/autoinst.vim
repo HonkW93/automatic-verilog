@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/05/26 00:23
+" Last Modified:  2022/05/30 22:46
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -391,14 +391,14 @@ function g:AutoVerilog_GetIO(lines,mode)
                 "for types like input aa,bb,cc;
                 let names = split(line,',')
                 for name in names
+                    let name = substitute(name,'\s*','','g')          "delete redundant space
                     let name = matchstr(name,'\w\+')
-                    if name == ''
-                        let name = 'NULL'
+                    if name != ''
+                        "dict       [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
+                        let value = [type,seq,     io_dir, width1, width2, name,        0,         '']
+                        call extend(io_seqs, {seq : value})
+                        let seq = seq + 1
                     endif
-                    "dict       [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
-                    let value = [type,seq,     io_dir, width1, width2, name,        0,         '']
-                    call extend(io_seqs, {seq : value})
-                    let seq = seq + 1
                 endfor
             endif
             "}}}4
