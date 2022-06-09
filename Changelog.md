@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.5] - 2022-05-15
+
+### Changed
+
+- `automatic.vim` changed into several different files
+
+  拆分原文件为多个独立分拣，功能解耦合
+
+### Fixed
+
+- Bug fixed
+
+  修复部分遗留问题
+
 ## [1.2.6] - 2022-02-15
 
 ### Fixed
