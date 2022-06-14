@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/05/17 20:58
+" Last Modified:  2022/06/14 20:42
 " File:           autoarg.vim
 " Note:           AutoArg function self-made
 "------------------------------------------------------------------------------
@@ -218,7 +218,7 @@ function s:DrawArg(io_seqs)
 
     "guarantee spaces width{{{3
     let max_comma_len = 0
-    for seq in sort(g:AutoVerilog_Str2Num(keys(a:io_seqs)),g:atv_sort_funcref)
+    for seq in sort(map(keys(a:io_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = a:io_seqs[seq]
         let type = value[0]
         if type != 'keep' 
@@ -237,7 +237,7 @@ function s:DrawArg(io_seqs)
 
         "get io first{{{5
         let io_lines = []
-        for seq in sort(g:AutoVerilog_Str2Num(keys(a:io_seqs)),g:atv_sort_funcref)
+        for seq in sort(map(keys(a:io_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
             let value = a:io_seqs[seq]
             let type = value[0]
             let line = value[7]
@@ -308,7 +308,7 @@ function s:DrawArg(io_seqs)
         let inputs = []
         let outputs = []
         let inouts = []
-        for seq in sort(g:AutoVerilog_Str2Num(keys(a:io_seqs)),g:atv_sort_funcref)
+        for seq in sort(map(keys(a:io_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
             let value = a:io_seqs[seq]
             let type = value[0]
             let line = value[7]

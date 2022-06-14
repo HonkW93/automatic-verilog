@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/05/25 23:15
+" Last Modified:  2022/06/14 20:46
 " File:           autopara.vim
 " Note:           AutoPara function self-made
 "------------------------------------------------------------------------------
@@ -460,7 +460,7 @@ function s:GetPara(lines,mode)
 
     "remove single comment line before first declaration parameter
     "find last port parameter first 
-    for idx in sort(g:AutoVerilog_Str2Num(keys(line_idxs)),g:atv_sort_funcref)
+    for idx in sort(map(keys(line_idxs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = line_idxs[idx]
         let type = value[0]
         if type == 'port'
@@ -468,7 +468,7 @@ function s:GetPara(lines,mode)
         endif
     endfor
     "find last decl parameter first 
-    for idx in sort(g:AutoVerilog_Str2Num(keys(line_idxs)),g:atv_sort_funcref)
+    for idx in sort(map(keys(line_idxs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = line_idxs[idx]
         let type = value[0]
         if type == 'decl'
@@ -477,7 +477,7 @@ function s:GetPara(lines,mode)
     endfor
 
     "remove single comment line
-    for idx in sort(g:AutoVerilog_Str2Num(keys(line_idxs)),g:atv_sort_funcref)
+    for idx in sort(map(keys(line_idxs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = line_idxs[idx]
         let type = value[0]
         let line = value[2]
@@ -518,7 +518,7 @@ function s:GetPara(lines,mode)
     "   `endif
     "---------------------------------------------------------------
     "remove single comment line after last declaration parameter
-    for idx in reverse(sort(g:AutoVerilog_Str2Num(keys(line_idxs)),g:atv_sort_funcref))
+    for idx in reverse(sort(map(keys(line_idxs),'str2nr(v:val)'),g:atv_sort_funcref))
         let value = line_idxs[idx]
         let type = value[0]
         let line = value[2]
@@ -532,7 +532,7 @@ function s:GetPara(lines,mode)
     endfor
 
     "ifdef keeped if below is declaration parameter
-    for idx in sort(g:AutoVerilog_Str2Num(keys(line_idxs)),g:atv_sort_funcref)
+    for idx in sort(map(keys(line_idxs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = line_idxs[idx]
         let type = value[0]
         let line = value[2]
@@ -555,7 +555,7 @@ function s:GetPara(lines,mode)
 
     let endif_exist = 0
     "endif keeped only once after declaration parameter
-    for idx in sort(g:AutoVerilog_Str2Num(keys(line_idxs)),g:atv_sort_funcref)
+    for idx in sort(map(keys(line_idxs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = line_idxs[idx]
         let type = value[0]
         let line = value[2]
@@ -576,7 +576,7 @@ function s:GetPara(lines,mode)
 
     "generate parameter seqs{{{3
     let seq = 0
-    for idx in sort(g:AutoVerilog_Str2Num(keys(line_idxs)),g:atv_sort_funcref)
+    for idx in sort(map(keys(line_idxs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = line_idxs[idx]
         "[type, idx, line]
         let type = value[0]
@@ -628,7 +628,7 @@ function s:GetPara(lines,mode)
     if len(keys(para_seqs)) > 0
         "last parameter in port 
         let last_port_seq = 0
-        for seq in sort(g:AutoVerilog_Str2Num(keys(para_seqs)),g:atv_sort_funcref)
+        for seq in sort(map(keys(para_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
             let value = para_seqs[seq]
             let type = value[0]
             if type == 'port'
@@ -637,7 +637,7 @@ function s:GetPara(lines,mode)
         endfor
         "last parameter in declaration
         let last_decl_seq = 0
-        for seq in sort(g:AutoVerilog_Str2Num(keys(para_seqs)),g:atv_sort_funcref)
+        for seq in sort(map(keys(para_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
             let value = para_seqs[seq]
             let type = value[0]
             if(type == 'decl')
@@ -1047,7 +1047,7 @@ function s:DrawPara(para_seqs,para_list,chg_para_names)
     "guarantee spaces width{{{3
     let max_lbracket_len = 0
     let max_rbracket_len = 0
-    for seq in sort(g:AutoVerilog_Str2Num(keys(a:para_seqs)),g:atv_sort_funcref)
+    for seq in sort(map(keys(a:para_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = a:para_seqs[seq]
         let p_name = value[2]
         let p_value = p_name
@@ -1074,7 +1074,7 @@ function s:DrawPara(para_seqs,para_list,chg_para_names)
         let para_list_empty = 0
     endif
 
-    for seq in sort(g:AutoVerilog_Str2Num(keys(a:para_seqs)),g:atv_sort_funcref)
+    for seq in sort(map(keys(a:para_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = a:para_seqs[seq]
         let type = value[0]
         let line = value[5]
@@ -1248,7 +1248,7 @@ function s:DrawParaValue(para_seqs,para_list)
     "guarantee spaces width{{{3
     let max_lbracket_len = 0
     let max_rbracket_len = 0
-    for seq in sort(g:AutoVerilog_Str2Num(keys(a:para_seqs)),g:atv_sort_funcref)
+    for seq in sort(map(keys(a:para_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = a:para_seqs[seq]
         let p_name = value[2]
         let p_value = value[3]
@@ -1269,7 +1269,7 @@ function s:DrawParaValue(para_seqs,para_list)
         let para_list_empty = 0
     endif
 
-    for seq in sort(g:AutoVerilog_Str2Num(keys(a:para_seqs)),g:atv_sort_funcref)
+    for seq in sort(map(keys(a:para_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = a:para_seqs[seq]
         let type = value[0]
         "ignore single comment/ifdef line{{{4
