@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/05/30 22:46
+" Last Modified:  2022/06/14 20:39
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -872,7 +872,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
     "guarantee spaces width{{{3
     let max_lbracket_len = 0
     let max_rbracket_len = 0
-    for seq in sort(g:AutoVerilog_Str2Num(keys(a:io_seqs)),g:atv_sort_funcref)
+    for seq in sort(map(keys(a:io_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = a:io_seqs[seq]
         let type = value[0]
         if type != 'keep' 
@@ -914,7 +914,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
         let io_list_empty = 0
     endif
 
-    for seq in sort(g:AutoVerilog_Str2Num(keys(a:io_seqs)),g:atv_sort_funcref)
+    for seq in sort(map(keys(a:io_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = a:io_seqs[seq]
         let type = value[0]
         let line = value[7]

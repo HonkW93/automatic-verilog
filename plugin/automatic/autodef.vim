@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/05/18 20:25
+" Last Modified:  2022/06/14 20:46
 " File:           autodef.vim
 " Note:           AutoDef function partly from zhangguo's vimscript
 "                 Progress bar based off code from "progressbar widget" plugin by
@@ -889,7 +889,7 @@ function s:DrawReg(reg_names,reg_list)
     "}}}4
 
     "draw freg{{{4
-    for seq in sort(g:AutoVerilog_Str2Num(keys(freg_seqs)),g:atv_sort_funcref)
+    for seq in sort(map(keys(freg_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = freg_seqs[seq]
         "Format reg sequences
         "    0     1             2      3            4         5
@@ -957,7 +957,7 @@ function s:DrawReg(reg_names,reg_list)
     "}}}4
 
     "draw creg{{{4
-    for seq in sort(g:AutoVerilog_Str2Num(keys(creg_seqs)),g:atv_sort_funcref)
+    for seq in sort(map(keys(creg_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = creg_seqs[seq]
         "Format reg sequences
         "    0       1         2       3       4            5 
@@ -1777,7 +1777,7 @@ function s:DrawWire(wire_names,wire_list)
     "}}}4
 
     "draw awire{{{4
-    for seq in sort(g:AutoVerilog_Str2Num(keys(awire_seqs)),g:atv_sort_funcref)
+    for seq in sort(map(keys(awire_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = awire_seqs[seq]
         "Format wire sequences
         "    0     1             2      3            4         5
@@ -1845,7 +1845,7 @@ function s:DrawWire(wire_names,wire_list)
     "}}}4
 
     "draw iwire{{{4
-    for seq in sort(g:AutoVerilog_Str2Num(keys(iwire_seqs)),g:atv_sort_funcref)
+    for seq in sort(map(keys(iwire_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = iwire_seqs[seq]
         "Format wire sequences
         "    0       1         2       3       4            5 

@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/05/17 22:54
+" Last Modified:  2022/06/14 20:47
 " File:           crossdir.vim
 " Note:           search cross directory by tags/filelist/verilog-library
 "------------------------------------------------------------------------------
@@ -851,25 +851,6 @@ endfunction
 "}}}1
 
 "AutoVerilog_Sort 排序兼容vim7.4{{{1
-
-"AutoVerilog_Str2Num 字符串转数字（用于sort函数排序）{{{2
-"--------------------------------------------------
-" Function: AutoVerilog_Str2Num
-" Input: 
-"   string list
-" Description:
-"   convert every string into number
-" Output:
-"   output number list
-"---------------------------------------------------
-function g:AutoVerilog_Str2Num(list)
-    let nr_list = []
-    for item in a:list
-        call add(nr_list,str2nr(item))
-    endfor
-    return nr_list
-endfunction
-"}}}2
 
 "SortNaturalOrder sort函数Funcref（用于sort函数排序）{{{2
 " Comparator function for natural ordering of numbers
