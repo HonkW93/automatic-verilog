@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/05/17 20:58
+" Last Modified:  2022/06/21 23:13
 " File:           autoarg.vim
 " Note:           AutoArg function self-made
 "------------------------------------------------------------------------------
@@ -441,7 +441,7 @@ function s:DrawArg(io_seqs)
     "}}}3
 
     if lines == []
-        echohl ErrorMsg | echo "Error io_seqs input for function DrawArg! io_seqs has no input/output definition! Possibly written in verilog-95 but ati_95_support not open " | echohl None
+        echohl ErrorMsg | echo "Error io_seqs input for function DrawArg! io_seqs has no input/output definition! Possibly written in verilog-95 but atv_autoinst_95_support not open " | echohl None
     endif
 
     return lines
