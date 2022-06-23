@@ -2,11 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-<<<<<<< HEAD
-" Last Modified:  2022/06/21 23:13
-=======
-" Last Modified:  2022/06/14 20:42
->>>>>>> 953f2b8a29f75359b8c089fdd3c1a73dfaea543a
+" Last Modified:  2022/06/23 20:55
 " File:           autoarg.vim
 " Note:           AutoArg function self-made
 "------------------------------------------------------------------------------
