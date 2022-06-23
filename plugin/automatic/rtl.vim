@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/06/23 00:28
+" Last Modified:  2022/06/23 23:37
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -359,7 +359,7 @@ function s:OpenRtlInst() abort "{{{3
         let curbufexist = 0
         "check if current buffer exist
         for buf in getbufinfo()
-            if buf.name =~ escape(s:RtlCurBufName,'\') && buf.loaded == 1
+            if buf.name =~ fnamemodify(s:RtlCurBufName,':t') && buf.loaded == 1
                 let curbufexist = 1
             endif
         endfor
@@ -398,7 +398,7 @@ function s:OpenRtlModule() abort "{{{3
         let curbufexist = 0
         "check if current buffer exist
         for buf in getbufinfo()
-            if buf.name =~ escape(s:RtlCurBufName,'\') && buf.loaded == 1
+            if buf.name =~ fnamemodify(s:RtlCurBufName,':t') && buf.loaded == 1
                 let curbufexist = 1
             endif
         endfor
