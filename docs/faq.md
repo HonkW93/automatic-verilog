@@ -68,19 +68,18 @@
 
 ## RtlTree？
 
-注意，`RtlTree`会自动生成`tags`文件，若一般正常操作则会自动删除此文件，但出现异常时此文件可能会留存，若不需要请自行删除
-
 1. 顶层文件位置？
 
-   `RtlTree`以当前模块为顶层模块开始进行树图生成（默认，不可改）
+   `RtlTree`以当前模块为顶层模块开始进行树图生成，如果想置顶文件位置，可以自行加上文件名（如果在当前文件夹，可用`tab`在命令行自动补全）
+
+   ```javascript
+   RtlTree top.v
+   ```
 
 2. 乱跳转？窗口切换混乱？其他异常`bug`?
 
-   你可以[留言](https://blog.honk.wang/posts/AutoMatic#post-comment)，但不一定修复
+   可以[留言](https://blog.honk.wang/posts/AutoMatic#post-comment)，我会尽量修复
    
-   因为这部分代码是直接移植的，改动很小，修复难度较大，除非重构
-   
-   PS：最近正在考虑重构，不过时间嘛，哈哈，得加钱
 
 ## 代码对齐？
 

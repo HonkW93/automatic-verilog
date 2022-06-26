@@ -1152,9 +1152,7 @@ let g:atv_crossdir_mode = 2    "0:normal 1:filelist 2:tags
 
 > 通过Rtl树观察代码结构
 >
-> 此功能完全参考zhangguo的脚本[automatic for Verilog & RtlTree](https://www.vim.org/scripts/script.php?script_id=4067)，只进行`tags`生成的`vimscript`集成以及文件名跨文件夹的重构。同时，此功能开启后由于自动生成`tags`，因此可以通过`<C-]>`进行模块的快速跳转。
->
-> ⚠️注意：此功能纯移植，可能存在`BUG`，以后有时间考虑重构，但不是现在
+> ⚠️注意：此功能可能存在`BUG`，请及时反馈
 
 ![callout_rtl](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/callout_rtl.gif)
 
@@ -1168,17 +1166,43 @@ let g:atv_crossdir_mode = 2    "0:normal 1:filelist 2:tags
    :RtlTree
    ```
 
+   `RtlTree`默认以当前模块为顶层模块开始进行树图生成，如果想自定义顶层文件，可以自行加上文件名（如果在当前文件夹，可用`tab`在命令行自动补全）
+
+   ```javascript
+   RtlTree top.v
+   ```
+
+   ```
+   RtlTree ../src/top.v
+   ```
+
+   ⚠️需要注意的是，当前版本的`跨文件夹`如果使用`verilog-library`设置（默认），则必须从当前打开的文件进行树图展开，否则无法找到跨文件夹的文件。如果使用`filelist`和`tag`则不受此影响。
+
 2. 跳转
 
    - 鼠标操作
 
-     单击跳转至例化位置，双击跳转至模块内部
+     单击跳转至例化位置
+
+     双击跳转至模块内部（如果文件存在），同时展开其子模块（如果子模块文件存在）
+
+     `+`代表可以展开，`~`代表无法展开，`unresolved`代表子模块对应文件不存在（即跨文件夹未搜索到）
 
      ![mouse](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/mouse.gif)
 
    - 键盘操作
 
-     单击`~`，`-`，`+`位置跳转至模块内部，单击同一行其他位置跳转至例化位置
+     在`~`，`+`位置按`<CR>`，也就是`<Enter>`，进行子模块展开/收缩
 
+     按`o`，打开对应模块
+     
+     按`i`，打开对应模块例化位置
+     
+     按`q`，关闭`RtlTree`
+     
+     按`r`，更新`RtlTree`（适用于在过程中新增/删除文件，新增/删除模块的时候。注意更新之后需要手动收缩/展开一次相应模块的位置才能展现效果）
+     
+     按`?`，打开或关闭帮助信息
+     
      ![fastkey](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/fastkey.gif)
 
