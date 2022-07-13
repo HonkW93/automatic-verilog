@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/06/14 20:39
+" Last Modified:  2022/07/13 18:36
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -386,6 +386,7 @@ function g:AutoVerilog_GetIO(lines,mode)
                 if line =~ '\[.*\]'
                     let width1 = 'c0'
                     let width2 = 'c0'
+                    let line = substitute(line,'\[.*\]','','')
                 endif
 
                 "for types like input aa,bb,cc;
