@@ -340,9 +340,9 @@ let g:atv_snippet_att_en = 0
    
    <summary>自动例化</summary>
 
-   - 使用菜单栏点击`AutoInst(0)`或在命令行输入`:call AutoInst(0)`确认，进行`/*autoinst*/`**当前模块**自动例化，注意例化时光标必须置于`/*autoinst*/`所在行之前的位置（即在当前行或上一行，若在当前行则必须在`/*autoinst*/`所在列之前）；
+   - 使用菜单栏点击`AutoInst(0)`或在命令行输入`:call g:AutoInst(0)`确认，进行`/*autoinst*/`**当前模块**自动例化，注意例化时光标必须置于`/*autoinst*/`所在行之前的位置（即在当前行或上一行，若在当前行则必须在`/*autoinst*/`所在列之前）；
 
-   - 使用菜单栏点击`AutoInst(1)`或在命令行输入`:call AutoInst(1)`确认，进行`/*autoinst*/`**所有模块**自动例化；
+   - 使用菜单栏点击`AutoInst(1)`或在命令行输入`:call g:AutoInst(1)`确认，进行`/*autoinst*/`**所有模块**自动例化；
    - 上述操作也可以使用快捷键完成。
    
    </details>
@@ -350,17 +350,16 @@ let g:atv_snippet_att_en = 0
 3. 快捷键
 
    <details>
-   
    <summary>快捷键</summary>
-
-   - 默认键盘快捷键为`<S-F3>`（`Shift+F3`），为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;ati`）
-
-   ```javascript
-   map ;ati      :call AutoInst(0)<ESC>
+   
+- 默认键盘快捷键为`<S-F3>`（`Shift+F3`），为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;ati`）
+   
+```javascript
+   map ;ati      :call g:AutoInst(0)<ESC>
    ```
    
    </details>
-
+   
 4. 配置参数 
    
    <details>
@@ -462,8 +461,8 @@ let g:atv_snippet_att_en = 0
    - 为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atp`和`;atpv`）
    
      ```javascript
-     map ;atp      :call AutoPara(0)<ESC>
-     map ;atpv     :call AutoParaValue(0)<ESC>
+     map ;atp      :call g:AutoPara(0)<ESC>
+     map ;atpv     :call g:AutoParaValue(0)<ESC>
      ```
    
    </details>
@@ -592,7 +591,7 @@ let g:atv_autopara_tail_nalign = 1
    
    <summary>自动生成</summary>
 
-   - 使用菜单栏点击`AutoReg()`或在命令行输入`:call AutoReg()`确认，在当前文本`/*autoreg*/`下方自动生成`reg`，例化时光标位置随意，只要保证当前文本含有包含`/*autoreg*/`的行即可；
+   - 使用菜单栏点击`AutoReg()`或在命令行输入`:call g:AutoReg()`确认，在当前文本`/*autoreg*/`下方自动生成`reg`，例化时光标位置随意，只要保证当前文本含有包含`/*autoreg*/`的行即可；
 
    - 上述操作也可以使用快捷键完成。
    
@@ -608,7 +607,7 @@ let g:atv_autopara_tail_nalign = 1
    默认键盘快捷键为`<S-F6>`（`Shift+F6`），为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atr`）
 
    ```javascript
-   map ;atr      :call AutoReg()<ESC>
+   map ;atr      :call g:AutoReg()<ESC>
    ```
    
    </details>
@@ -653,7 +652,7 @@ let g:atv_autopara_tail_nalign = 1
    
    <summary>自动生成</summary>
 
-   - 使用菜单栏点击`AutoWire()`或在命令行输入`:call AutoWire()`确认，在当前文本`/*autowire*/`下方自动生成`wire`，例化时光标位置随意，只要保证当前文本含有包含`/*autowire*/`的行即可；
+   - 使用菜单栏点击`AutoWire()`或在命令行输入`:call g:AutoWire()`确认，在当前文本`/*autowire*/`下方自动生成`wire`，例化时光标位置随意，只要保证当前文本含有包含`/*autowire*/`的行即可；
 
    - 上述操作也可以使用快捷键完成。
    
@@ -668,7 +667,7 @@ let g:atv_autopara_tail_nalign = 1
     默认键盘快捷键为`<S-F7>`（`Shift+F7`），为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atw`）
    
      ```javascript
-     map ;atw      :call AutoWire()<ESC>
+     map ;atw      :call g:AutoWire()<ESC>
      ```
 
     </details>
@@ -693,7 +692,7 @@ let g:atv_autopara_tail_nalign = 1
 1. 写标志为`/*autodef*/`。默认键盘快捷键为`<S-F8>`（`Shift+F8`）。为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;atd`）
 
    ```javascript
-   map ;atd      :call AutoDef()<ESC>
+   map ;atd      :call g:AutoDef()<ESC>
    ```
    
    其余步骤及注意事项参考[AutoReg](#自动寄存器-AutoReg)与[AutoWire](#自动线网-AutoWire)。
@@ -820,7 +819,7 @@ let g:atv_autopara_tail_nalign = 1
 
    <summary>自动声明</summary>
    
-   - 使用菜单栏点击`AutoArg()`或在命令行输入`:call AutoArg()`确认，进行`/*autoarg*/`当前模块自动声明，注意例化时光标必须置于`/*autoarg*/`所在行之前的位置（即在当前行或上一行，若在当前行则必须在`/*autoarg*/`所在列之前）；
+   - 使用菜单栏点击`AutoArg()`或在命令行输入`:call g:AutoArg()`确认，进行`/*autoarg*/`当前模块自动声明，注意例化时光标必须置于`/*autoarg*/`所在行之前的位置（即在当前行或上一行，若在当前行则必须在`/*autoarg*/`所在列之前）；
 
    - 上述操作也可以使用快捷键完成。
 
@@ -835,7 +834,7 @@ let g:atv_autopara_tail_nalign = 1
    - 默认键盘快捷键为`<S-F2>`（`Shift+F2`），为避免脚本更新导致的快捷键变更，或想使用自定义快捷键，可通过在`.vimrc(or _vimrc)`中配置相关`mapping`实现覆盖配置。（假设配置为`;ata`）
 
      ```javascript
-     map ;ata      :call AutoArg()<ESC>
+     map ;ata      :call g:AutoArg()<ESC>
      ```
 
    </details>
