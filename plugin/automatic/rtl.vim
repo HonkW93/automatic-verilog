@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/07/18 17:52
+" Last Modified:  2022/07/18 19:11
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -297,7 +297,7 @@ function s:SetRtlBufAu()
         execute "autocmd QuitPre <buffer> bwipeout ".s:RtlTreeBufName
     "if exists("#BufLeave") ---always 0
     else    
-        execute "autocmd BufLeave <buffer> bwipeout ".s:RtlTreeBufName
+        "execute "autocmd BufLeave <buffer> bwipeout ".s:RtlTreeBufName
     endif
 
     execute "autocmd BufEnter,WinEnter <buffer> stopinsert"
@@ -364,11 +364,21 @@ function s:OpenRtlInst() abort "{{{3
     else
         let curbufexist = 0
         "check if current buffer exist
-        for buf in getbufinfo()
-            if buf.name =~ fnamemodify(s:RtlCurBufName,':t') && buf.loaded == 1
-                let curbufexist = 1
-            endif
-        endfor
+        if exists("*getbufinfo") 
+            for buf in getbufinfo()
+                if buf.name =~ fnamemodify(s:RtlCurBufName,':t') && buf.loaded == 1
+                    let curbufexist = 1
+                endif
+            endfor
+        else
+            for nr in  filter(range(1,bufnr('$')),'buflisted(v:val)')
+                let bufname = bufname(nr)
+                let bufloaded = bufloaded(nr)
+                if bufname =~ fnamemodify(s:RtlCurBufName,':t') && bufloaded == 1
+                    let curbufexist = 1
+                endif
+            endfor
+        endif
         "current buffer exist, jump to window
         if curbufexist == 1
             silent! exe bufwinnr(s:RtlCurBufName)." wincmd w"
@@ -385,7 +395,7 @@ function s:OpenRtlInst() abort "{{{3
         call cursor(node.idx,1)
         call search('\w\+')
         execute "normal zz"
-        let s:RtlCurBufName = bufname()
+        let s:RtlCurBufName = bufname("%")
         execute bufwinnr(s:RtlTreeBufName)."wincmd w"
     endif
 endfunction
@@ -403,11 +413,21 @@ function s:OpenRtlModule() abort "{{{3
     else
         let curbufexist = 0
         "check if current buffer exist
-        for buf in getbufinfo()
-            if buf.name =~ fnamemodify(s:RtlCurBufName,':t') && buf.loaded == 1
-                let curbufexist = 1
-            endif
-        endfor
+        if exists("*getbufinfo") 
+            for buf in getbufinfo()
+                if buf.name =~ fnamemodify(s:RtlCurBufName,':t') && buf.loaded == 1
+                    let curbufexist = 1
+                endif
+            endfor
+        else
+            for nr in  filter(range(1,bufnr('$')),'buflisted(v:val)')
+                let bufname = bufname(nr)
+                let bufloaded = bufloaded(nr)
+                if bufname =~ fnamemodify(s:RtlCurBufName,':t') && bufloaded == 1
+                    let curbufexist = 1
+                endif
+            endfor
+        endif
         "current buffer exist, jump to window
         if curbufexist == 1
             silent! exe bufwinnr(s:RtlCurBufName)." wincmd w"
@@ -423,7 +443,7 @@ function s:OpenRtlModule() abort "{{{3
         execute "edit ".(node.fname)
         call search('^\s*module')
         execute "normal zz"
-        let s:RtlCurBufName = bufname()
+        let s:RtlCurBufName = bufname("%")
         execute bufwinnr(s:RtlTreeBufName)."wincmd w"
     endif
 endfunction
