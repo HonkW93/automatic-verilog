@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/07/18 16:41
+" Last Modified:  2022/07/18 19:18
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -66,7 +66,8 @@ let g:_ATV_AUTOINST_DEFAULTS = {
             \'95_support':  0,    
             \'tail_nalign': 0,    
             \'add_dir':     0,    
-            \'add_dir_keep':0
+            \'add_dir_keep':0,
+            \'incl_width':  1    
             \}
 for s:key in keys(g:_ATV_AUTOINST_DEFAULTS)
     if !exists('g:atv_autoinst_' . s:key)
@@ -387,6 +388,12 @@ function g:AutoVerilog_GetIO(lines,mode)
                     let width1 = 'c0'
                     let width2 = 'c0'
                     let line = substitute(line,'\[.*\]','','')
+                endif
+
+                "if config,never output width
+                if g:atv_autoinst_incl_width == 0
+                    let width1 = 'c0'
+                    let width2 = 'c0'
                 endif
 
                 "for types like input aa,bb,cc;
