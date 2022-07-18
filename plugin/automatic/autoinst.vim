@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/07/13 18:36
+" Last Modified:  2022/07/18 16:41
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -77,10 +77,10 @@ let s:st_prefix = repeat(' ',g:atv_autoinst_st_pos)
 "}}}1
 
 "Keys 快捷键{{{1
-amenu 9998.2.1 &Verilog.AutoInst.AutoInst(0)<TAB>One                             :call AutoInst(0)<CR>
-amenu 9998.2.2 &Verilog.AutoInst.AutoInst(1)<TAB>All                             :call AutoInst(1)<CR>
-if !hasmapto(':call AutoInst(0)<ESC>')
-    map <S-F3>      :call AutoInst(0)<ESC>
+amenu 9998.2.1 &Verilog.AutoInst.AutoInst(0)<TAB>One                             :call g:AutoInst(0)<CR>
+amenu 9998.2.2 &Verilog.AutoInst.AutoInst(1)<TAB>All                             :call g:AutoInst(1)<CR>
+if !hasmapto(':call g:AutoInst(0)<ESC>')
+    map <S-F3>      :call g:AutoInst(0)<ESC>
 endif
 "}}}1
 

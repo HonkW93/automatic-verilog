@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/06/14 20:46
+" Last Modified:  2022/07/18 16:48
 " File:           autodef.vim
 " Note:           AutoDef function partly from zhangguo's vimscript
 "                 Progress bar based off code from "progressbar widget" plugin by
@@ -149,17 +149,17 @@ let s:atv_pb_en = 0
 "}}}1
 
 "Keys 快捷键{{{1
-amenu 9998.4.1 &Verilog.AutoDef.AutoDef()<TAB>                                   :call AutoDef()<CR>
-amenu 9998.4.2 &Verilog.AutoDef.AutoReg()<TAB>                                   :call AutoReg()<CR>
-amenu 9998.4.3 &Verilog.AutoDef.AutoWire()<TAB>                                  :call AutoWire()<CR>
-if !hasmapto(':call AutoReg()<ESC>')
-    map <S-F6>      :call AutoReg()<ESC>
+amenu 9998.4.1 &Verilog.AutoDef.AutoDef()<TAB>                                   :call g:AutoDef()<CR>
+amenu 9998.4.2 &Verilog.AutoDef.AutoReg()<TAB>                                   :call g:AutoReg()<CR>
+amenu 9998.4.3 &Verilog.AutoDef.AutoWire()<TAB>                                  :call g:AutoWire()<CR>
+if !hasmapto(':call g:AutoReg()<ESC>')
+    map <S-F6>      :call g:AutoReg()<ESC>
 endif
-if !hasmapto(':call AutoWire()<ESC>')
-    map <S-F7>      :call AutoWire()<ESC>
+if !hasmapto(':call g:AutoWire()<ESC>')
+    map <S-F7>      :call g:AutoWire()<ESC>
 endif
-if !hasmapto(':call AutoDef()<ESC>')
-    map <S-F8>      :call AutoDef()<ESC>
+if !hasmapto(':call g:AutoDef()<ESC>')
+    map <S-F8>      :call g:AutoDef()<ESC>
 endif
 "}}}1
 
@@ -245,59 +245,57 @@ endfunction
 "    0      1             2      3            4         5
 "   ['wire', specify type, width, signal_name, resolved, seq]
 "---------------------------------------------------
-function AutoWire()
-    try
-        "Record current position
-        let orig_idx = line('.')
-        let orig_col = col('.')
+function g:AutoWire() abort
+    "Record current position
+    let orig_idx = line('.')
+    let orig_col = col('.')
 
-        "AutoWire all start from top line
-        call cursor(1,1)
+    "AutoWire all start from top line
+    call cursor(1,1)
 
-        while 1
-            "Put cursor to /*autowire*/ line
-            if search('\/\*autowire\*\/','W') == 0
-                break
-            endif
-
-            "read from current buffer
-            let lines = getline(1,line('$'))
-
-            "Get keep wire & update wire list
-            let [keep_wire_list,upd_wire_list] = s:GetDeclWire(lines)
-
-            "Get wire names {name : value}
-            let wire_names = s:GetWire(lines)
-
-            "Remove wire from wire_names that want to be keep when autowire
-            "   wire_names = {signal_name : value }
-            for name in keep_wire_list
-                if has_key(wire_names,name)
-                    call remove(wire_names,name)
-                endif
-            endfor
-
-            "Kill all contents between //Start of automatic wire and //End of automatic wire 
-            "Current position must be at /*autowire*/ line
-            call s:KillAutoWire()
-
-            "Draw wire, use wire_names to cover update wire list
-            "if wire_names has new wire_name that's never in upd_wire_list, add //WIRE_NEW
-            "if wire_names has same wire_name that's in upd_wire_list, cover
-            "if wire_names doesn't have wire_name that's in upd_wire_list, add //WIRE_DEL
-            let lines = s:DrawWire(wire_names,upd_wire_list)
-
-            "Append wires definition
-            call append(line('.'),lines)
-
-            "Only autowire once
+    while 1
+        "Put cursor to /*autowire*/ line
+        if search('\/\*autowire\*\/','W') == 0
             break
+        endif
 
-        endwhile
+        "read from current buffer
+        let lines = getline(1,line('$'))
 
-        "Put cursor back to original position
-        call cursor(orig_idx,orig_col)
-    endtry
+        "Get keep wire & update wire list
+        let [keep_wire_list,upd_wire_list] = s:GetDeclWire(lines)
+
+        "Get wire names {name : value}
+        let wire_names = s:GetWire(lines)
+
+        "Remove wire from wire_names that want to be keep when autowire
+        "   wire_names = {signal_name : value }
+        for name in keep_wire_list
+            if has_key(wire_names,name)
+                call remove(wire_names,name)
+            endif
+        endfor
+
+        "Kill all contents between //Start of automatic wire and //End of automatic wire 
+        "Current position must be at /*autowire*/ line
+        call s:KillAutoWire()
+
+        "Draw wire, use wire_names to cover update wire list
+        "if wire_names has new wire_name that's never in upd_wire_list, add //WIRE_NEW
+        "if wire_names has same wire_name that's in upd_wire_list, cover
+        "if wire_names doesn't have wire_name that's in upd_wire_list, add //WIRE_DEL
+        let lines = s:DrawWire(wire_names,upd_wire_list)
+
+        "Append wires definition
+        call append(line('.'),lines)
+
+        "Only autowire once
+        break
+
+    endwhile
+
+    "Put cursor back to original position
+    call cursor(orig_idx,orig_col)
 endfunction
 "}}}1
 
@@ -312,78 +310,77 @@ endfunction
 " Output:
 "   Formatted autodef code
 "---------------------------------------------------
-function AutoDef()
+function g:AutoDef() abort
     let prefix = s:st_prefix
-    try
-        "Record current position
-        let orig_idx = line('.')
-        let orig_col = col('.')
 
-        "AutoDef all start from top line
-        call cursor(1,1)
+    "Record current position
+    let orig_idx = line('.')
+    let orig_col = col('.')
 
-        while 1
-            "Put cursor to /*autodef*/ line
-            if search('\/\*autodef\*\/','W') == 0
-                break
-            endif
+    "AutoDef all start from top line
+    call cursor(1,1)
 
-            "Kill all contents between //Start of automatic define and //End of automatic define 
-            "Current position must be at /*autodef*/ line
-            "call s:KillAutoDef()
-
-            "darw //Start of automatic define
-            if search('\/\/Start of automatic define','W') != 0
-            else
-                call append(line('.'),prefix.'//Start of automatic define')
-                call cursor(line('.')+1,1)
-            endif
-
-            "AutoReg(){{{2
-            "add /*autoreg*/
-            call append(line('.'),'/*autoreg*/')
-            "cursor + 1
-            call cursor(line('.')+1,1)
-            "AutoReg
-            call AutoReg()
-            "delete /*autoreg*/
-            execute ':'.line('.').'d'
-            "cursor to end
-            call search('\/\/End of automatic reg','W')
-            "}}}2
-
-            "AutoWire(){{{2
-            "add /*autowire*/
-            call append(line('.'),'/*autowire*/')
-            "cursor + 1
-            call cursor(line('.')+1,1)
-            "AutoReg
-            call AutoWire()
-            "delete /*autowire*/
-            execute ':'.line('.').'d'
-            "cursor to end
-            call search('\/\/End of automatic wire','W')
-            "}}}2
-    
-            if search('\/\/End of automatic define','W')
-            else
-                call append(line('.'),prefix.'//End of automatic define')
-            endif
-
-            "Only autodef once
+    while 1
+        "Put cursor to /*autodef*/ line
+        if search('\/\*autodef\*\/','W') == 0
             break
-
-        endwhile
-
-        "Put cursor back to original position
-        call cursor(orig_idx,orig_col)
-
-        "Move other define down below //End of automatic define
-        if g:atv_autodef_mv == 1
-            call s:DefMove()
         endif
 
-    endtry
+        "Kill all contents between //Start of automatic define and //End of automatic define 
+        "Current position must be at /*autodef*/ line
+        "call s:KillAutoDef()
+
+        "darw //Start of automatic define
+        if search('\/\/Start of automatic define','W') != 0
+        else
+            call append(line('.'),prefix.'//Start of automatic define')
+            call cursor(line('.')+1,1)
+        endif
+
+        "AutoReg(){{{2
+        "add /*autoreg*/
+        call append(line('.'),'/*autoreg*/')
+        "cursor + 1
+        call cursor(line('.')+1,1)
+        "AutoReg
+        call g:AutoReg()
+        "delete /*autoreg*/
+        execute ':'.line('.').'d'
+        "cursor to end
+        call search('\/\/End of automatic reg','W')
+        "}}}2
+
+        "AutoWire(){{{2
+        "add /*autowire*/
+        call append(line('.'),'/*autowire*/')
+        "cursor + 1
+        call cursor(line('.')+1,1)
+        "AutoReg
+        call g:AutoWire()
+        "delete /*autowire*/
+        execute ':'.line('.').'d'
+        "cursor to end
+        call search('\/\/End of automatic wire','W')
+        "}}}2
+
+        if search('\/\/End of automatic define','W')
+        else
+            call append(line('.'),prefix.'//End of automatic define')
+        endif
+
+        "Only autodef once
+        break
+
+    endwhile
+
+    "Put cursor back to original position
+    call cursor(orig_idx,orig_col)
+
+    "Move other define down below //End of automatic define
+    if g:atv_autodef_mv == 1
+        call s:DefMove()
+    endif
+
 endfunction
 "}}}1
 

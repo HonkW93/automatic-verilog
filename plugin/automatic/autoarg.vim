@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/06/23 20:55
+" Last Modified:  2022/07/18 16:40
 " File:           autoarg.vim
 " Note:           AutoArg function self-made
 "------------------------------------------------------------------------------
@@ -45,9 +45,9 @@ let g:atv_autoarg_tail_nalign = g:atv_autoarg_mode ? 1 : g:atv_autoarg_tail_nali
 let s:st_prefix = repeat(' ',g:atv_autoarg_st_pos)
 
 "Keys 快捷键{{{1
-amenu 9998.1.1 &Verilog.AutoArg.AutoArg()<TAB>                          :call AutoArg()<CR>
-if !hasmapto(':call AutoArg()<ESC>')
-    map <S-F2>      :call AutoArg()<ESC>
+amenu 9998.1.1 &Verilog.AutoArg.AutoArg()<TAB>                          :call g:AutoArg()<CR>
+if !hasmapto(':call g:AutoArg()<ESC>')
+    map <S-F2>      :call g:AutoArg()<ESC>
 endif
 "}}}1
 
@@ -67,7 +67,7 @@ endif
 "   io_seqs = {seq : value }
 "   io_names = {signal_name : value }
 "---------------------------------------------------
-function! AutoArg() abort
+function! g:AutoArg() abort
     "AutoArg must open 95_support
     if g:atv_autoinst_95_support == 0
         echohl ErrorMsg | echo "Error because AutoArg must be used in verilog-95 but atv_autoinst_95_support not open! " | echohl None

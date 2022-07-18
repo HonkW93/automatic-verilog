@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/06/14 20:47
+" Last Modified:  2022/07/18 16:36
 " File:           crossdir.vim
 " Note:           search cross directory by tags/filelist/verilog-library
 "------------------------------------------------------------------------------
@@ -854,7 +854,7 @@ endfunction
 
 "SortNaturalOrder sort函数Funcref（用于sort函数排序）{{{2
 " Comparator function for natural ordering of numbers
-function s:SortNaturalOrder(firstNr, secondNr)
+function g:AutoVerilog_SortNaturalOrder(firstNr, secondNr)
   if a:firstNr < a:secondNr
     return -1
   elseif a:firstNr > a:secondNr
@@ -870,10 +870,10 @@ elseif v:version == 704
     if has("patch341") 
         let g:atv_sort_funcref = 'n'
     else
-        let g:atv_sort_funcref = 's:SortNaturalOrder'
+        let g:atv_sort_funcref = 'g:AutoVerilog_SortNaturalOrder'
     endif
 elseif v:version == 703
-    let g:atv_sort_funcref = 's:SortNaturalOrder'
+    let g:atv_sort_funcref = 'g:AutoVerilog_SortNaturalOrder'
 endif
 
 "}}}2

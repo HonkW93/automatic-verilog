@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/06/14 20:46
+" Last Modified:  2022/07/18 16:42
 " File:           autopara.vim
 " Note:           AutoPara function self-made
 "------------------------------------------------------------------------------
@@ -58,15 +58,15 @@ let s:st_prefix = repeat(' ',g:atv_autopara_st_pos)
 "}}}1
 
 "Keys 快捷键{{{1
-amenu 9998.3.1 &Verilog.AutoPara.AutoPara(0)<TAB>One                             :call AutoPara(0)<CR>
-amenu 9998.3.2 &Verilog.AutoPara.AutoPara(1)<TAB>All                             :call AutoPara(1)<CR>
-amenu 9998.3.3 &Verilog.AutoPara.AutoParaValue(0)<TAB>One                        :call AutoParaValue(0)<CR>
-amenu 9998.3.4 &Verilog.AutoPara.AutoParaValue(1)<TAB>All                        :call AutoParaValue(1)<CR>
-if !hasmapto(':call AutoPara(0)<ESC>')
-    map <S-F4>      :call AutoPara(0)<ESC>
+amenu 9998.3.1 &Verilog.AutoPara.AutoPara(0)<TAB>One                             :call g:AutoPara(0)<CR>
+amenu 9998.3.2 &Verilog.AutoPara.AutoPara(1)<TAB>All                             :call g:AutoPara(1)<CR>
+amenu 9998.3.3 &Verilog.AutoPara.AutoParaValue(0)<TAB>One                        :call g:AutoParaValue(0)<CR>
+amenu 9998.3.4 &Verilog.AutoPara.AutoParaValue(1)<TAB>All                        :call g:AutoParaValue(1)<CR>
+if !hasmapto(':call g:AutoPara(0)<ESC>')
+    map <S-F4>      :call g:AutoPara(0)<ESC>
 endif
-if !hasmapto(':call AutoParaValue(0)<ESC>')
-    map <S-F5>      :call AutoParaValue(0)<ESC>
+if !hasmapto(':call g:AutoParaValue(0)<ESC>')
+    map <S-F5>      :call g:AutoParaValue(0)<ESC>
 endif
 "}}}1
 
@@ -203,7 +203,7 @@ endfunction
 "   para_seqs = {seq : value }
 "   para_names = {parameter_name : value }
 "---------------------------------------------------
-function! AutoParaValue(mode) abort
+function! g:AutoParaValue(mode) abort
     "Get module-file-dir dictionary
     let [files,modules] = g:AutoVerilog_GetModuleFileDirDic()
 

@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/06/23 23:37
+" Last Modified:  2022/07/18 17:52
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -111,7 +111,7 @@ endfunction
 "}}}2
 function s:oTreeNode.CreateTree() "{{{2
     "add parent node
-    call extend(s:rtltree,{self.iname:self})
+    call extend(s:rtltree,{self.iname : self})
 
     "show progress
     redraw
@@ -165,7 +165,7 @@ function s:oTreeNode.Expand() "{{{2
     let node = copy(self)
     "mark node as unfold
     let node.fold = 0
-    call extend(s:rtltree,{node.iname:node})
+    call extend(s:rtltree,{node.iname : node})
     call append(".",node.Draw([]))
 endfunction
 function s:oTreeNode.Draw(lines) "{{{3
@@ -204,7 +204,7 @@ function s:oTreeNode.Shrink() "{{{2
     let node = copy(self)
     "mark node as unfold
     let node.fold = 1
-    call extend(s:rtltree,{node.iname:node})
+    call extend(s:rtltree,{node.iname : node})
     let orig_idx = line(".")
     let orig_col = col(".")
     let prefix = matchstr(getline("."),'^\s*')
@@ -267,7 +267,7 @@ function s:OpenRtl(file) abort "{{{3
     let node.layer = 0
     call node.CreateTree()
     "Create Window for RtlTree
-    let s:RtlCurBufName = bufname()
+    let s:RtlCurBufName = bufname("%")
     let s:RtlTreeBufName = "RtlTree"."(".s:rtl_top_module.")"
     silent! exe 'aboveleft ' . 'vertical ' . s:RtlTreeWinWidth . ' new '.s:RtlTreeBufName
     execute bufwinnr(s:RtlTreeBufName) . "wincmd w"
@@ -293,7 +293,13 @@ function s:SetRtlBufOpt()
 	setlocal mouse=n
 endfunction
 function s:SetRtlBufAu()
-    execute "autocmd QuitPre <buffer> bwipeout ".s:RtlTreeBufName
+    if exists("#QuitPre")
+        execute "autocmd QuitPre <buffer> bwipeout ".s:RtlTreeBufName
+    "if exists("#BufLeave") ---always 0
+    else    
+        execute "autocmd BufLeave <buffer> bwipeout ".s:RtlTreeBufName
+    endif
+
     execute "autocmd BufEnter,WinEnter <buffer> stopinsert"
 endfunction
 function s:SetRtlBufHl()
@@ -553,14 +559,14 @@ function s:GetModuleInst(lines)
                     call substitute(join(module_lines),module_inst_pattern,'\=extend(value,[submatch(1),submatch(4)])','')
                     let seq = seq + 1
                     call add(value,inst_idx)
-                    call extend(module_seqs,{seq:value})
+                    call extend(module_seqs,{seq : value})
                 "module #() inst ();
                 elseif join(module_lines) =~ module_para_inst_pattern
                     let value = []
                     call substitute(join(module_lines),module_para_inst_pattern,'\=extend(value,[submatch(1),submatch(4)])','')
                     let seq = seq + 1
                     call add(value,inst_idx)
-                    call extend(module_seqs,{seq:value})
+                    call extend(module_seqs,{seq : value})
                 endif
                 let in_module = 0
                 let module_lines = []
@@ -581,14 +587,14 @@ function s:GetModuleInst(lines)
                     call substitute(join(module_lines),module_inst_pattern,'\=extend(value,[submatch(1),submatch(4)])','')
                     let seq = seq + 1
                     call add(value,inst_idx)
-                    call extend(module_seqs,{seq:value})
+                    call extend(module_seqs,{seq : value})
                 "module #() inst ();
                 elseif join(module_lines) =~ module_para_inst_pattern
                     let value = []
                     call substitute(join(module_lines),module_para_inst_pattern,'\=extend(value,[submatch(1),submatch(4)])','')
                     let seq = seq + 1
                     call add(value,inst_idx)
-                    call extend(module_seqs,{seq:value})
+                    call extend(module_seqs,{seq : value})
                 endif
                 let in_module = 0
                 let module_lines = []
