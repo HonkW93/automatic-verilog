@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/07/18 19:18
+" Last Modified:  2022/07/19 13:15
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -388,12 +388,6 @@ function g:AutoVerilog_GetIO(lines,mode)
                     let width1 = 'c0'
                     let width2 = 'c0'
                     let line = substitute(line,'\[.*\]','','')
-                endif
-
-                "if config,never output width
-                if g:atv_autoinst_incl_width == 0
-                    let width1 = 'c0'
-                    let width2 = 'c0'
                 endif
 
                 "for types like input aa,bb,cc;
@@ -883,10 +877,13 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
     for seq in sort(map(keys(a:io_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = a:io_seqs[seq]
         let type = value[0]
+
         if type != 'keep' 
             let name = value[5]
             "calculate maximum len of position to Draw
-            if value[4] == 'c0'
+            if g:atv_autoinst_incl_width == 0       "if config,never output width
+                let width = ''
+            elseif value[4] == 'c0'
                 if value[3] == 'c0' 
                     let width = ''
                 else
@@ -954,7 +951,9 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             "name2bracket
             let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(name)-len('.'))
             "width
-            if value[4] == 'c0'
+            if g:atv_autoinst_incl_width == 0       "if config,never output width
+                let width = ''
+            elseif value[4] == 'c0'
                 if value[3] == 'c0' 
                     let width = ''
                 else
