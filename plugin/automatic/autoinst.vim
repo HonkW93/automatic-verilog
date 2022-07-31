@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/07/19 13:15
+" Last Modified:  2022/07/31 23:19
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -138,8 +138,7 @@ function! g:AutoInst(mode) abort
         "Get keep inst io & update inst io list 
         let keep_io_list = s:GetInstIO(getline(idx1,line('.')))
         let upd_io_list = s:GetInstIO(getline(line('.'),idx2))
-        "Get changed inst io names
-        let chg_io_names = s:GetChangedInstIO(getline(line('.'),idx2))
+        let chg_lines = getline(line('.'),idx2)
 
         "Get io sequences {sequence : value}
         if has_key(modules,module_name)
@@ -166,6 +165,9 @@ function! g:AutoInst(mode) abort
             echohl ErrorMsg | echo "No file with module name ".module_name." exist in cur dir ".getcwd() | echohl None
             return
         endif
+
+        "Get changed inst io names
+        let chg_io_names = s:GetChangedInstIO(chg_lines,io_names)
 
         "Remove io from io_seqs that want to be keep when autoinst
         "   value = [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
@@ -563,6 +565,7 @@ endfunction
 " Function: GetChangedInstIO
 " Input: 
 "   lines : lines to get inst IO port
+"   io_names = {signal_name : value }
 " Description:
 "   Get changed inst io port info from lines
 "   e.g
@@ -591,9 +594,10 @@ endfunction
 "                   'port_a':'port_a_o[4:0]'
 "                 }
 "---------------------------------------------------
-function s:GetChangedInstIO(lines)
+function s:GetChangedInstIO(lines,io_names)
     let idx = 0
     let cinst_names = {}
+    let io_names = copy(a:io_names)
     while idx < len(a:lines)
         let idx = idx + 1
         let idx = g:AutoVerilog_SkipCommentLine(2,idx,a:lines)  "skip pair comment line
@@ -607,6 +611,29 @@ function s:GetChangedInstIO(lines)
             let conn_name = matchstr(conn,'\w\+')                           "connection name
             if inst_name != conn_name
                 call extend(cinst_names,{inst_name : conn})
+            elseif has_key(io_names,inst_name)
+                let value = io_names[inst_name]
+                let type = value[0]
+                if type != 'keep' 
+                    let name = value[5]
+                    if g:atv_autoinst_incl_width == 0       "if config,never output width
+                        let width = ''
+                    elseif value[4] == 'c0'
+                        if value[3] == 'c0' 
+                            let width = ''
+                        else
+                            let width = '['.value[3].']'
+                        endif
+                    elseif value[3] != 'c0'
+                        let width = '['.value[3].':'.value[4].']'
+                    else
+                        let width = ''
+                    endif
+                    let conn_inst = name.width
+                endif
+                if conn_inst != conn
+                    call extend(cinst_names,{inst_name : conn})
+                endif
             endif
         endif
     endwhile

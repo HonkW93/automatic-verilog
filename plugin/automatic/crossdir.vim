@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/07/18 16:36
+" Last Modified:  2022/07/31 22:57
 " File:           crossdir.vim
 " Note:           search cross directory by tags/filelist/verilog-library
 "------------------------------------------------------------------------------
@@ -184,9 +184,12 @@ function s:GetFileDirDicFromFlist(file)
                 let ext = substitute(flag,'+libext+','','g')
                 call substitute(ext,'\zs\S\+\ze','\=add(elist,submatch(0))','g')
             elseif flag != ''
-                if filereadable(flist_dir.'/'.flag)
-                    let vfile = flist_dir.'/'.flag
-                    let vfile = expand(vfile)
+                "remove space from the head&tail
+                let flag = substitute(flag,'\s*$','','g')
+                let flag = substitute(flag,'^\s*','','g')
+                let vfile = flist_dir.'/'.flag
+                let vfile = expand(vfile)
+                if filereadable(vfile)
                     let vfile = fnamemodify(vfile,':p')
                     let dir = fnamemodify(vfile,':p:h')
                     let file = fnamemodify(vfile,':p:t')
