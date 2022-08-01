@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/07/31 23:19
+" Last Modified:  2022/08/01 22:38
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -607,7 +607,7 @@ function s:GetChangedInstIO(lines,io_names)
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
             let inst_name = matchstr(line,'\.\s*\zs\w\+\ze\s*(.*)')
-            let conn = matchstr(line,'\.\s*\w\+\s*(\s*\zs.\{-\}\ze\s*)')    "connection
+            let conn = matchstr(line,'\.\s*\w\+\s*(\s*\zs\S*\ze\s*\(\/\/.*\)\@<!)')    "connection,skip comment
             let conn_name = matchstr(conn,'\w\+')                           "connection name
             if inst_name != conn_name
                 call extend(cinst_names,{inst_name : conn})
