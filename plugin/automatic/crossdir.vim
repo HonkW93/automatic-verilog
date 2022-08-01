@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/07/31 22:57
+" Last Modified:  2022/08/01 23:55
 " File:           crossdir.vim
 " Note:           search cross directory by tags/filelist/verilog-library
 "------------------------------------------------------------------------------
@@ -141,6 +141,7 @@ endfunction
 " Description:
 "   get file-dir dictionary from filelist
 "   flist e.g.
+"       -f filelist
 "       -v lib_file
 "       -y lib_dir
 "       +libext+lib_ext
@@ -154,6 +155,7 @@ function s:GetFileDirDicFromFlist(file)
     let files = {}
     "get from filelist, no recursive
     let dirlist =[]
+    let flist = []
     let vlist = []
     let elist = []
     let rec = 0
@@ -166,12 +168,29 @@ function s:GetFileDirDicFromFlist(file)
             continue
         endif
         let matchflags = '\('.   '-y'           . '\|' .
+                                \'-f'           . '\|' .
                                 \'+incdir+'     . '\|' .
                                 \'-v'           . '\|' .
                                 \'+libext+'     . '\)'
         let flag_list = split(line,matchflags.'\(\s*[^ \-+]\+\)\{1,\}\zs')
         for flag in flag_list
-            if flag =~ '^\s*-y'
+            if flag =~ '^\s*-f'
+                let ffile = substitute(flag,'-f','','g')
+                call substitute(ffile,'\zs\S\+\ze','\=add(flist,submatch(0))','g')
+                for file in flist
+                    if file =~ '^\s*\.'                 "dir start with ./ or ../
+                        let file = flist_dir.'/'.file
+                    elseif file =~ '^\s*\S\+\/'         "dir start wich $DESIGN_ROOT/.../
+                        let file = file
+                    else                                "dir start with test.v
+                        let file = flist_dir.'/'.file
+                    endif
+                    let file = expand(file)
+                    let file = fnamemodify(file,':p')
+                    let subfiles = s:GetFileDirDicFromFlist(file)
+                    call extend (files,subfiles)
+                endfor
+            elseif flag =~ '^\s*-y'
                 let ydir = substitute(flag,'-y','','g')
                 call substitute(ydir,'\zs\S\+\ze','\=add(dirlist,submatch(0))','g')
             elseif flag =~ '^\s*+incdir+'
@@ -186,8 +205,15 @@ function s:GetFileDirDicFromFlist(file)
             elseif flag != ''
                 "remove space from the head&tail
                 let flag = substitute(flag,'\s*$','','g')
-                let flag = substitute(flag,'^\s*','','g')
-                let vfile = flist_dir.'/'.flag
+                let file = substitute(flag,'^\s*','','g')
+                if file =~ '^\s*\.'                 "dir start with ./ or ../
+                    let file = flist_dir.'/'.file
+                elseif file =~ '^\s*\S\+\/'         "dir start wich $DESIGN_ROOT/.../
+                    let file = file
+                else                                "dir start with test.v
+                    let file = flist_dir.'/'.file
+                endif
+                let vfile = file
                 let vfile = expand(vfile)
                 if filereadable(vfile)
                     let vfile = fnamemodify(vfile,':p')
