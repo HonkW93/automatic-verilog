@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/07/18 19:11
+" Last Modified:  2022/08/03 00:21
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -89,6 +89,24 @@ let s:VlogKeyWords  = s:VlogTypePre . s:VlogTypePort . s:VlogTypeConn .  s:VlogT
 "Not Keywords 非关键词类型
 let s:not_keywords_pattern = s:VlogKeyWords . '\@!\(\<\w\+\>\)'
 
+"Rtl Config Rtl配置
+let g:_ATV_RTL_DEFAULTS = {
+            \'recursive':   0,
+            \'refresh':     "r",
+            \'quit':        "q",
+            \'open':        "o",
+            \'inst':        "i",
+            \'fold':        "<CR>",
+            \'ver':         "1.0"
+            \}
+for s:key in keys(g:_ATV_RTL_DEFAULTS)
+    if !exists('g:atv_rtl_' . s:key)
+        let g:atv_rtl_{s:key} = copy(g:_ATV_RTL_DEFAULTS[s:key])
+    endif
+endfor
+
+command -nargs=? -complete=file RtlTree :call <SID>RtlTree(<f-args>)
+
 "}}}1
 
 "RtlTree Rtl树{{{1
@@ -106,12 +124,22 @@ function s:oTreeNode.New() "{{{2
     let newTreeNode.unresolved = 0
     let newTreeNode.layer = -1
     let newTreeNode.fold = 1
+    let newTreeNode.child_created = 0
     return newTreeNode
 endfunction
 "}}}2
-function s:oTreeNode.CreateTree() "{{{2
+function s:oTreeNode.CreateTree(level) "{{{2
     "add parent node
     call extend(s:rtltree,{self.iname : self})
+
+    "none recursive create must have 2-level because 
+    " '+' needed for children's child
+    "e.g.
+    "   ~ top
+    "     + top_child
+    if a:level == 2
+        return
+    endif
 
     "show progress
     redraw
@@ -120,9 +148,15 @@ function s:oTreeNode.CreateTree() "{{{2
     "create child node
     if self.CreateChildren() == []
         return
-    else
+    elseif g:atv_rtl_recursive == 1
+        "recursive creation
         for node in self.children
-            call node.CreateTree()
+            call node.CreateTree(0)
+        endfor
+    else
+        "none recursive creation
+        for node in self.children
+            call node.CreateTree(a:level+1)
         endfor
     endif
 endfunction
@@ -265,7 +299,8 @@ function s:OpenRtl(file) abort "{{{3
     let node.fname = s:rtl_top_file
     let node.children = []
     let node.layer = 0
-    call node.CreateTree()
+    let node.child_created = 1
+    call node.CreateTree(0)
     "Create Window for RtlTree
     let s:RtlCurBufName = bufname("%")
     let s:RtlTreeBufName = "RtlTree"."(".s:rtl_top_module.")"
@@ -336,6 +371,11 @@ function s:FoldRtl() abort "{{{3
     endif
     "expand
     if line =~ '^\s*+\s'
+        "none recursive, rtl needed create while fold
+        if g:atv_rtl_recursive==0 && node.child_created== 0
+            call node.CreateTree(0)
+            let node.child_created = 1
+        endif
         "+ -> ~
         let line = substitute(line,'\(^\s*\)+\s','\1\~ ','')
         call setline(".",line)
@@ -456,19 +496,17 @@ function s:CreateRtl() abort "{{{3
     let node.fname = s:rtl_top_file
     let node.children = []
     let node.layer = 0
-    call node.CreateTree()
+    let node.child_created = 1
+    "recursively refresh
+    let save_recursive = g:atv_rtl_recursive 
+    let g:atv_rtl_recursive = 1
+    call node.CreateTree(0)
+    let g:atv_rtl_recursive = save_recursive
 endfunction
 "}}}3
 "}}}2
-command -nargs=? -complete=file RtlTree :call <SID>RtlTree(<f-args>)
 
 "Rtl Help
-let g:atv_rtl_ver = "1.0"
-let g:atv_rtl_refresh = "r"
-let g:atv_rtl_quit = "q"
-let g:atv_rtl_open = "o"
-let g:atv_rtl_inst = "i"
-let g:atv_rtl_fold = "<CR>"
 function s:RtlHelp()
     let orig_idx = line(".")
     let orig_col = col(".")
@@ -651,4 +689,3 @@ endfunction
 "}}}2
 
 "}}}1
-

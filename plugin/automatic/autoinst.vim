@@ -1087,7 +1087,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
     "}}}3
 
     if lines == []
-        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly written in verilog-95 but atv_autoinst_95_support not open " | echohl None
+        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly written in verilog-95 but atv_autoinst_95_support not open, or bracket not match in inst list " | echohl None
     endif
 
     return lines
