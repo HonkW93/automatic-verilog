@@ -1,6 +1,26 @@
 # Changelog
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.5.1] - 2022-08-05
+
+### Changed
+
+- `autoinst` changed config and fixed several bugs
+
+  修改部分配置并修复部分遗留问题
+
+### Added
+
+- Add `RtlTree` newer version
+
+  优化版`RtlTree()`
+
+### Fixed
+
+- Bug fixed
+
+  修复大量遗留问题
+
 ## [1.5] - 2022-05-15
 
 ### Changed
