@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/05/19 20:24
+" Last Modified:  2022/08/05 23:11
 " File:           automatic.vim
 " Note:           1. Auto function based on zhangguo's vimscript, heavily modified
 "                 2. Rtl Tree based on zhangguo's vimscript, slightly modified
@@ -48,6 +48,7 @@ endfunction
 let g:atv_personal_keys = get(g:,'atv_personal_keys',0)
 if g:atv_personal_keys == 1
     imap <F2> <C-R>=strftime("%Y/%m/%d")<CR>
+    "format.vim
 endif
 "}}}1
 
