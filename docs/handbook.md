@@ -430,6 +430,7 @@ let g:atv_snippet_att_en = 0
    > - 例化时支持`verilog-95`的写法（`g:atv_autoinst_95_support`）
    > - 例化时默认不添加例化模块文件所在位置<code>dir</code>，打开此配置会在例化模块之前一行添加`//Instance`+`dir`以显示例化模块所在的文件夹地址（`g:atv_autoinst_add_dir`）
    > - 例化时若添加了例化模块文件所在位置<code>dir</code>，使用原有的环境变量（如果有，例如`$HOME`）表述而不展开为详细目录（`g:atv_autoinst_add_dir_keep`）
+   > - 例化时默认添加多`bit`信号的位宽，如不想添加，可关闭位宽添加（`g:atv_autoinst_incl_width`）
    
    可通过在`.vimrc(or _vimrc)`中配置相关`global`参数实现配置
    
@@ -448,12 +449,13 @@ let g:atv_snippet_att_en = 0
    let g:atv_autoinst_tail_nalign = 1
    let g:atv_autoinst_add_dir = 1
    let g:atv_autoinst_add_dir_keep = 1
+   let g:atv_autoinst_incl_width = 0
    ```
    
    ![ati_mark_demo](https://cdn-1301954091.cos.ap-chengdu.myqcloud.com/blog/vimscript-automatic/ati_mark_demo.gif)
-   
-   </details>
 
+   </details>
+   
 5. 重刷
 
    <details>
