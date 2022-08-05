@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/08/04 23:17
+" Last Modified:  2022/08/05 21:28
 " File:           snippet.vim
 " Note:           Snippet function partly from zhangguo's vimscript,partly from load_template
 "------------------------------------------------------------------------------
@@ -49,6 +49,9 @@ let g:_ATV_SNIPPET_DEFAULTS = {
 for s:key in keys(g:_ATV_SNIPPET_DEFAULTS)
     if !exists('g:atv_snippet_' . s:key)
         let g:atv_snippet_{s:key} = copy(g:_ATV_SNIPPET_DEFAULTS[s:key])
+    endif
+    if s:key =~ 'alb.*_file'
+        let g:atv_snippet_{s:key} = expand(g:atv_snippet_{s:key})
     endif
 endfor
 "}}}1
