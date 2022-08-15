@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/08/03 00:21
+" Last Modified:  2022/08/15 22:48
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -301,6 +301,8 @@ function s:OpenRtl(file) abort "{{{3
     let node.layer = 0
     let node.child_created = 1
     call node.CreateTree(0)
+    "forbid mouse behavior change when using this plugin, possible problem here
+    let s:save_mouse = &mouse
     "Create Window for RtlTree
     let s:RtlCurBufName = bufname("%")
     let s:RtlTreeBufName = "RtlTree"."(".s:rtl_top_module.")"
@@ -325,17 +327,15 @@ function s:SetRtlBufOpt()
     setlocal buftype=nofile
     setlocal nospell
     setlocal nonumber
-	setlocal mouse=n
 endfunction
 function s:SetRtlBufAu()
     if exists("#QuitPre")
         execute "autocmd QuitPre <buffer> bwipeout ".s:RtlTreeBufName
-    "if exists("#BufLeave") ---always 0
-    else    
-        "execute "autocmd BufLeave <buffer> bwipeout ".s:RtlTreeBufName
     endif
-
     execute "autocmd BufEnter,WinEnter <buffer> stopinsert"
+    "mouse support
+    execute "autocmd BufEnter,WinEnter ".s:RtlTreeBufName." set mouse=n"
+    execute "autocmd BufLeave,BufDelete <buffer> set mouse=".s:save_mouse
 endfunction
 function s:SetRtlBufHl()
     hi def link RtlTree Directory
