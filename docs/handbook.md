@@ -1266,7 +1266,7 @@ let g:atv_crossdir_mode = 2    "0:normal 1:filelist 2:tags
      例如配置通过`d`键打开对应模块：
 
      ```javascript
-     let g:atv_rtl_open = "o"
+     let g:atv_rtl_open = "d"
      ```
 
 ### 递归搜索

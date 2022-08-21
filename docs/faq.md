@@ -130,9 +130,7 @@ let g:atv_autoinst_95_support = 1
 
 ## 代码段自定义？
 
-已经集成`load_template`脚本，自动调用模板，参考[vim-scripts/load_template](https://github.com/vim-scripts/load_template)。
-
-之后会使用更简洁的方式配置及载入自定义代码段。
+自动调用`always`块等模板简单实现了一下，希望纯自定义代码段的请参考[vim-scripts/load_template](https://github.com/vim-scripts/load_template)，本插件不专注与实现代码段的功能。
 
 ## 其他稀奇古怪#%……&*￥的问题？
 
