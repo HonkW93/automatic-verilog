@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/08/15 22:48
+" Last Modified:  2022/08/21 21:41
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -177,6 +177,7 @@ function s:oTreeNode.CreateChildren() "{{{3
         if module_seqs == {}
             return []
         else
+            let self.children = []
             for seq in sort(map(keys(module_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
                 let value = module_seqs[seq]
                 let child_node = s:oTreeNode.New()
