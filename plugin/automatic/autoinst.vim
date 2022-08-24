@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/08/04 20:55
+" Last Modified:  2022/08/24 21:49
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -80,6 +80,9 @@ let s:st_prefix = repeat(' ',g:atv_autoinst_st_pos)
 "Keys 快捷键{{{1
 amenu 9998.2.1 &Verilog.AutoInst.AutoInst(0)<TAB>One                             :call g:AutoInst(0)<CR>
 amenu 9998.2.2 &Verilog.AutoInst.AutoInst(1)<TAB>All                             :call g:AutoInst(1)<CR>
+amenu 9998.2.3 &Verilog.AutoInst.KillAutoInst(0)<TAB>One                         :call g:KillAutoInst(0)<CR>
+amenu 9998.2.4 &Verilog.AutoInst.KillAutoInst(1)<TAB>All                         :call g:KillAutoInst(1)<CR>
+
 if !hasmapto(':call g:AutoInst(0)<ESC>')
     map <S-F3>      :call g:AutoInst(0)<ESC>
 endif
@@ -103,7 +106,7 @@ endif
 "   io_seqs = {seq : value }
 "   io_names = {signal_name : value }
 "---------------------------------------------------
-function! g:AutoInst(mode) abort
+function! g:AutoInst(mode)
     "Get module-file-dir dictionary
     let [files,modules] = g:AutoVerilog_GetModuleFileDirDic()
 
@@ -163,7 +166,14 @@ function! g:AutoInst(mode) abort
             let io_names = g:AutoVerilog_GetIO(lines,'name')
         else
             echohl ErrorMsg | echo "No file with module name ".module_name." exist in cur dir ".getcwd() | echohl None
-            return
+            if a:mode == 1
+                continue
+            elseif a:mode == 0
+                return
+            else
+                echohl ErrorMsg | echo "Error input for AutoInst(),input mode = ".a:mode| echohl None
+                return
+            endif
         endif
 
         "Get changed inst io names
@@ -219,14 +229,70 @@ function! g:AutoInst(mode) abort
         "mode = 0, only autoinst once
         if a:mode == 0
             break
-            "mode = 1, autoinst all
-        else
+        "mode = 1, autoinst all
         endif
 
     endwhile
 
     "Put cursor back to original position
     call cursor(orig_idx,orig_col)
+
+endfunction
+"}}}1
+
+"KillAutoInst Kill自动例化{{{1
+"--------------------------------------------------
+" Function: KillAutoInst
+" Input: 
+"   mode : mode for kill autoinst
+" Description:
+"   autoinst for inst module
+"   mode = 1, kill all autoinst instance
+"   mode = 0, kill only one autoinst instance
+" Output:
+"   Killed autoinst code
+"---------------------------------------------------
+function! g:KillAutoInst(mode) abort
+
+    "Record current position
+    let orig_idx = line('.')
+    let orig_col = col('.')
+
+    "AutoInst all start from top line, AutoInst once start from first /*autoinst*/ line
+    if a:mode == 1
+        call cursor(1,1)
+    elseif a:mode == 0
+        call cursor(line('.'),1)
+    else
+        echohl ErrorMsg | echo "Error input for KillAutoInst(),input mode = ".a:mode| echohl None
+        return
+    endif
+
+    while 1
+        "Put cursor to /*autoinst*/ line
+        if search('\/\*autoinst\*\/','W') == 0
+            break
+        endif
+
+        "Skip comment line //
+        if getline('.') =~ '^\s*\/\/'
+            continue
+        endif
+
+        "Kill all contents under /*autoinst*/
+        "Current position must be at /*autoinst*/ line
+        call s:KillAutoInst()
+
+        "mode = 0, only kill autoinst once
+        if a:mode == 0
+            break
+        "mode = 1, kill autoinst all
+        endif
+    endwhile
+
+    "cursor back
+    call cursor(orig_idx,orig_col)
+
 endfunction
 "}}}1
 
