@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/07/18 16:48
+" Last Modified:  2022/09/03 23:51
 " File:           autodef.vim
 " Note:           AutoDef function partly from zhangguo's vimscript
 "                 Progress bar based off code from "progressbar widget" plugin by
@@ -152,6 +152,10 @@ let s:atv_pb_en = 0
 amenu 9998.4.1 &Verilog.AutoDef.AutoDef()<TAB>                                   :call g:AutoDef()<CR>
 amenu 9998.4.2 &Verilog.AutoDef.AutoReg()<TAB>                                   :call g:AutoReg()<CR>
 amenu 9998.4.3 &Verilog.AutoDef.AutoWire()<TAB>                                  :call g:AutoWire()<CR>
+amenu 9998.4.4 &Verilog.AutoDef.KillAutoDef()<TAB>                               :call g:KillAutoDef()<CR>
+amenu 9998.4.5 &Verilog.AutoDef.KillAutoReg()<TAB>                               :call g:KillAutoReg()<CR>
+amenu 9998.4.6 &Verilog.AutoDef.KillAutoWire()<TAB>                              :call g:KillAutoWire()<CR>
+
 if !hasmapto(':call g:AutoReg()<ESC>')
     map <S-F6>      :call g:AutoReg()<ESC>
 endif
@@ -226,7 +230,7 @@ function! g:AutoReg() abort
 
     endwhile
 
-    "Put cursor back to original position
+    "cursor back
     call cursor(orig_idx,orig_col)
 endfunction
 "}}}1
@@ -294,7 +298,7 @@ function g:AutoWire() abort
 
     endwhile
 
-    "Put cursor back to original position
+    "cursor back
     call cursor(orig_idx,orig_col)
 endfunction
 "}}}1
@@ -380,6 +384,118 @@ function g:AutoDef() abort
     if g:atv_autodef_mv == 1
         call s:DefMove()
     endif
+
+endfunction
+"}}}1
+
+"KillAutoReg Kill自动寄存器{{{1
+"--------------------------------------------------
+" Function: KillAutoReg
+" Input: 
+"   N/A
+" Output:
+"   Killed autoreg code
+"---------------------------------------------------
+function! g:KillAutoReg() abort
+
+    "Record current position
+    let orig_idx = line('.')
+    let orig_col = col('.')
+
+    "KillAutoReg all start from top line
+    call cursor(1,1)
+
+    while 1
+        "Put cursor to /*autoreg*/ line
+        if search('\/\*autoreg\*\/','W') == 0
+            break
+        endif
+
+        "Kill all contents between //Start of automatic reg and //End of automatic reg
+        "Current position must be at /*autoreg*/ line
+        call s:KillAutoReg()
+
+        "only kill autoreg once
+        break
+    endwhile
+
+    "cursor back
+    call cursor(orig_idx,orig_col)
+
+endfunction
+"}}}1
+
+"KillAutoWire Kill自动线网{{{1
+"--------------------------------------------------
+" Function: KillAutoWire
+" Input: 
+"   N/A
+" Output:
+"   Killed autowire code
+"---------------------------------------------------
+function g:KillAutoWire() abort
+
+    "Record current position
+    let orig_idx = line('.')
+    let orig_col = col('.')
+
+    "AutoWire all start from top line
+    call cursor(1,1)
+
+    while 1
+        "Put cursor to /*autowire*/ line
+        if search('\/\*autowire\*\/','W') == 0
+            break
+        endif
+
+        "Kill all contents between //Start of automatic wire and //End of automatic wire 
+        "Current position must be at /*autowire*/ line
+        call s:KillAutoWire()
+
+        "only autowire once
+        break
+    endwhile
+
+    "cursor back
+    call cursor(orig_idx,orig_col)
+
+endfunction
+"}}}1
+
+"KillAutoDef Kill自动定义所有信号{{{1
+"--------------------------------------------------
+" Function: KillAutoDef
+" Input: 
+"   N/A
+" Output:
+"   Killed autodef code
+"---------------------------------------------------
+function g:KillAutoDef() abort
+    let prefix = s:st_prefix
+
+    "Record current position
+    let orig_idx = line('.')
+    let orig_col = col('.')
+
+    "AutoDef all start from top line
+    call cursor(1,1)
+
+    while 1
+        "Put cursor to /*autodef*/ line
+        if search('\/\*autodef\*\/','W') == 0
+            break
+        endif
+
+        "Kill all contents between //Start of automatic define and //End of automatic define 
+        "Current position must be at /*autodef*/ line
+        call s:KillAutoDef()
+
+        "only autodef once
+        break
+    endwhile
+
+    "cursor back
+    call cursor(orig_idx,orig_col)
 
 endfunction
 "}}}1

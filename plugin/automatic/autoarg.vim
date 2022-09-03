@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/07/18 16:40
+" Last Modified:  2022/09/03 23:37
 " File:           autoarg.vim
 " Note:           AutoArg function self-made
 "------------------------------------------------------------------------------
@@ -35,7 +35,6 @@ let g:_ATV_AUTOARG_DEFAULTS = {
             \'io_clsf':     1,
             \'tail_nalign': 1
             \}
-"}}}1
 for s:key in keys(g:_ATV_AUTOARG_DEFAULTS)
     if !exists('g:atv_autoarg_' . s:key)
         let g:atv_autoarg_{s:key} = copy(g:_ATV_AUTOARG_DEFAULTS[s:key])
@@ -43,9 +42,12 @@ for s:key in keys(g:_ATV_AUTOARG_DEFAULTS)
 endfor
 let g:atv_autoarg_tail_nalign = g:atv_autoarg_mode ? 1 : g:atv_autoarg_tail_nalign
 let s:st_prefix = repeat(' ',g:atv_autoarg_st_pos)
+"}}}1
 
 "Keys 快捷键{{{1
 amenu 9998.1.1 &Verilog.AutoArg.AutoArg()<TAB>                          :call g:AutoArg()<CR>
+amenu 9998.1.2 &Verilog.AutoArg.KillAutoArg()<TAB>                      :call g:KillAutoArg()<CR>
+
 if !hasmapto(':call g:AutoArg()<ESC>')
     map <S-F2>      :call g:AutoArg()<ESC>
 endif
@@ -115,7 +117,56 @@ function! g:AutoArg() abort
 
     endwhile
 
-    "Put cursor back to original position
+    "cursor back
+    call cursor(orig_idx,orig_col)
+
+endfunction
+"}}}1
+
+"KillAutoArg Kill自动声明{{{1
+"--------------------------------------------------
+" Function: KillAutoArg
+" Input: 
+"   N/A
+" Description:
+"   kill auto argument
+" Output:
+"   Killed autoarg code
+"---------------------------------------------------
+function! g:KillAutoArg() abort
+
+    "AutoArg must open 95_support
+    if g:atv_autoinst_95_support == 0
+        echohl ErrorMsg | echo "Error because KillAutoArg must be used in verilog-95 but atv_autoinst_95_support not open! " | echohl None
+    endif
+
+    "Record current position
+    let orig_idx = line('.')
+    let orig_col = col('.')
+
+    "AutoArg all start from top line
+    call cursor(1,1)
+
+    while 1
+        "Put cursor to /*autoarg*/ line
+        if search('\/\*autoarg\*\/','W') == 0
+            break
+        endif
+
+        "Skip comment line //
+        if getline('.') =~ '^\s*\/\/'
+            continue
+        endif
+
+        "Kill all contents under /*autoarg*/
+        "Current position must be at /*autoarg*/ line
+        call s:KillAutoArg()
+
+        "only autoarg once
+        break
+    endwhile
+
+    "cursor back
     call cursor(orig_idx,orig_col)
 
 endfunction

@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/09/03 23:18
+" Last Modified:  2022/09/03 23:30
 " File:           autopara.vim
 " Note:           AutoPara function self-made
 "------------------------------------------------------------------------------
@@ -62,6 +62,9 @@ amenu 9998.3.1 &Verilog.AutoPara.AutoPara(0)<TAB>One                            
 amenu 9998.3.2 &Verilog.AutoPara.AutoPara(1)<TAB>All                             :call g:AutoPara(1)<CR>
 amenu 9998.3.3 &Verilog.AutoPara.AutoParaValue(0)<TAB>One                        :call g:AutoParaValue(0)<CR>
 amenu 9998.3.4 &Verilog.AutoPara.AutoParaValue(1)<TAB>All                        :call g:AutoParaValue(1)<CR>
+amenu 9998.3.5 &Verilog.AutoPara.KillAutoPara(0)<TAB>One                         :call g:KillAutoPara(0)<CR>
+amenu 9998.3.5 &Verilog.AutoPara.KillAutoPara(1)<TAB>All                         :call g:KillAutoPara(1)<CR>
+
 if !hasmapto(':call g:AutoPara(0)<ESC>')
     map <S-F4>      :call g:AutoPara(0)<ESC>
 endif
