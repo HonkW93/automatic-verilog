@@ -55,24 +55,32 @@
 3. 快捷键
 
    <details>
-   
    <summary>快捷键</summary>
    
-   如果希望自行设定快捷键，可配置快捷键如下：
-
-   - `<Plug>Atv_Timewave_AddClk;`：绘制时钟`clk`
+   默认快捷键如下：
+   
+- `<Leader>clk`：绘制时钟`clk`
+   - `<Leader>sig`：绘制单线`sig`
+   - `<Leader>bus`：绘制总线`bus`
+   - `<Leader>blk`：绘制间隔`blk`
+   - `<Leader>neg`：绘制翻转`neg`
+   - `<Leaderinv`：翻转信号`inv`
+   
+如果希望自行设定快捷键，可配置快捷键如下：
+   
+- `<Plug>Atv_Timewave_AddClk;`：绘制时钟`clk`
    - `<Plug>Atv_Timewave_AddSig;`：绘制单线`sig`
    - `<Plug>Atv_Timewave_AddBus;`：绘制总线`bus`
    - `<Plug>Atv_Timewave_AddBlk;`：绘制间隔`blk`
-   - `<Plug>Atv_Timewave_AddNeg;`：绘制翻转`neg`
+- `<Plug>Atv_Timewave_AddNeg;`：绘制翻转`neg`
    - `<Plug>Atv_Timewave_Invert;`：翻转信号`inv`
-
+   
    可通过在`.vimrc(or _vimrc)`中配置相关`Plug`快捷键实现配置（以绘制时钟`clk`为例，配置快捷键为`;clock`）
-
+   
    ```javascript
    map ;clock <Plug>Atv_Timewave_AddClk;
    ```
-
+   
    </details>
 
 ## 代码段-Snippet
