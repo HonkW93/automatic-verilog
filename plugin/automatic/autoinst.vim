@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/09/03 23:36
+" Last Modified:  2022/09/15 18:22
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -420,6 +420,8 @@ function g:AutoVerilog_GetIO(lines,mode)
                     let type = 'reg'
                 elseif line =~ '\<wire\>'
                     let type = 'wire'
+                elseif line =~ '\<real\>'
+                    let type = 'real'
                 endif
 
                 "io direction input/output/inout
@@ -448,7 +450,7 @@ function g:AutoVerilog_GetIO(lines,mode)
 
                 "name
                 let line = substitute(line,io_dir,'','')
-                let line = substitute(line,'\<reg\>\|\<wire\>','','')
+                let line = substitute(line,'\<reg\>\|\<wire\>\|\<real\>','','')
                 let line = substitute(line,'\[.\{-\}\]','','')
 
                 "ignore list like input [7:0] a[7:0];
