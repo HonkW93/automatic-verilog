@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/09/03 23:51
+" Last Modified:  2022/09/16 12:31
 " File:           autodef.vim
 " Note:           AutoDef function partly from zhangguo's vimscript
 "                 Progress bar based off code from "progressbar widget" plugin by
@@ -2200,8 +2200,8 @@ function s:DefMove()
     call search('\/\/End of automatic define','W')
     call append(line('.'),keep_lines)
     "delete all scattered define
-    execute ':'.'g/^\s*reg.*\/\/keep_reg/d'
-    execute ':'.'g/^\s*wire.*\/\/keep_wire/d'
+    execute ':silent! '.'g/^\s*reg.*\/\/keep_reg/d'
+    execute ':silent! '.'g/^\s*wire.*\/\/keep_wire/d'
     "cursor back
     call cursor(1,1)
     call search('\/\*autodef\*\/','W')
