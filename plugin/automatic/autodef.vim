@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/09/16 12:31
+" Last Modified:  2022/09/16 18:24
 " File:           autodef.vim
 " Note:           AutoDef function partly from zhangguo's vimscript
 "                 Progress bar based off code from "progressbar widget" plugin by
@@ -320,6 +320,8 @@ function g:AutoDef() abort
     "Record current position
     let orig_idx = line('.')
     let orig_col = col('.')
+    let save_foldenable = &foldenable
+    execute ':'.'let &foldenable=0'
 
     "AutoDef all start from top line
     call cursor(1,1)
@@ -378,6 +380,7 @@ function g:AutoDef() abort
     endwhile
 
     "Put cursor back to original position
+    let &foldenable = save_foldenable
     call cursor(orig_idx,orig_col)
 
     "Move other define down below //End of automatic define
