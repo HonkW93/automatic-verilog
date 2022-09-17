@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/08/21 21:41
+" Last Modified:  2022/09/17 21:46
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -110,6 +110,7 @@ command -nargs=? -complete=file RtlTree :call <SID>RtlTree(<f-args>)
 "}}}1
 
 "RtlTree Rtl树{{{1
+
 "Rtl Tree Build
 let s:oTreeNode = {}
 let s:rtltree = {}
@@ -173,7 +174,8 @@ function s:oTreeNode.CreateChildren() "{{{3
     endif
     "search inst if resolved
     if self.unresolved == 0
-        let module_seqs = s:GetModuleInst(readfile(self.fname))
+
+        let module_seqs = s:GetModuleInst(readfile(self.fname),self.mname)
         if module_seqs == {}
             return []
         else
@@ -352,11 +354,16 @@ function s:SetRtlBufHl()
     execute 'syn match RtlTreeHelp #".*#'
 endfunction
 function s:SetRtlBufKey()
-    nnoremap <buffer> <silent> r :call <SID>CreateRtl()<CR>
-    nnoremap <buffer> <silent> q :call <SID>CloseRtl()<CR>
-    nnoremap <buffer> <silent> o :call <SID>OpenRtlModule()<CR>
-    nnoremap <buffer> <silent> i :call <SID>OpenRtlInst()<CR>
-    nnoremap <buffer> <silent> <CR> :call <SID>FoldRtl()<CR>
+    "nnoremap <buffer> <silent> r :call <SID>CreateRtl()<CR>
+    execute "nnoremap <buffer> <silent> ".g:atv_rtl_refresh." :call <SID>CreateRtl()<CR>"
+    "nnoremap <buffer> <silent> q :call <SID>CloseRtl()<CR>
+    execute "nnoremap <buffer> <silent> ".g:atv_rtl_quit." :call <SID>CloseRtl()<CR>"
+    "nnoremap <buffer> <silent> o :call <SID>OpenRtlModule()<CR>
+    execute "nnoremap <buffer> <silent> ".g:atv_rtl_open." :call <SID>OpenRtlModule()<CR>"
+    "nnoremap <buffer> <silent> i :call <SID>OpenRtlInst()<CR>
+    execute "nnoremap <buffer> <silent> ".g:atv_rtl_inst." :call <SID>OpenRtlInst()<CR>"
+    "nnoremap <buffer> <silent> <CR> :call <SID>FoldRtl()<CR>
+    execute "nnoremap <buffer> <silent> ".g:atv_rtl_fold." :call <SID>FoldRtl()<CR>"
     nnoremap <buffer> <silent> <leftrelease> :call <SID>OpenRtlInst()<CR>
     nnoremap <buffer> <silent> <2-leftmouse> :call <SID>FoldRtl()<CR>:call <SID>OpenRtlModule()<CR>
     nnoremap <buffer> <silent> ? :call <SID>RtlHelp()<CR>
@@ -483,6 +490,7 @@ function s:OpenRtlModule() abort "{{{3
         "edit parent file,cursor to inst position
         execute "edit ".(node.fname)
         call search('^\s*module')
+        call search(node.mname)
         execute "normal zz"
         let s:RtlCurBufName = bufname("%")
         execute bufwinnr(s:RtlTreeBufName)."wincmd w"
@@ -508,7 +516,7 @@ endfunction
 "}}}2
 
 "Rtl Help
-function s:RtlHelp()
+function s:RtlHelp() "{{{2
     let orig_idx = line(".")
     let orig_col = col(".")
     if getline(1) =~ '^"\sRtlTree'
@@ -529,6 +537,8 @@ function s:RtlHelp()
     endif
     call cursor(orig_idx,orig_col)
 endfunction
+"}}}2
+
 "}}}1
 
 "Sub Function 辅助函数{{{1
@@ -572,6 +582,77 @@ function s:RemoveCommentLine(lines)
 endfunction
 "}}}2
 
+"RemoveOutsideModuleLine 删除所有Module外的行{{{2
+"--------------------------------------------------
+" Function: RemoveOutsideModuleLine()
+"
+" Description:
+"   Remove lines outside specific module
+"   e.g
+"   module a();
+"     uart u_uart();
+"   endmodule
+"   module b();
+"     uart #(para=2) u_uart ();
+"   endmodule
+"
+"   --->RemoveOutsideModuleLine(lines,a)
+"
+" Output:
+"   module a();
+"     uart #(para=2) u_uart ();
+"   endmodule
+"---------------------------------------------------
+function s:RemoveOutsideModuleLine(lines,module)
+    let find_module = 0
+    let in_module = 0
+    let multiline_module = ''
+    let proc_lines = []
+    for line in a:lines
+        "single line
+        if line =~ '^\s*module'
+            if line =~ '^\s*module'.'\s\+'.a:module
+                call add(proc_lines,line)
+                let in_module = 1
+            elseif line =~ '^\s*module\s*$'
+                let multiline_module = matchstr(line,'^\s*module')
+                let find_module = 1
+            else
+                call add(proc_lines,'')
+            endif
+            continue
+        endif
+        "multi line
+        if find_module == 1 && in_module == 0
+            if line =~ '^\s*'.a:module 
+                call add(proc_lines,multiline_module)
+                call add(proc_lines,line)
+                let in_module = 1
+                continue
+            elseif line =~ '^\s*$' || line =~ '^\s*\/\/.*$'
+                call add(proc_lines,line)
+                continue
+            else
+                call add(proc_lines,'')
+            endif
+        endif
+        "endmodule
+        if in_module == 1
+            call add(proc_lines,line)
+            if line =~ 'endmodule'
+                let in_module = 0
+                continue
+            endif
+        "outisde module
+        else
+            call add(proc_lines,'')
+        endif
+    endfor
+
+    return proc_lines
+endfunction
+"}}}2
+
 "GetModuleInst 获取子模块的Module-Inst关系{{{2
 "--------------------------------------------------
 " Function: GetModuleInst
@@ -589,8 +670,9 @@ endfunction
 "   [module_name, inst_name, line_index]
 "   [uart,        u_uart,    3]
 "---------------------------------------------------
-function s:GetModuleInst(lines)
+function s:GetModuleInst(lines,mname)
     let lines = s:RemoveCommentLine(a:lines)
+    let lines = s:RemoveOutsideModuleLine(a:lines,a:mname)
     let module_lines = []
     let in_module = 0
     let module_seqs ={}
@@ -677,6 +759,7 @@ endfunction
 " Output:
 "   module name
 " Note:
+"   only use for top_module generation, ignore multi-line
 "---------------------------------------------------
 function s:GetModule(lines)
     let lines = s:RemoveCommentLine(a:lines)
