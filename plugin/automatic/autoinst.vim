@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/09/18 11:45
+" Last Modified:  2022/12/06 23:07
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -149,6 +149,8 @@ function! g:AutoInst(mode)
             let dir = files[file]
             "read file
             let lines = readfile(dir.'/'.file)
+            "reserve only module lines, in case of multiple module in same file
+            let lines = g:AutoVerilog_RsvModuleLine(lines,module_name)
 
             "get add_dir by g:atv_crossdir_dirs e.g. F:/vim/test.v ->$VIM/test.v
             if g:atv_autoinst_add_dir_keep == 1
@@ -867,6 +869,77 @@ function g:AutoVerilog_GetInstModuleName()
 
     return [module_name,inst_name,idx1,idx2,idx3]
 
+endfunction
+"}}}2
+
+"AutoVerilog_RsvModuleLine 删除所有Module外的行{{{2
+"--------------------------------------------------
+" Function: AutoVerilog_RsvModuleLine()
+"
+" Description:
+"   Remove lines outside specific module, reserve module lines
+"   e.g
+"   module a();
+"     uart u_uart();
+"   endmodule
+"   module b();
+"     uart #(para=2) u_uart ();
+"   endmodule
+"
+"   --->AutoVerilog_RsvModuleLine(lines,a)
+"
+" Output:
+"   module a();
+"     uart #(para=2) u_uart ();
+"   endmodule
+"---------------------------------------------------
+function g:AutoVerilog_RsvModuleLine(lines,module)
+    let find_module = 0
+    let in_module = 0
+    let multiline_module = ''
+    let proc_lines = []
+    for line in a:lines
+        "single line
+        if line =~ '^\s*module'
+            if line =~ '^\s*module'.'\s\+'.a:module
+                call add(proc_lines,line)
+                let in_module = 1
+            elseif line =~ '^\s*module\s*$'
+                let multiline_module = matchstr(line,'^\s*module')
+                let find_module = 1
+            else
+                call add(proc_lines,'')
+            endif
+            continue
+        endif
+        "multi line
+        if find_module == 1 && in_module == 0
+            if line =~ '^\s*'.a:module 
+                call add(proc_lines,multiline_module)
+                call add(proc_lines,line)
+                let in_module = 1
+                continue
+            elseif line =~ '^\s*$' || line =~ '^\s*\/\/.*$'
+                call add(proc_lines,line)
+                continue
+            else
+                call add(proc_lines,'')
+            endif
+        endif
+        "endmodule
+        if in_module == 1
+            call add(proc_lines,line)
+            if line =~ 'endmodule'
+                let in_module = 0
+                continue
+            endif
+        "outisde module
+        else
+            call add(proc_lines,'')
+        endif
+    endfor
+
+    return proc_lines
 endfunction
 "}}}2
 

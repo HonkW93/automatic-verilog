@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/09/17 21:46
+" Last Modified:  2022/12/06 23:26
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -97,6 +97,7 @@ let g:_ATV_RTL_DEFAULTS = {
             \'open':        "o",
             \'inst':        "i",
             \'fold':        "<CR>",
+            \'pos':         0,
             \'ver':         "1.0"
             \}
 for s:key in keys(g:_ATV_RTL_DEFAULTS)
@@ -309,7 +310,11 @@ function s:OpenRtl(file) abort "{{{3
     "Create Window for RtlTree
     let s:RtlCurBufName = bufname("%")
     let s:RtlTreeBufName = "RtlTree"."(".s:rtl_top_module.")"
-    silent! exe 'aboveleft ' . 'vertical ' . s:RtlTreeWinWidth . ' new '.s:RtlTreeBufName
+    if g:atv_rtl_pos == 0
+        silent! exe 'aboveleft ' . 'vertical ' . s:RtlTreeWinWidth . ' new '.s:RtlTreeBufName
+    else
+        silent! exe 'belowright ' . 'vertical ' . s:RtlTreeWinWidth . ' new '.s:RtlTreeBufName
+    endif
     execute bufwinnr(s:RtlTreeBufName) . "wincmd w"
     call s:SetRtlBufOpt()
     call s:SetRtlBufAu()
@@ -582,77 +587,6 @@ function s:RemoveCommentLine(lines)
 endfunction
 "}}}2
 
-"RemoveOutsideModuleLine 删除所有Module外的行{{{2
-"--------------------------------------------------
-" Function: RemoveOutsideModuleLine()
-"
-" Description:
-"   Remove lines outside specific module
-"   e.g
-"   module a();
-"     uart u_uart();
-"   endmodule
-"   module b();
-"     uart #(para=2) u_uart ();
-"   endmodule
-"
-"   --->RemoveOutsideModuleLine(lines,a)
-"
-" Output:
-"   module a();
-"     uart #(para=2) u_uart ();
-"   endmodule
-"---------------------------------------------------
-function s:RemoveOutsideModuleLine(lines,module)
-    let find_module = 0
-    let in_module = 0
-    let multiline_module = ''
-    let proc_lines = []
-    for line in a:lines
-        "single line
-        if line =~ '^\s*module'
-            if line =~ '^\s*module'.'\s\+'.a:module
-                call add(proc_lines,line)
-                let in_module = 1
-            elseif line =~ '^\s*module\s*$'
-                let multiline_module = matchstr(line,'^\s*module')
-                let find_module = 1
-            else
-                call add(proc_lines,'')
-            endif
-            continue
-        endif
-        "multi line
-        if find_module == 1 && in_module == 0
-            if line =~ '^\s*'.a:module 
-                call add(proc_lines,multiline_module)
-                call add(proc_lines,line)
-                let in_module = 1
-                continue
-            elseif line =~ '^\s*$' || line =~ '^\s*\/\/.*$'
-                call add(proc_lines,line)
-                continue
-            else
-                call add(proc_lines,'')
-            endif
-        endif
-        "endmodule
-        if in_module == 1
-            call add(proc_lines,line)
-            if line =~ 'endmodule'
-                let in_module = 0
-                continue
-            endif
-        "outisde module
-        else
-            call add(proc_lines,'')
-        endif
-    endfor
-
-    return proc_lines
-endfunction
-"}}}2
-
 "GetModuleInst 获取子模块的Module-Inst关系{{{2
 "--------------------------------------------------
 " Function: GetModuleInst
@@ -672,7 +606,7 @@ endfunction
 "---------------------------------------------------
 function s:GetModuleInst(lines,mname)
     let lines = s:RemoveCommentLine(a:lines)
-    let lines = s:RemoveOutsideModuleLine(a:lines,a:mname)
+    let lines = g:AutoVerilog_RsvModuleLine(a:lines,a:mname)
     let module_lines = []
     let in_module = 0
     let module_seqs ={}
