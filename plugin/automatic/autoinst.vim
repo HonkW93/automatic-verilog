@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/12/06 23:07
+" Last Modified:  2022/12/07 23:07
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -901,7 +901,7 @@ function g:AutoVerilog_RsvModuleLine(lines,module)
     for line in a:lines
         "single line
         if line =~ '^\s*module'
-            if line =~ '^\s*module'.'\s\+'.a:module
+            if line =~ '^\s*module'.'\s\+'.'\<'.a:module.'\>'
                 call add(proc_lines,line)
                 let in_module = 1
             elseif line =~ '^\s*module\s*$'
@@ -914,7 +914,7 @@ function g:AutoVerilog_RsvModuleLine(lines,module)
         endif
         "multi line
         if find_module == 1 && in_module == 0
-            if line =~ '^\s*'.a:module 
+            if line =~ '^\s*'.'\<'.a:module.'\>'
                 call add(proc_lines,multiline_module)
                 call add(proc_lines,line)
                 let in_module = 1
