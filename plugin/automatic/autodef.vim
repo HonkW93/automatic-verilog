@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/09/18 17:29
+" Last Modified:  2022/12/26 23:14
 " File:           autodef.vim
 " Note:           AutoDef function partly from zhangguo's vimscript
 "                 Progress bar based off code from "progressbar widget" plugin by
@@ -122,6 +122,8 @@ let s:not_keywords_pattern = s:VlogKeyWords . '\@!\(\<\w\+\>\)'
 "+-----------------+--------------------------------------------------------------+
 "|   tail_nalign   |   don't do alignment in tail when autoreg/autowire/autodef   |
 "+-----------------+--------------------------------------------------------------+
+"|      logic      |                use logic instead of reg&wire                 |
+"+-----------------+--------------------------------------------------------------+
 let g:_ATV_AUTODEF_DEFAULTS = {
             \'st_pos':          4,
             \'name_pos':        32,
@@ -134,7 +136,8 @@ let g:_ATV_AUTODEF_DEFAULTS = {
             \'reg_rmv_io':      1,        
             \'wire_rmv_io':     1,
             \'mv':              0,        
-            \'tail_nalign':     0    
+            \'tail_nalign':     0,
+            \'logic':           0    
             \}
 for s:key in keys(g:_ATV_AUTODEF_DEFAULTS)
     if !exists('g:atv_autodef_' . s:key)
@@ -961,7 +964,11 @@ function s:DrawReg(reg_names,reg_list)
             let width = value[2]
             "calculate maximum len of position to Draw
             "let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
-            let max_lname_len = max([max_lname_len,len(prefix)+len('reg  ')+len(width)+4,g:atv_autodef_name_pos])
+            if g:atv_autodef_logic == 1
+                let max_lname_len = max([max_lname_len,len(prefix)+len('logic ')+len(width)+4,g:atv_autodef_name_pos])
+            else 
+                let max_lname_len = max([max_lname_len,len(prefix)+len('reg  ')+len(width)+4,g:atv_autodef_name_pos])
+            endif
             let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,g:atv_autodef_sym_pos])
         endif
     endfor
@@ -1034,10 +1041,18 @@ function s:DrawReg(reg_names,reg_list)
         "Draw reg by config
         "empty list, default
         if reg_list_empty == 1
-            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            endif
         "update list,draw reg by config
         else
-            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            endif
             "process //REG_NEW
             let reg_idx = index(reg_list,name) 
             "name not exist in old reg_list, add //REG_NEW
@@ -1102,10 +1117,18 @@ function s:DrawReg(reg_names,reg_list)
         "Draw reg by config
         "empty list, default
         if reg_list_empty == 1
-            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            endif
         "update list,draw reg by config
         else
-            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            endif
             "process //REG_NEW
             let reg_idx = index(reg_list,name) 
             "name not exist in old reg_list, add //REG_NEW
@@ -1863,7 +1886,11 @@ function s:DrawWire(wire_names,wire_list)
             else
                 "logic & real
             endif
-            let max_lname_len = max([max_lname_len,len(prefix)+len(stype)+len(' ')+len(width)+4,g:atv_autodef_name_pos])
+            if g:atv_autodef_logic == 1
+                let max_lname_len = max([max_lname_len,len(prefix)+len('logic ')+len(width)+4,g:atv_autodef_name_pos])
+            else 
+                let max_lname_len = max([max_lname_len,len(prefix)+len(stype)+len(' ')+len(width)+4,g:atv_autodef_name_pos])
+            endif
             let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,g:atv_autodef_sym_pos])
         endif
     endfor
@@ -1936,10 +1963,18 @@ function s:DrawWire(wire_names,wire_list)
         "Draw wire by config
         "empty list, default
         if wire_list_empty == 1
-            let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            endif
         "update list,draw wire by config
         else
-            let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            endif
             "process //WIRE_NEW
             let wire_idx = index(wire_list,name) 
             "name not exist in old wire_list, add //WIRE_NEW
@@ -2010,10 +2045,18 @@ function s:DrawWire(wire_names,wire_list)
         "Draw wire by config
         "empty list, default
         if wire_list_empty == 1
-            let line = prefix.stype.' '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.stype.' '.width.width2name.name.name2semicol.semicol
+            endif
         "update list,draw wire by config
         else
-            let line = prefix.stype.' '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.stype.' '.width.width2name.name.name2semicol.semicol
+            endif
             "process //WIRE_NEW
             let wire_idx = index(wire_list,name) 
             "name not exist in old wire_list, add //WIRE_NEW
