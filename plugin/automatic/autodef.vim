@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/09/03 23:51
+" Last Modified:  2022/12/26 23:14
 " File:           autodef.vim
 " Note:           AutoDef function partly from zhangguo's vimscript
 "                 Progress bar based off code from "progressbar widget" plugin by
@@ -122,6 +122,8 @@ let s:not_keywords_pattern = s:VlogKeyWords . '\@!\(\<\w\+\>\)'
 "+-----------------+--------------------------------------------------------------+
 "|   tail_nalign   |   don't do alignment in tail when autoreg/autowire/autodef   |
 "+-----------------+--------------------------------------------------------------+
+"|      logic      |                use logic instead of reg&wire                 |
+"+-----------------+--------------------------------------------------------------+
 let g:_ATV_AUTODEF_DEFAULTS = {
             \'st_pos':          4,
             \'name_pos':        32,
@@ -134,7 +136,8 @@ let g:_ATV_AUTODEF_DEFAULTS = {
             \'reg_rmv_io':      1,        
             \'wire_rmv_io':     1,
             \'mv':              0,        
-            \'tail_nalign':     0    
+            \'tail_nalign':     0,
+            \'logic':           0    
             \}
 for s:key in keys(g:_ATV_AUTODEF_DEFAULTS)
     if !exists('g:atv_autodef_' . s:key)
@@ -320,6 +323,8 @@ function g:AutoDef() abort
     "Record current position
     let orig_idx = line('.')
     let orig_col = col('.')
+    let save_foldenable = &foldenable
+    execute ':'.'let &foldenable=0'
 
     "AutoDef all start from top line
     call cursor(1,1)
@@ -378,6 +383,7 @@ function g:AutoDef() abort
     endwhile
 
     "Put cursor back to original position
+    let &foldenable = save_foldenable
     call cursor(orig_idx,orig_col)
 
     "Move other define down below //End of automatic define
@@ -958,7 +964,11 @@ function s:DrawReg(reg_names,reg_list)
             let width = value[2]
             "calculate maximum len of position to Draw
             "let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
-            let max_lname_len = max([max_lname_len,len(prefix)+len('reg  ')+len(width)+4,g:atv_autodef_name_pos])
+            if g:atv_autodef_logic == 1
+                let max_lname_len = max([max_lname_len,len(prefix)+len('logic ')+len(width)+4,g:atv_autodef_name_pos])
+            else 
+                let max_lname_len = max([max_lname_len,len(prefix)+len('reg  ')+len(width)+4,g:atv_autodef_name_pos])
+            endif
             let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,g:atv_autodef_sym_pos])
         endif
     endfor
@@ -1031,10 +1041,18 @@ function s:DrawReg(reg_names,reg_list)
         "Draw reg by config
         "empty list, default
         if reg_list_empty == 1
-            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            endif
         "update list,draw reg by config
         else
-            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            endif
             "process //REG_NEW
             let reg_idx = index(reg_list,name) 
             "name not exist in old reg_list, add //REG_NEW
@@ -1099,10 +1117,18 @@ function s:DrawReg(reg_names,reg_list)
         "Draw reg by config
         "empty list, default
         if reg_list_empty == 1
-            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            endif
         "update list,draw reg by config
         else
-            let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'reg'.'  '.width.width2name.name.name2semicol.semicol
+            endif
             "process //REG_NEW
             let reg_idx = index(reg_list,name) 
             "name not exist in old reg_list, add //REG_NEW
@@ -1331,8 +1357,8 @@ endfunction
 "
 " Output:
 "   width_names    
-"    0     1            2      3             4            5
-"   [seqs, signal_name, lines, module_names, conn_widths, resolved]
+"    0     1            2      3             4            5         6
+"   [seqs, signal_name, lines, module_names, conn_widths, resolved, stype]
 "---------------------------------------------------
 function s:GetiWire(lines,files,modules,reg_width_names,decl_reg,io_names)
     let width_names = {}
@@ -1454,6 +1480,7 @@ function s:GetiWire(lines,files,modules,reg_width_names,decl_reg,io_names)
                     "  status priority 4=3 > 2=1 > 0
                     "
                     let wire_status = 0
+                    let stype = 'iwire'
 
                     "if it's not input(output/inout), it must be wire
                     if has_key(inst_io_names,port)
@@ -1465,6 +1492,13 @@ function s:GetiWire(lines,files,modules,reg_width_names,decl_reg,io_names)
                             let wire_status = 1
                         else
                             let wire_status = 2
+                        endif
+                        "specify type to substitute iwire
+                        let type = value[0]
+                        if type == 'logic' || type == 'real'
+                            let stype = type
+                        else
+                            let stype = 'iwire'
                         endif
                     else
                         let wire_status = -1
@@ -1524,9 +1558,9 @@ function s:GetiWire(lines,files,modules,reg_width_names,decl_reg,io_names)
                         endif
 
                                 "   width_names
-                                "    0     1            2           3             4            5
-                                "   [seqs, signal_name, lines,      module_names, conn_widths, resolved]
-                        let value = [seqs, conn_name,   inst_lines, module_names, conn_widths, resolved]
+                                "    0     1            2           3             4            5         6
+                                "   [seqs, signal_name, lines,      module_names, conn_widths, resolved, type]
+                        let value = [seqs, conn_name,   inst_lines, module_names, conn_widths, resolved, stype]
                         
                         call extend(width_names,{conn_name : value})
                         "echo 'name = '.conn_name.join(conn_widths)
@@ -1841,12 +1875,22 @@ function s:DrawWire(wire_names,wire_list)
         "   [type, specify type, width, signal_name, resolved, seq]
         let value = a:wire_names[name]
         let type = value[0]
+        let stype = value[1]
         if type == 'wire'
             let name = value[3]
             let width = value[2]
             "calculate maximum len of position to Draw
             "let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
-            let max_lname_len = max([max_lname_len,len(prefix)+len('wire ')+len(width)+4,g:atv_autodef_name_pos])
+            if stype == 'iwire' || stype == 'awire'
+                let stype = 'wire'
+            else
+                "logic & real
+            endif
+            if g:atv_autodef_logic == 1
+                let max_lname_len = max([max_lname_len,len(prefix)+len('logic ')+len(width)+4,g:atv_autodef_name_pos])
+            else 
+                let max_lname_len = max([max_lname_len,len(prefix)+len(stype)+len(' ')+len(width)+4,g:atv_autodef_name_pos])
+            endif
             let max_rsemicol_len = max([max_rsemicol_len,max_lname_len+len(name)+4,g:atv_autodef_sym_pos])
         endif
     endfor
@@ -1875,7 +1919,7 @@ function s:DrawWire(wire_names,wire_list)
         if stype == 'awire'
             call extend(awire_seqs,{seq : value})
         endif
-        if stype == 'iwire'
+        if stype == 'iwire' || stype == 'logic' || stype == 'real'
             call extend(iwire_seqs,{seq : value})
         endif
     endfor
@@ -1919,10 +1963,18 @@ function s:DrawWire(wire_names,wire_list)
         "Draw wire by config
         "empty list, default
         if wire_list_empty == 1
-            let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            endif
         "update list,draw wire by config
         else
-            let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            endif
             "process //WIRE_NEW
             let wire_idx = index(wire_list,name) 
             "name not exist in old wire_list, add //WIRE_NEW
@@ -1961,14 +2013,20 @@ function s:DrawWire(wire_names,wire_list)
     for seq in sort(map(keys(iwire_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = iwire_seqs[seq]
         "Format wire sequences
-        "    0       1         2       3       4            5 
-        "   [type, sequence, width1, width2, signal_name, lines]
+        "    0     1             2      3            4         5
+        "   [type, specify type, width, signal_name, resolved, seq]
 
         "width
         let width = value[2]
 
         "width2name
-        let width2name = repeat(' ',max_lname_len-len(prefix)-len(width)-len('wire '))
+        let stype = value[1]
+        if stype == 'iwire' || stype == 'awire'
+            let stype = 'wire'
+        else
+            "logic & real
+        endif
+        let width2name = repeat(' ',max_lname_len-len(prefix)-len(width)-len(stype)-len(' '))
 
         "name
         let name = value[3]
@@ -1987,10 +2045,18 @@ function s:DrawWire(wire_names,wire_list)
         "Draw wire by config
         "empty list, default
         if wire_list_empty == 1
-            let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.stype.' '.width.width2name.name.name2semicol.semicol
+            endif
         "update list,draw wire by config
         else
-            let line = prefix.'wire'.' '.width.width2name.name.name2semicol.semicol
+            if g:atv_autodef_logic == 1
+                let line = prefix.'logic'.' '.width.width2name.name.name2semicol.semicol
+            else
+                let line = prefix.stype.' '.width.width2name.name.name2semicol.semicol
+            endif
             "process //WIRE_NEW
             let wire_idx = index(wire_list,name) 
             "name not exist in old wire_list, add //WIRE_NEW
@@ -2200,8 +2266,8 @@ function s:DefMove()
     call search('\/\/End of automatic define','W')
     call append(line('.'),keep_lines)
     "delete all scattered define
-    execute ':'.'g/^\s*reg.*\/\/keep_reg/d'
-    execute ':'.'g/^\s*wire.*\/\/keep_wire/d'
+    execute ':silent! '.'g/^\s*reg.*\/\/keep_reg/d'
+    execute ':silent! '.'g/^\s*wire.*\/\/keep_wire/d'
     "cursor back
     call cursor(1,1)
     call search('\/\*autodef\*\/','W')
@@ -3049,20 +3115,22 @@ function s:GetAllSig(lines,mode)
             "use iwire
             else
                 let conn_widths = iwire_value[4]
+                let stype = iwire_value[6]
                 "   list of signal sequences
                 "    0     1             2      3            4         5
                 "   [type, specify type, width, signal_name, resolved, seq]
-                let value = ['wire','iwire',conn_widths[-1],name,0,iwire_seqs[0]]
+                let value = ['wire',stype,conn_widths[-1],name,0,iwire_seqs[0]]
                 call extend(sig_names,{name : value})
                 call extend(wire_names,{name : value})
             endif
         "only iwire
         else
+            let conn_widths = iwire_value[4]
+            let stype = iwire_value[6]
             "   list of signal sequences
             "    0     1             2      3            4         5
             "   [type, specify type, width, signal_name, resolved, seq]
-            let conn_widths = iwire_value[4]
-            let value = ['wire','iwire',conn_widths[-1],name,iwire_resolved,iwire_seqs[0]]
+            let value = ['wire',stype,conn_widths[-1],name,iwire_resolved,iwire_seqs[0]]
             call extend(sig_names,{name : value})
             call extend(wire_names,{name : value})
         endif

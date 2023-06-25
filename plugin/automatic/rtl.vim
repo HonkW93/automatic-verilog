@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/08/21 21:41
+" Last Modified:  2022/12/06 23:26
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -97,6 +97,7 @@ let g:_ATV_RTL_DEFAULTS = {
             \'open':        "o",
             \'inst':        "i",
             \'fold':        "<CR>",
+            \'pos':         0,
             \'ver':         "1.0"
             \}
 for s:key in keys(g:_ATV_RTL_DEFAULTS)
@@ -110,6 +111,7 @@ command -nargs=? -complete=file RtlTree :call <SID>RtlTree(<f-args>)
 "}}}1
 
 "RtlTree Rtl树{{{1
+
 "Rtl Tree Build
 let s:oTreeNode = {}
 let s:rtltree = {}
@@ -173,7 +175,8 @@ function s:oTreeNode.CreateChildren() "{{{3
     endif
     "search inst if resolved
     if self.unresolved == 0
-        let module_seqs = s:GetModuleInst(readfile(self.fname))
+
+        let module_seqs = s:GetModuleInst(readfile(self.fname),self.mname)
         if module_seqs == {}
             return []
         else
@@ -307,7 +310,11 @@ function s:OpenRtl(file) abort "{{{3
     "Create Window for RtlTree
     let s:RtlCurBufName = bufname("%")
     let s:RtlTreeBufName = "RtlTree"."(".s:rtl_top_module.")"
-    silent! exe 'aboveleft ' . 'vertical ' . s:RtlTreeWinWidth . ' new '.s:RtlTreeBufName
+    if g:atv_rtl_pos == 0
+        silent! exe 'aboveleft ' . 'vertical ' . s:RtlTreeWinWidth . ' new '.s:RtlTreeBufName
+    else
+        silent! exe 'belowright ' . 'vertical ' . s:RtlTreeWinWidth . ' new '.s:RtlTreeBufName
+    endif
     execute bufwinnr(s:RtlTreeBufName) . "wincmd w"
     call s:SetRtlBufOpt()
     call s:SetRtlBufAu()
@@ -352,11 +359,16 @@ function s:SetRtlBufHl()
     execute 'syn match RtlTreeHelp #".*#'
 endfunction
 function s:SetRtlBufKey()
-    nnoremap <buffer> <silent> r :call <SID>CreateRtl()<CR>
-    nnoremap <buffer> <silent> q :call <SID>CloseRtl()<CR>
-    nnoremap <buffer> <silent> o :call <SID>OpenRtlModule()<CR>
-    nnoremap <buffer> <silent> i :call <SID>OpenRtlInst()<CR>
-    nnoremap <buffer> <silent> <CR> :call <SID>FoldRtl()<CR>
+    "nnoremap <buffer> <silent> r :call <SID>CreateRtl()<CR>
+    execute "nnoremap <buffer> <silent> ".g:atv_rtl_refresh." :call <SID>CreateRtl()<CR>"
+    "nnoremap <buffer> <silent> q :call <SID>CloseRtl()<CR>
+    execute "nnoremap <buffer> <silent> ".g:atv_rtl_quit." :call <SID>CloseRtl()<CR>"
+    "nnoremap <buffer> <silent> o :call <SID>OpenRtlModule()<CR>
+    execute "nnoremap <buffer> <silent> ".g:atv_rtl_open." :call <SID>OpenRtlModule()<CR>"
+    "nnoremap <buffer> <silent> i :call <SID>OpenRtlInst()<CR>
+    execute "nnoremap <buffer> <silent> ".g:atv_rtl_inst." :call <SID>OpenRtlInst()<CR>"
+    "nnoremap <buffer> <silent> <CR> :call <SID>FoldRtl()<CR>
+    execute "nnoremap <buffer> <silent> ".g:atv_rtl_fold." :call <SID>FoldRtl()<CR>"
     nnoremap <buffer> <silent> <leftrelease> :call <SID>OpenRtlInst()<CR>
     nnoremap <buffer> <silent> <2-leftmouse> :call <SID>FoldRtl()<CR>:call <SID>OpenRtlModule()<CR>
     nnoremap <buffer> <silent> ? :call <SID>RtlHelp()<CR>
@@ -483,6 +495,7 @@ function s:OpenRtlModule() abort "{{{3
         "edit parent file,cursor to inst position
         execute "edit ".(node.fname)
         call search('^\s*module')
+        call search(node.mname)
         execute "normal zz"
         let s:RtlCurBufName = bufname("%")
         execute bufwinnr(s:RtlTreeBufName)."wincmd w"
@@ -508,7 +521,7 @@ endfunction
 "}}}2
 
 "Rtl Help
-function s:RtlHelp()
+function s:RtlHelp() "{{{2
     let orig_idx = line(".")
     let orig_col = col(".")
     if getline(1) =~ '^"\sRtlTree'
@@ -529,6 +542,8 @@ function s:RtlHelp()
     endif
     call cursor(orig_idx,orig_col)
 endfunction
+"}}}2
+
 "}}}1
 
 "Sub Function 辅助函数{{{1
@@ -589,8 +604,9 @@ endfunction
 "   [module_name, inst_name, line_index]
 "   [uart,        u_uart,    3]
 "---------------------------------------------------
-function s:GetModuleInst(lines)
+function s:GetModuleInst(lines,mname)
     let lines = s:RemoveCommentLine(a:lines)
+    let lines = g:AutoVerilog_RsvModuleLine(a:lines,a:mname)
     let module_lines = []
     let in_module = 0
     let module_seqs ={}
@@ -677,6 +693,7 @@ endfunction
 " Output:
 "   module name
 " Note:
+"   only use for top_module generation, ignore multi-line
 "---------------------------------------------------
 function s:GetModule(lines)
     let lines = s:RemoveCommentLine(a:lines)

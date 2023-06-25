@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/09/03 23:30
+" Last Modified:  2022/12/06 23:20
 " File:           autopara.vim
 " Note:           AutoPara function self-made
 "------------------------------------------------------------------------------
@@ -135,6 +135,8 @@ function! g:AutoPara(mode)
             let dir = files[file]
             "read file
             let lines = readfile(dir.'/'.file)
+            "reserve only module lines, in case of multiple module in same file
+            let lines = g:AutoVerilog_RsvModuleLine(lines,module_name)
             "parameter sequences
             let para_seqs = s:GetPara(lines,'seq')
             let para_names = s:GetPara(lines,'name')
@@ -250,6 +252,8 @@ function! g:AutoParaValue(mode)
             let dir = files[file]
             "read file
             let lines = readfile(dir.'/'.file)
+            "reserve only module lines, in case of multiple module in same file
+            let lines = g:AutoVerilog_RsvModuleLine(lines,module_name)
             "parameter sequences
             let para_seqs = s:GetPara(lines,'seq')
             let para_names = s:GetPara(lines,'name')
