@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/12/26 23:14
+" Last Modified:  2023/06/25 22:26
 " File:           autodef.vim
 " Note:           AutoDef function partly from zhangguo's vimscript
 "                 Progress bar based off code from "progressbar widget" plugin by
@@ -2647,8 +2647,8 @@ function s:GetRightWidth(right,name,width_names)
     let right_signal_link = old_value[7]
 
     "get width
-    let right = substitute(a:right,'\s*','','g')                    "delete redundant space
-    let right = substitute(right,'#`\?\w\+\(\.\w\+\)\?','','')      "for delay like #0.1
+    let right = substitute(a:right,'#`\?\w\+\(\.\w\+\)\?','','')  "for delay like #0.1
+    let right = substitute(right,'\s*','','g')                    "delete redundant space
 
     "match M'bN or M'hN or M'dN
     "M may be `define or parameter or number

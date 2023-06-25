@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/12/07 23:07
+" Last Modified:  2023/06/25 22:25
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -893,14 +893,20 @@ function g:AutoVerilog_GetInstModuleName()
             for col in cols
                 call cursor(idx,col+1)
                 "search for pair ()
-                if searchpair('(','',')') > 0
-                    let index = line('.')
-                    let col = col('.')
-                else
+                if searchpair('(','',')','nW') <= 0
                     let index = line('.')
                     let col = col('.')
                     echohl ErrorMsg | echo "() pair not-match in autoinst, line: ".index." colunm: ".col | echohl None
                     return
+                else
+                    "searchpair() may err pair when 
+                    "( ..... //)
+                    ")
+                    "exist
+                    "use % instead
+                    execute 'normal %'
+                    let index = line('.')
+                    let col = col('.')
                 endif
                 "search for none-blank character,skip comment
                 call search('\(\/\/.*\)\@<![^ \/]')
@@ -919,7 +925,9 @@ function g:AutoVerilog_GetInstModuleName()
                 "record ); position
                 let idx2 = line('.')
 
-                call searchpair('(','',')','bW')
+                "call searchpair('(','',')','bW')
+                execute 'normal %'
+
                 "find position of inst_name,skip comment
                 call search('\(\/\/.*\)\@<!\w\+','b')
                 "get inst_name
