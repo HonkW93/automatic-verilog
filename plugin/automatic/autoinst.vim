@@ -16,11 +16,82 @@ let g:loaded_automatic_verilog_autoinst = 1
 
 "Defaults 默认配置{{{1
 
+" Verilog Type 定义Verilog变量类型{{{2
+
 "Port 端口类型
 let s:VlogTypePort =                  '\<input\>\|'
 let s:VlogTypePort = s:VlogTypePort . '\<output\>\|'
 let s:VlogTypePort = s:VlogTypePort . '\<inout\>'
-let s:VlogTypePorts = '\(' . s:VlogTypePort . '\)'
+
+"Data 数据类型
+let s:VlogTypeData =                  '\<wire\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<reg\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<parameter\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<localparam\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<defparam\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<genvar\>\|'
+let s:VlogTypeData = s:VlogTypeData . '\<integer\>'
+
+"Calculation 计算类型
+let s:VlogTypeCalc =                  '\<assign\>\|'
+let s:VlogTypeCalc = s:VlogTypeCalc . '\<always\>'
+
+"Structure 结构类型
+let s:VlogTypeStru =                  '\<module\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endmodule\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<function\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endfunction\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<task\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endtask\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<generate\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endgenerate\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<begin\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<end\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<case\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<casex\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<casez\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endcase\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<default\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<for\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<if\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<define\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<ifdef\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<ifndef\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<elsif\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<else\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endif\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<celldefine\>\|'
+let s:VlogTypeStru = s:VlogTypeStru . '\<endcelldefine\>'
+
+"Others 其他类型
+let s:VlogTypeOthe =                  '\<posedge\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<negedge\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<timescale\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<initial\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<forever\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<specify\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<endspecify\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<include\>\|'
+let s:VlogTypeOthe = s:VlogTypeOthe . '\<or\>'
+
+"() 括号包含
+let s:VlogTypePre  = '\('
+let s:VlogTypePost = '\)'
+let s:VlogTypeConn = '\|'
+
+let s:VlogTypePorts = s:VlogTypePre . s:VlogTypePort . s:VlogTypePost
+let s:VlogTypeDatas = s:VlogTypePre . s:VlogTypeData . s:VlogTypePost
+let s:VlogTypeCalcs = s:VlogTypePre . s:VlogTypeCalc . s:VlogTypePost
+let s:VlogTypeStrus = s:VlogTypePre . s:VlogTypeStru . s:VlogTypePost
+let s:VlogTypeOthes = s:VlogTypePre . s:VlogTypeOthe . s:VlogTypePost
+
+"Keywords 关键词类型
+let s:VlogKeyWords  = s:VlogTypePre . s:VlogTypePort . s:VlogTypeConn .  s:VlogTypeData . s:VlogTypeConn. s:VlogTypeCalc . s:VlogTypeConn. s:VlogTypeStru . s:VlogTypeConn. s:VlogTypeOthe . s:VlogTypePost
+
+"Not Keywords 非关键词类型
+let s:not_keywords_pattern = s:VlogKeyWords . '\@!\(\<\w\+\>\)'
+
+"}}}2
 
 "AutoInst Config 自动例化配置
 "+--------------+-------------------------------------------------------------+
@@ -57,7 +128,7 @@ let g:_ATV_AUTOINST_DEFAULTS = {
             \'name_pos':    32,
             \'sym_pos':     64,
             \'io_dir':      1,
-            \'io_dir_name': 'input output inout',
+            \'io_dir_name': 'input output inout interface',
             \'inst_new':    1,
             \'inst_del':    1,
             \'keep_chg':    1,        
@@ -67,6 +138,7 @@ let g:_ATV_AUTOINST_DEFAULTS = {
             \'tail_nalign': 0,    
             \'add_dir':     0,    
             \'add_dir_keep':0,
+            \'itf_support': 0,    
             \'incl_width':  1    
             \}
 for s:key in keys(g:_ATV_AUTOINST_DEFAULTS)
@@ -339,6 +411,7 @@ function g:AutoVerilog_GetIO(lines,mode)
     let wait_module = 1
     let wait_port = 1
     let func_flag = 0
+    let interface_flag = 1
     let io_seqs = {}
 
     "get io seqs from line {{{3
@@ -372,7 +445,6 @@ function g:AutoVerilog_GetIO(lines,mode)
             endif
         endif
 
-
         "no port definition, never record io_seqs
         if wait_port == 1 && line =~ ')\s*;' && len(io_seqs) > 0
             let seq = 0
@@ -397,7 +469,7 @@ function g:AutoVerilog_GetIO(lines,mode)
                 let seq = seq + 1
             "}}}4
 
-            " `ifdef `ifndef & single comment line {{{4
+            " `ifdef `ifndef & single comment line {{{5
             elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)' || (line =~ '^\s*\/\/' && line !~ '^\s*\/\/\s*{{{')
                 "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line ]
                 let value = ['keep',seq,     '',     'c0',   'c0',   line,        0,         line]
@@ -476,6 +548,38 @@ function g:AutoVerilog_GetIO(lines,mode)
                         let seq = seq + 1
                     endif
                 endfor
+            "}}}4
+
+            "sv interface {{{4
+            elseif (line =~ '^\s*'    . s:not_keywords_pattern.'\.\='.'\w*'.'\s\+'.'\w\+' 
+              \ || line =~ '^\s*(\s*'. s:not_keywords_pattern.'\.\='.'\w*'.'\s\+'.'\w\+' 
+              \ || line =~ '^\s*,\s*'. s:not_keywords_pattern.'\.\='.'\w*'.'\s\+'.'\w\+')
+              \ && g:atv_autoinst_itf_support == 1
+
+                let wait_port = 0
+
+                "skip matcth outside module(); no interface
+                if interface_flag == 0
+                    continue
+                endif
+
+                "delete abnormal
+                if line =~ '\/\/.*$'
+                    let line = substitute(line,'\/\/.*$','','')
+                endif
+
+                "type interface,use line&signal_name as ifname&name
+                let type = 'interface'
+                let io_dir = 'interface'
+                let ifname = matchstr(line,'\zs\w\+\.\=\w*\ze'.'\s\+'.'\w\+')
+                let name = matchstr(line,'\w\+\.\=\w*'.'\s\+'.'\zs\w\+\ze')
+
+                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line ]
+                let value = [type,  seq,      io_dir, 'c0',   'c0',   name,        0,         ifname]
+                call extend(io_seqs, {seq : value})
+                let seq = seq + 1
+
+                "for types like chip_bus a_bus,b_bus,c_bus; problem might exists
             endif
             "}}}4
 
@@ -488,11 +592,11 @@ function g:AutoVerilog_GetIO(lines,mode)
                 break
             endif
             
-            "verilog-1995,input/output/inout may appear outside bracket
-            if g:atv_autoinst_95_support == 1
-            "verilog-2001 or above
-            else
-                if line =~ ')\s*;\s*$' "normal break, find end of port declaration
+            if line =~ ')\s*;\s*$' "find end of port declaration
+                let interface_flag = 0     "break all interface
+                "verilog-1995,input/output/inout may appear outside bracket
+                "verilog-2001 or above, break here
+                if g:atv_autoinst_95_support == 0
                     break
                 endif
             endif
@@ -1160,6 +1264,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             else
                 let comma = ','      "comma exists
             endif
+
             "io_dir
             let io_dir = value[2]
             let io_dir_name_list = split(g:atv_autoinst_io_dir_name)
@@ -1169,6 +1274,8 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
                 let io_dir = io_dir_name_list[1]
             elseif io_dir == 'inout'
                 let io_dir = io_dir_name_list[2]
+            elseif io_dir == 'interface' && len(io_dir_name_list) == 4
+                let io_dir = io_dir_name_list[3]
             endif
 
             "Draw IO by config
@@ -1200,6 +1307,12 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
                     let line = line
                     call remove(io_list,io_idx)
                 endif
+            endif
+
+            "process sv_interface
+            if type == 'interface'
+                let ifname = value[7]
+                let line = line.'//'.ifname
             endif
 
             call add(lines,line)
