@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/06/25 22:25
+" Last Modified:  2023/06/26 22:30
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -123,6 +123,12 @@ let s:not_keywords_pattern = s:VlogKeyWords . '\@!\(\<\w\+\>\)'
 "+--------------+-------------------------------------------------------------+
 "| add_dir_keep |     directory keep original format(ENV VAR like $HOME)      |
 "+--------------+-------------------------------------------------------------+
+"| itf_support  |                      iterface support                       |
+"+--------------+-------------------------------------------------------------+
+"|  incl_width  |                instance signal include width                |
+"+--------------+-------------------------------------------------------------+
+"|    ls_cnt    |           add ls_cnt number of left space after (           |
+"+--------------+-------------------------------------------------------------+
 let g:_ATV_AUTOINST_DEFAULTS = {
             \'st_pos':      4,
             \'name_pos':    32,
@@ -139,7 +145,8 @@ let g:_ATV_AUTOINST_DEFAULTS = {
             \'add_dir':     0,    
             \'add_dir_keep':0,
             \'itf_support': 0,    
-            \'incl_width':  1    
+            \'incl_width':  1,
+            \'ls_cnt':  0    
             \}
 for s:key in keys(g:_ATV_AUTOINST_DEFAULTS)
     if !exists('g:atv_autoinst_' . s:key)
@@ -1151,6 +1158,7 @@ endfunction
 "---------------------------------------------------
 function s:DrawIO(io_seqs,io_list,chg_io_names)
     let prefix = s:st_prefix.repeat(' ',4)
+    let lspace = repeat(' ',g:atv_autoinst_ls_cnt)
     let io_list = copy(a:io_list)
     let chg_io_names = copy(a:chg_io_names)
 
@@ -1182,11 +1190,13 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             if g:atv_autoinst_keep_chg == 1
                 if(has_key(chg_io_names,name))
                     let connect = chg_io_names[name]
+                    "when use connect, no lspace
+                    let lspace = ''
                 endif
             endif
-            "prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'
+            "prefix.'.'.name.name2bracket.'('.lspace.connect.width2bracket.')'
             let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,g:atv_autoinst_name_pos])
-            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(connect)+4,g:atv_autoinst_sym_pos])
+            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(lspace)+len(connect)+4,g:atv_autoinst_sym_pos])
         endif
     endfor
     "}}}3
@@ -1233,6 +1243,9 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
 
             "name2bracket
             let name2bracket = repeat(' ',max_lbracket_len-len(prefix)-len(name)-len('.'))
+
+            "lspace
+
             "width
             if g:atv_autoinst_incl_width == 0       "if config,never output width
                 let width = ''
@@ -1261,7 +1274,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             if g:atv_autoinst_tail_nalign == 1
                 let width2bracket = ''
             else
-                let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-len('(')-len(connect))
+                let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-len('(')-len(lspace)-len(connect))
             endif
 
             "comma
@@ -1287,20 +1300,15 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             endif
 
             "Draw IO by config
+            let line = prefix.'.'.name.name2bracket.'('.lspace.connect.width2bracket.')'.comma
+
+            if g:atv_autoinst_io_dir == 1
+                let line = line .' //'.io_dir
+            endif
+
             "empty list, default
-            if io_list_empty == 1
-                if g:atv_autoinst_io_dir == 1
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
-                else
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
-                endif
-            "update list,draw io by config
-            else
-                if g:atv_autoinst_io_dir == 1
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma.' //'.io_dir
-                else
-                    let line = prefix.'.'.name.name2bracket.'('.connect.width2bracket.')'.comma
-                endif
+            "update list, draw io by config
+            if io_list_empty == 0
                 "process //INST_NEW
                 let io_idx = index(io_list,name) 
                 "name not exist in old io_list, add //INST_NEW

@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/12/06 23:26
+" Last Modified:  2023/06/26 22:48
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -335,6 +335,7 @@ function s:SetRtlBufOpt()
     setlocal buftype=nofile
     setlocal nospell
     setlocal nonumber
+    setlocal winfixwidth
 endfunction
 function s:SetRtlBufAu()
     if exists("#QuitPre")

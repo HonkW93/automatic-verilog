@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/06/25 22:26
+" Last Modified:  2023/06/26 22:47
 " File:           autodef.vim
 " Note:           AutoDef function partly from zhangguo's vimscript
 "                 Progress bar based off code from "progressbar widget" plugin by
@@ -2665,6 +2665,17 @@ function s:GetRightWidth(right,name,width_names)
             let width2 = '0'
             call add(right_widths,[width1,width2])
         endif
+
+    "match {WIDTH{1'b1}}
+    elseif right =~ '^{'.'\(`\?\w\+\|\d\+\)'.'{'.'\(`\?\w\+\|\d\+\)'."'".'[bhd]'.'\w*'.'}'.'}'
+        "detect 1'b 1'd 1'h
+        let nr = matchstr(right,'^{'.'\(`\?\w\+\|\d\+\)'.'{'.'\zs'.'\(`\?\w\+\|\d\+\)'."'".'[bhd]'.'\w*'.'\ze')
+        if nr =~ '^1'."'".'[bhd]'.'[01]'
+            let width1 = matchstr(right,'\(`\?\w\+\|\d\+\)').'-1'
+            let width2 = '0'
+            call add(right_widths,[width1,width2])
+        endif
+
 
     "match signal[N], N may be `define or parameter or number
     "Note: only match once, don't match pattern like a[7]+b[17] && a[7:0]
