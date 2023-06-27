@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/06/26 22:30
+" Last Modified:  2023/06/27 23:26
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -94,41 +94,45 @@ let s:not_keywords_pattern = s:VlogKeyWords . '\@!\(\<\w\+\>\)'
 "}}}2
 
 "AutoInst Config 自动例化配置
-"+--------------+-------------------------------------------------------------+
-"|    st_pos    |                       start position                        |
-"+--------------+-------------------------------------------------------------+
-"|   name_pos   |                    signal name position                     |
-"+--------------+-------------------------------------------------------------+
-"|   sym_pos    |                    symbol name position                     |
-"+--------------+-------------------------------------------------------------+
-"|    io_dir    |       add //input or //output in the end of instance        |
-"+--------------+-------------------------------------------------------------+
-"| io_dir_name  |       default io_dir name, can be changed to 'I O IO'       |
-"+--------------+-------------------------------------------------------------+
-"|   inst_new   |  add //INST_NEW if port has been newly added to the module  |
-"+--------------+-------------------------------------------------------------+
-"|   inst_del   |   add //INST_DEL if port has been deleted from the module   |
-"+--------------+-------------------------------------------------------------+
-"|   keep_chg   |                    keep changed inst io                     |
-"+--------------+-------------------------------------------------------------+
-"|  incl_cmnt   | include comment line of // (/*...*/ will always be ignored) |
-"+--------------+-------------------------------------------------------------+
-"|  incl_ifdef  |              include ifdef like `ifdef `endif               |
-"+--------------+-------------------------------------------------------------+
-"|  95_support  |                    Support Verilog-1995                     |
-"+--------------+-------------------------------------------------------------+
-"| tail_nalign  |          don't do alignment in tail when autoinst           |
-"+--------------+-------------------------------------------------------------+
-"|   add_dir    |               add //Instance ...directory...                |
-"+--------------+-------------------------------------------------------------+
-"| add_dir_keep |     directory keep original format(ENV VAR like $HOME)      |
-"+--------------+-------------------------------------------------------------+
-"| itf_support  |                      iterface support                       |
-"+--------------+-------------------------------------------------------------+
-"|  incl_width  |                instance signal include width                |
-"+--------------+-------------------------------------------------------------+
-"|    ls_cnt    |           add ls_cnt number of left space after (           |
-"+--------------+-------------------------------------------------------------+
+"+--------------+---------------------------------------------------------------------------------------+
+"|    st_pos    |                                    start position                                     |
+"+--------------+---------------------------------------------------------------------------------------+
+"|   name_pos   |                                 signal name position                                  |
+"+--------------+---------------------------------------------------------------------------------------+
+"|   sym_pos    |                                 symbol name position                                  |
+"+--------------+---------------------------------------------------------------------------------------+
+"|    io_dir    |                    add //input or //output in the end of instance                     |
+"+--------------+---------------------------------------------------------------------------------------+
+"| io_dir_name  |                    default io_dir name, can be changed to 'I O IO'                    |
+"+--------------+---------------------------------------------------------------------------------------+
+"|   inst_new   |               add //INST_NEW if port has been newly added to the module               |
+"+--------------+---------------------------------------------------------------------------------------+
+"|   inst_del   |                add //INST_DEL if port has been deleted from the module                |
+"+--------------+---------------------------------------------------------------------------------------+
+"|   keep_chg   |                            keep changed inst io by changes                            |
+"+--------------+---------------------------------------------------------------------------------------+
+"|  keep_name   |                             keep changed inst io by name                              |
+"+--------------+---------------------------------------------------------------------------------------+
+"|    ls_cnt    |                                add left space after (                                 |
+"+--------------+---------------------------------------------------------------------------------------+
+"|    rs_cnt    |                               add right space before )                                |
+"+--------------+---------------------------------------------------------------------------------------+
+"| tail_nalign  |                       don't do alignment in tail when autoinst                        |
+"+--------------+---------------------------------------------------------------------------------------+
+"|  incl_cmnt   |              include comment line of // (/*...*/ will always be ignored)              |
+"+--------------+---------------------------------------------------------------------------------------+
+"|  incl_ifdef  |                           include ifdef like `ifdef `endif                            |
+"+--------------+---------------------------------------------------------------------------------------+
+"|  95_support  |                                 Support Verilog-1995                                  |
+"+--------------+---------------------------------------------------------------------------------------+
+"|   add_dir    |                            add //Instance ...directory...                             |
+"+--------------+---------------------------------------------------------------------------------------+
+"| add_dir_keep | add //Instance ...directory... but directory keep original format(ENV VAR like $HOME) |
+"+--------------+---------------------------------------------------------------------------------------+
+"| itf_support  |                                   iterface support                                    |
+"+--------------+---------------------------------------------------------------------------------------+
+"|  incl_width  |                             instance signal include width                             |
+"+--------------+---------------------------------------------------------------------------------------+
 let g:_ATV_AUTOINST_DEFAULTS = {
             \'st_pos':      4,
             \'name_pos':    32,
@@ -138,22 +142,36 @@ let g:_ATV_AUTOINST_DEFAULTS = {
             \'inst_new':    1,
             \'inst_del':    1,
             \'keep_chg':    1,        
+            \'keep_name':   1,        
+            \'ls_cnt':      0,
+            \'rs_cnt':      0,    
+            \'tail_nalign': 0,    
             \'incl_cmnt':   1,
             \'incl_ifdef':  1,    
             \'95_support':  0,    
-            \'tail_nalign': 0,    
             \'add_dir':     0,    
             \'add_dir_keep':0,
             \'itf_support': 0,    
-            \'incl_width':  1,
-            \'ls_cnt':  0    
+            \'incl_width':  1
             \}
 for s:key in keys(g:_ATV_AUTOINST_DEFAULTS)
     if !exists('g:atv_autoinst_' . s:key)
         let g:atv_autoinst_{s:key} = copy(g:_ATV_AUTOINST_DEFAULTS[s:key])
     endif
 endfor
+"cfg pre process
 let s:st_prefix = repeat(' ',g:atv_autoinst_st_pos)
+let s:lspace = repeat(' ',g:atv_autoinst_ls_cnt)
+let s:rspace = repeat(' ',g:atv_autoinst_rs_cnt)
+
+if g:atv_autoinst_keep_chg == 0
+    let g:atv_autoinst_keep_name = 0
+endif
+
+if g:atv_autoinst_tail_nalign == 0 
+    let g:atv_autoinst_rs_cnt = 0
+endif
+
 "}}}1
 
 "Keys 快捷键{{{1
@@ -791,6 +809,7 @@ function s:GetChangedInstIO(lines,io_names)
         if line =~ '\.\s*\w\+\s*(.*)'
             let inst_name = matchstr(line,'\.\s*\zs\w\+\ze\s*(.*)')
             let conn = matchstr(line,'\.\s*\w\+\s*(\zs.*\ze\(\/\/.*\)\@<!)')        "connection,skip comment
+            let conn = substitute(conn,'^\s*','','')                                "delete space from the start for alignment
             let conn = substitute(conn,'\s*$','','')                                "delete space in the end for alignment
             let conn_name = matchstr(conn,'\w\+')                                   "connection name
             if inst_name != conn_name
@@ -815,8 +834,10 @@ function s:GetChangedInstIO(lines,io_names)
                     endif
                     let conn_inst = name.width
                 endif
-                if conn_inst != conn
-                    call extend(cinst_names,{inst_name : conn})
+                if g:atv_autoinst_keep_name == 0
+                    if conn_inst != conn
+                        call extend(cinst_names,{inst_name : conn})
+                    endif
                 endif
             endif
         endif
@@ -1158,7 +1179,6 @@ endfunction
 "---------------------------------------------------
 function s:DrawIO(io_seqs,io_list,chg_io_names)
     let prefix = s:st_prefix.repeat(' ',4)
-    let lspace = repeat(' ',g:atv_autoinst_ls_cnt)
     let io_list = copy(a:io_list)
     let chg_io_names = copy(a:chg_io_names)
 
@@ -1190,13 +1210,13 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             if g:atv_autoinst_keep_chg == 1
                 if(has_key(chg_io_names,name))
                     let connect = chg_io_names[name]
-                    "when use connect, no lspace
-                    let lspace = ''
+                    "when use changed io, no lspace
+                    let s:lspace = ''
                 endif
             endif
             "prefix.'.'.name.name2bracket.'('.lspace.connect.width2bracket.')'
             let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,g:atv_autoinst_name_pos])
-            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(lspace)+len(connect)+4,g:atv_autoinst_sym_pos])
+            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(s:lspace)+len(connect)+4,g:atv_autoinst_sym_pos])
         endif
     endfor
     "}}}3
@@ -1266,6 +1286,8 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             if g:atv_autoinst_keep_chg == 1
                 if(has_key(chg_io_names,name))
                     let connect = chg_io_names[name]
+                    "when use changed io, no lspace
+                    let s:lspace = ''
                 endif
             endif
             
@@ -1274,7 +1296,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             if g:atv_autoinst_tail_nalign == 1
                 let width2bracket = ''
             else
-                let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-len('(')-len(lspace)-len(connect))
+                let width2bracket = repeat(' ',max_rbracket_len-max_lbracket_len-len('(')-len(s:lspace)-len(connect))
             endif
 
             "comma
@@ -1300,7 +1322,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             endif
 
             "Draw IO by config
-            let line = prefix.'.'.name.name2bracket.'('.lspace.connect.width2bracket.')'.comma
+            let line = prefix.'.'.name.name2bracket.'('.s:lspace.connect.width2bracket.')'.comma
 
             if g:atv_autoinst_io_dir == 1
                 let line = line .' //'.io_dir
