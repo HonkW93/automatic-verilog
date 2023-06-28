@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/09/16 19:13
+" Last Modified:  2023/06/28 23:56
 " File:           crossdir.vim
 " Note:           search cross directory by tags/filelist/verilog-library
 "------------------------------------------------------------------------------
@@ -568,6 +568,7 @@ function s:GetModuleFileDict(files)
                 elseif line =~ '^\s*\w\+'
                     let module = matchstr(line,'^\s*\zs\w\+') 
                     let find_module = 1
+                    let module_flag = 0
                 else
                     let find_module = 0
                 endif

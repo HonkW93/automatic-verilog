@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/06/26 22:48
+" Last Modified:  2023/06/28 23:50
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -96,9 +96,10 @@ let g:_ATV_RTL_DEFAULTS = {
             \'quit':        "q",
             \'open':        "o",
             \'inst':        "i",
+            \'split':       "s",
             \'fold':        "<CR>",
             \'pos':         0,
-            \'ver':         "1.0"
+            \'ver':         "1.1"
             \}
 for s:key in keys(g:_ATV_RTL_DEFAULTS)
     if !exists('g:atv_rtl_' . s:key)
@@ -261,7 +262,6 @@ endfunction
 "Rtl Main
 let s:RtlTreeBufName = "RtlTree"."("."top".")"
 let s:RtlTreeWinWidth = 31
-let s:RtlCurBufName = expand("%")
 function s:RtlTree(...) "{{{2
     if a:0 == 0
         let file = expand("%")
@@ -281,8 +281,6 @@ endfunction
 function s:CloseRtl() abort "{{{3
     execute bufwinnr(s:RtlTreeBufName) . "wincmd w"
     close
-    execute bufwinnr(s:RtlCurBufName) . "wincmd w"
-    execute "bwipeout ".s:RtlTreeBufName
 endfunction
 "}}}3
 function s:OpenRtl(file) abort "{{{3
@@ -316,18 +314,24 @@ function s:OpenRtl(file) abort "{{{3
         silent! exe 'belowright ' . 'vertical ' . s:RtlTreeWinWidth . ' new '.s:RtlTreeBufName
     endif
     execute bufwinnr(s:RtlTreeBufName) . "wincmd w"
-    call s:SetRtlBufOpt()
-    call s:SetRtlBufAu()
-    call s:SetRtlBufHl()
-    call s:SetRtlBufKey()
     call setline(1,'" Press ? for help')
     call setline(2,"")
     call append(2,"RtlTree")
     call append(3,"~ ".("u_".s:rtl_top_module)." (".(s:rtl_top_module).")")
     call cursor(4,1)
     call node.Expand()
+    call s:SetRtlBufOpt()
+    call s:SetRtlBufAu()
+    call s:SetRtlBufHl()
+    call s:SetRtlBufKey()
+    "change window twice for autocmd
+    execute bufwinnr(s:RtlCurBufName) . "wincmd w"
+    execute bufwinnr(s:RtlTreeBufName) . "wincmd w"
 endfunction
 function s:SetRtlBufOpt()
+    setlocal bufhidden=wipe
+    setlocal winfixwidth
+    setlocal filetype=rtltree
     setlocal cursorline
     setlocal nowrap
     setlocal nomodified
@@ -335,7 +339,11 @@ function s:SetRtlBufOpt()
     setlocal buftype=nofile
     setlocal nospell
     setlocal nonumber
-    setlocal winfixwidth
+    setlocal readonly
+    setlocal nomodifiable
+    if has('patch-7.4.1925')
+        clearjumps
+    endif
 endfunction
 function s:SetRtlBufAu()
     if exists("#QuitPre")
@@ -345,6 +353,8 @@ function s:SetRtlBufAu()
     "mouse support
     execute "autocmd BufEnter,WinEnter ".s:RtlTreeBufName." set mouse=n"
     execute "autocmd BufLeave,BufDelete <buffer> set mouse=".s:save_mouse
+    "record last window
+    execute "autocmd BufEnter,WinEnter ".s:RtlTreeBufName." let s:RtlCurWinnr=winnr('#')"
 endfunction
 function s:SetRtlBufHl()
     hi def link RtlTree Directory
@@ -362,13 +372,10 @@ endfunction
 function s:SetRtlBufKey()
     "nnoremap <buffer> <silent> r :call <SID>CreateRtl()<CR>
     execute "nnoremap <buffer> <silent> ".g:atv_rtl_refresh." :call <SID>CreateRtl()<CR>"
-    "nnoremap <buffer> <silent> q :call <SID>CloseRtl()<CR>
     execute "nnoremap <buffer> <silent> ".g:atv_rtl_quit." :call <SID>CloseRtl()<CR>"
-    "nnoremap <buffer> <silent> o :call <SID>OpenRtlModule()<CR>
     execute "nnoremap <buffer> <silent> ".g:atv_rtl_open." :call <SID>OpenRtlModule()<CR>"
-    "nnoremap <buffer> <silent> i :call <SID>OpenRtlInst()<CR>
     execute "nnoremap <buffer> <silent> ".g:atv_rtl_inst." :call <SID>OpenRtlInst()<CR>"
-    "nnoremap <buffer> <silent> <CR> :call <SID>FoldRtl()<CR>
+    execute "nnoremap <buffer> <silent> ".g:atv_rtl_split." :call <SID>OpenRtlModuleSplit()<CR>"
     execute "nnoremap <buffer> <silent> ".g:atv_rtl_fold." :call <SID>FoldRtl()<CR>"
     nnoremap <buffer> <silent> <leftrelease> :call <SID>OpenRtlInst()<CR>
     nnoremap <buffer> <silent> <2-leftmouse> :call <SID>FoldRtl()<CR>:call <SID>OpenRtlModule()<CR>
@@ -376,6 +383,7 @@ function s:SetRtlBufKey()
 endfunction
 "}}}3
 function s:FoldRtl() abort "{{{3
+    setlocal noreadonly modifiable
     let line = getline(".")
     let iname = matchstr(line,'\w\+')
     if has_key(s:rtltree,iname)
@@ -401,6 +409,7 @@ function s:FoldRtl() abort "{{{3
         call setline(".",line)
         call node.Shrink()
     endif
+    setlocal readonly nomodifiable
 endfunction
 "}}}3
 function s:OpenRtlInst() abort "{{{3
@@ -416,31 +425,14 @@ function s:OpenRtlInst() abort "{{{3
         echohl WarningMsg | echo "Top module ".(node.mname)." doesn't have instance!" | echohl None
     "not top node
     else
-        let curbufexist = 0
-        "check if current buffer exist
-        if exists("*getbufinfo") 
-            for buf in getbufinfo()
-                if buf.name =~ fnamemodify(s:RtlCurBufName,':t') && buf.loaded == 1
-                    let curbufexist = 1
-                endif
-            endfor
-        else
-            for nr in  filter(range(1,bufnr('$')),'buflisted(v:val)')
-                let bufname = bufname(nr)
-                let bufloaded = bufloaded(nr)
-                if bufname =~ fnamemodify(s:RtlCurBufName,':t') && bufloaded == 1
-                    let curbufexist = 1
-                endif
-            endfor
-        endif
-        "current buffer exist, jump to window
-        if curbufexist == 1
-            silent! exe bufwinnr(s:RtlCurBufName)." wincmd w"
+        "current window exist, jump to window
+        if s:RtlCurWinnr != winnr() 
+            silent! exe s:RtlCurWinnr." wincmd w"
             "unsaved changes exist open new window
             if &modified == 1
                 silent! exe 'leftabove '.'new '
             endif
-        "no current buffer, open new window
+        "no current window, open new window
         else
             silent! exe 'rightbelow '.'vertical '. (&columns - s:RtlTreeWinWidth) . ' new '
         endif
@@ -449,7 +441,6 @@ function s:OpenRtlInst() abort "{{{3
         call cursor(node.idx,1)
         call search('\w\+')
         execute "normal zz"
-        let s:RtlCurBufName = bufname("%")
         execute bufwinnr(s:RtlTreeBufName)."wincmd w"
     endif
 endfunction
@@ -465,31 +456,14 @@ function s:OpenRtlModule() abort "{{{3
     if node.unresolved == 1
         echohl WarningMsg | echo "inst ".iname.' unresolved' | echohl None
     else
-        let curbufexist = 0
-        "check if current buffer exist
-        if exists("*getbufinfo") 
-            for buf in getbufinfo()
-                if buf.name =~ fnamemodify(s:RtlCurBufName,':t') && buf.loaded == 1
-                    let curbufexist = 1
-                endif
-            endfor
-        else
-            for nr in  filter(range(1,bufnr('$')),'buflisted(v:val)')
-                let bufname = bufname(nr)
-                let bufloaded = bufloaded(nr)
-                if bufname =~ fnamemodify(s:RtlCurBufName,':t') && bufloaded == 1
-                    let curbufexist = 1
-                endif
-            endfor
-        endif
-        "current buffer exist, jump to window
-        if curbufexist == 1
-            silent! exe bufwinnr(s:RtlCurBufName)." wincmd w"
+        "current window exist, jump to window
+        if s:RtlCurWinnr != winnr() 
+            silent! exe s:RtlCurWinnr." wincmd w"
             "unsaved changes exist open new window
             if &modified == 1
                 silent! exe 'leftabove '.'new '
             endif
-        "no current buffer, open new window
+        "no current window, open new window
         else
             silent! exe 'rightbelow '.'vertical '. (&columns - s:RtlTreeWinWidth) . ' new '
         endif
@@ -498,7 +472,35 @@ function s:OpenRtlModule() abort "{{{3
         call search('^\s*module')
         call search(node.mname)
         execute "normal zz"
-        let s:RtlCurBufName = bufname("%")
+        execute bufwinnr(s:RtlTreeBufName)."wincmd w"
+    endif
+endfunction
+"}}}3
+function s:OpenRtlModuleSplit() abort "{{{3
+    let line = getline(".")
+    let iname = matchstr(line,'\w\+')
+    if has_key(s:rtltree,iname)
+        let node = s:rtltree[iname]
+    else
+        return
+    endif
+    if node.unresolved == 1
+        echohl WarningMsg | echo "inst ".iname.' unresolved' | echohl None
+    else
+        "current window exist, jump to window
+        if s:RtlCurWinnr != winnr() 
+            silent! exe s:RtlCurWinnr." wincmd w"
+            "split parent file
+            silent! exe 'rightbelow '.'vertical '. 'split '
+            execute "edit ".(node.fname)
+        "no current window, open new window
+        else
+            silent! exe 'rightbelow '.'vertical '. (&columns - s:RtlTreeWinWidth) . ' new '
+        endif
+        "cursor to inst position
+        call search('^\s*module')
+        call search(node.mname)
+        execute "normal zz"
         execute bufwinnr(s:RtlTreeBufName)."wincmd w"
     endif
 endfunction
@@ -523,6 +525,7 @@ endfunction
 
 "Rtl Help
 function s:RtlHelp() "{{{2
+    setlocal noreadonly modifiable
     let orig_idx = line(".")
     let orig_col = col(".")
     if getline(1) =~ '^"\sRtlTree'
@@ -536,12 +539,14 @@ function s:RtlHelp() "{{{2
         let help .= '" '. g:atv_rtl_quit    . ': close rtl tree'."\n"
         let help .= '" '. g:atv_rtl_open    . ': open module position'."\n"
         let help .= '" '. g:atv_rtl_inst    . ': open inst position'."\n"
+        let help .= '" '. g:atv_rtl_split   . ': split open module position'."\n"
         let help .= '" '. g:atv_rtl_fold    . ': fold rtl tree'."\n"
         let help .= '" '. '?'               . ': toggle help'."\n"
         call cursor(1,1)
         0put =help
     endif
     call cursor(orig_idx,orig_col)
+    setlocal readonly nomodifiable
 endfunction
 "}}}2
 
