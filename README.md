@@ -85,6 +85,10 @@ Plugin 'HonkW93/automatic-verilog'
 
 ![autoarg](https://cdn.jsdelivr.net/gh/HonkW93/automatic-verilog@master/demo/autoarg.gif)
 
+### 3.8 RtlTree
+
+![rtl](https://cdn.jsdelivr.net/gh/HonkW93/automatic-verilog@master/demo/rtl.gif)
+
 ## 4. 文档
 
 [Vimcript-AutoMatic | HonkW](https://blog.honk.wang/posts/AutoMatic/)
