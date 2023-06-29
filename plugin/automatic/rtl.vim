@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/06/28 23:50
+" Last Modified:  2023/06/29 23:18
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -430,7 +430,7 @@ function s:OpenRtlInst() abort "{{{3
             silent! exe s:RtlCurWinnr." wincmd w"
             "unsaved changes exist open new window
             if &modified == 1
-                silent! exe 'leftabove '.'new '
+                silent! exe 'leftabove '.'vertical '.'new '
             endif
         "no current window, open new window
         else
@@ -461,7 +461,7 @@ function s:OpenRtlModule() abort "{{{3
             silent! exe s:RtlCurWinnr." wincmd w"
             "unsaved changes exist open new window
             if &modified == 1
-                silent! exe 'leftabove '.'new '
+                silent! exe 'leftabove '.'vertical '.'new '
             endif
         "no current window, open new window
         else

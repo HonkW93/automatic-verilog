@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/06/26 22:47
+" Last Modified:  2023/06/29 23:13
 " File:           autodef.vim
 " Note:           AutoDef function partly from zhangguo's vimscript
 "                 Progress bar based off code from "progressbar widget" plugin by
@@ -830,12 +830,16 @@ function s:GetDeclReg(lines)
             endif
         endif
 
-        while line =~ '^\s*reg\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*'
+        "match reg[1:0]a; or reg b;
+        let reg_pattern = '^\s*reg\s*\(\[.\{-\}\]\)\s*.\{-\}\s*;\s*'.'\|'.'^\s*reg\s\+.\{-\}\s*;\s*'
+        let match_pattern = '^\s*reg\s*\(\[.\{-\}\]\)\s*\zs.\{-\}\ze\s*;\s*'.'\|'.'^\s*reg\s\+\zs.\{-\}\ze\s*;\s*'
+
+        while line =~ reg_pattern
             "delete abnormal
             if line =~ '\<signed\>\|\<unsigned\>'
                 let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
             endif
-            let names = matchstr(line,'^\s*reg\s\+\(\[.\{-\}\]\)\?\s*\zs.\{-\}\ze\s*;\s*')
+            let names = matchstr(line,match_pattern)
             "in case style of reg a = {b,c,d};
             let names = substitute(names,'\(\/\/\)\@<!=.*$','','')
             "in case style of reg [1:0] a,b,c;
@@ -843,7 +847,7 @@ function s:GetDeclReg(lines)
                 let name = matchstr(name,'\w\+')
                 call add(decl_reg,name)
             endfor
-            let line = substitute(line,'^\s*reg\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*','','')
+            let line = substitute(line,reg_pattern,'','')
         endwhile
 
         let idx = idx + 1
@@ -1746,12 +1750,16 @@ function s:GetDeclWire(lines)
             endif
         endif
 
-        while line =~ '^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*'
+        "match wire[1:0]a; or wire b;
+        let wire_pattern = '^\s*wire\s*\(\[.\{-\}\]\)\s*.\{-\}\s*;\s*'.'\|'.'^\s*wire\s\+.\{-\}\s*;\s*'
+        let match_pattern = '^\s*wire\s*\(\[.\{-\}\]\)\s*\zs.\{-\}\ze\s*;\s*'.'\|'.'^\s*wire\s\+\zs.\{-\}\ze\s*;\s*'
+
+        while line =~ wire_pattern
             "delete abnormal
             if line =~ '\<signed\>\|\<unsigned\>'
                 let line = substitute(line,'\<signed\>\|\<unsigned\>','','')
             endif
-            let names = matchstr(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*\zs.\{-\}\ze\s*;\s*')
+            let names = matchstr(line,match_pattern)
             "in case style of wire a = {b,c,d};
             let names = substitute(names,'\(\/\/\)\@<!=.*$','','')
             "in case style of wire [1:0] a,b,c;
@@ -1759,7 +1767,7 @@ function s:GetDeclWire(lines)
                 let name = matchstr(name,'\w\+')
                 call add(decl_wire,name)
             endfor
-            let line = substitute(line,'^\s*wire\s\+\(\[.\{-\}\]\)\?\s*.\{-\}\s*;\s*','','')
+            let line = substitute(line,wire_pattern,'','')
         endwhile
 
         let idx = idx + 1
