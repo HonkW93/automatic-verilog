@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/06/28 23:56
+" Last Modified:  2023/07/05 22:36
 " File:           crossdir.vim
 " Note:           search cross directory by tags/filelist/verilog-library
 "------------------------------------------------------------------------------
@@ -12,6 +12,8 @@ if exists("g:loaded_automatic_verilog_crossdir")
     finish
 endif
 let g:loaded_automatic_verilog_crossdir = 1
+
+"}}}1
 
 "{{{1 debug注释行
 let s:skip_cmt_debug = 0
@@ -167,11 +169,11 @@ function s:GetFileDirDicFromFlist(file)
         if line =~ '^\s*\/\/'
             continue
         endif
-        let matchflags = '\('.   '-y'           . '\|' .
-                                \'-f'           . '\|' .
-                                \'+incdir+'     . '\|' .
+        let matchflags = '\('.   '-f'           . '\|' .
                                 \'-v'           . '\|' .
-                                \'+libext+'     . '\)'
+                                \'-y'           . '\|' .
+                                \'+libext+'     . '\|' .
+                                \'+incdir+'     . '\)'
         let flag_list = split(line,matchflags.'\(\s*[^ \-+]\+\)\{1,\}\zs')
         for flag in flag_list
             if flag =~ '^\s*-f'
@@ -235,18 +237,16 @@ function s:GetFileDirDicFromFlist(file)
     endif
 
     "expand directories{{{3
-    "default
-    let dir = '.'       
+    "default current directory
     if dirlist == [] 
-        let dirlist = [dir]
+        let dirlist = ["."]
     endif
     let exp_dirlist = []
     for dir in dirlist
-        "expand directories in SYSTEM VARIABLE (e.g. $VIM -> F:/Vim)
-        let dir = expand(dir)
-        "expand directories to full path(e.g. ./ -> /usr/share/vim/vim74 )
-        let dir = substitute(fnamemodify(dir,':p'),'\/$','','')
-        call add(exp_dirlist,dir)
+        let [dir,exp_dir] = s:GetExpandDir(dir)
+        call add(exp_dirlist,exp_dir)
+        "record expand dir dictionary as g:atv_crossdir_dirs
+        call extend(g:atv_crossdir_dirs,{exp_dir:dir})
     endfor
     let dirlist = exp_dirlist
     "}}}3
@@ -263,10 +263,16 @@ function s:GetFileDirDicFromFlist(file)
 
     "find file from vlist
     for vfile in vlist
-        if filereadable(vfile)
-            let dir = fnamemodify(vfile,':p:h')
-            let file = fnamemodify(vfile,':p:t')
-            call extend (files,{file : dir})
+        let exp_vfile = expand(vfile)                           "incase $VIM/test.v
+        let exp_vfile = fnamemodify(expand(exp_vfile),':p')
+        if filereadable(exp_vfile)
+            let file = fnamemodify(vfile,':p:t')                "get file name test.v
+            let dir = substitute(vfile,escape(file,'.'),'','')  "dir keep $VIM
+            let [dir,exp_dir] = s:GetExpandDir(dir)
+            "record expand dir dictionary as g:atv_crossdir_dirs
+            call extend(g:atv_crossdir_dirs,{exp_dir:dir})
+            "find file
+            call extend (files,{file : exp_dir})
         else
             echohl ErrorMsg | echo "No file ".vfile." exist!"| echohl None
         endif
@@ -298,10 +304,16 @@ function s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
     let files = {}
     "find file from vlist
     for vfile in a:vlist
-        if filereadable(vfile)
-            let dir = fnamemodify(vfile,':p:h')
-            let file = fnamemodify(vfile,':p:t')
-            call extend (files,{file : dir})
+        let exp_vfile = expand(vfile)                           "incase $VIM/test.v
+        let exp_vfile = fnamemodify(expand(exp_vfile),':p')
+        if filereadable(exp_vfile)
+            let file = fnamemodify(vfile,':p:t')                "get file name test.v
+            let dir = substitute(vfile,escape(file,'.'),'','')  "dir keep $VIM
+            let [dir,exp_dir] = s:GetExpandDir(dir)
+            "record expand dir dictionary as g:atv_crossdir_dirs
+            call extend(g:atv_crossdir_dirs,{exp_dir:dir})
+            "find file
+            call extend (files,{file : exp_dir})
         else
             echohl ErrorMsg | echo "No file ".vfile." exist!"| echohl None
         endif
@@ -647,49 +659,44 @@ function s:GetVerilogLib()
     "dir
     let dirlist = [] 
     let rec = 1
-    let g:atv_crossdir_dirs = {} "g:atv_crossdir_dirs -> {F:/vim -> $VIM}
-    "verilog file
+    let g:atv_crossdir_dirs = {} "record {F:/vim -> $VIM}
     let vlist = [] 
-    "extension
     let elist = []
-    "filelist
     let flist = []
-    "tag list
     let tlist = []
-    "divide quotation
-    let quote_list = []
+    let qlist = []               "quote list for //verilog-library-files
 
     "Get library
     let lines = getline(1,line('$'))
     for line in lines
         "verilog-library-directories
-        if line =~ 'verilog-library-directories:(.*)'
-            let dir = matchstr(line,'verilog-library-directories:(\zs.*\ze)')
+        if line =~ 'verilog-library-directories\s*:\s*(.*)'
+            let dir = matchstr(line,'verilog-library-directories\s*:\s*(\zs.*\ze)')
             call substitute(dir,'"\zs\S*\ze"','\=add(dirlist,submatch(0))','g')
         endif
 
         "verilog-library-directories-recursive
-        if line =~ 'verilog-library-directories-recursive:'
-            let rec = matchstr(line,'verilog-library-directories-recursive:\s*\zs\d\ze\s*$')
+        if line =~ 'verilog-library-directories-recursive\s*:'
+            let rec = matchstr(line,'verilog-library-directories-recursive\s*:\s*\zs\d\ze\s*$')
             if rec != '0' && rec != '1'
                 echohl ErrorMsg | echo "Error input for verilog-library-directories-recursive = ".rec| echohl None
             endif
         endif
 
         "verilog-library-files
-        if line =~ 'verilog-library-files:(.*)'
-            "//verilog-library-files:("./test.v" "./aaa/test1.v")
-            let file = matchstr(line,'verilog-library-files:(\zs.*\ze)')
-            let quote_list = []
-            call substitute(file,'"\zs.\{-}\ze"','\=add(quote_list,submatch(0))','g')
-            for lib in quote_list
+        if line =~ 'verilog-library-files\s*:\s*(.*)'
+            "//verilog-library-files:("./test.v" "./test2.v ./aaa/test1.v")
+            let file = matchstr(line,'verilog-library-files\s*:\s*(\zs.*\ze)')
+            let qlist = []
+            call substitute(file,'"\zs.\{-}\ze"','\=add(qlist,submatch(0))','g')
+            for lib in qlist
                 call substitute(lib,'\zs\S\+\ze','\=add(vlist,submatch(0))','g')
             endfor
         endif
         
         "verilog-library-flags
-        if line =~ 'verilog-library-flags:(.*)'
-            let quote = matchstr(line,'verilog-library-flags:("\zs.*\ze")')
+        if line =~ 'verilog-library-flags\s*:\s*(.*)'
+            let quote = matchstr(line,'verilog-library-flags\s*:\s*("\zs.*\ze")')
             let matchflags = '\('.   '-y'           . '\|' .
                                     \'+incdir+'     . '\|' .
                                     \'-I'           . '\|' .
@@ -735,39 +742,21 @@ function s:GetVerilogLib()
     endif
 
     "expand directories{{{3
-    "default
-    let dir = '.'       
+    "default current directory
     if dirlist == [] 
-        let dirlist = [dir]
+        let dirlist = ["."]
     endif
-
+    "expand directory
     let exp_dirlist = []
     for dir in dirlist
-        "expand directories in SYSTEM VARIABLE (e.g. $VIM -> F:/Vim)
-        let dir = expand(dir)
-        "expand directories to full path(e.g. ./ -> /usr/share/vim/vim74 )
-        let dir = substitute(fnamemodify(dir,':p'),'\/$','','')
-        call add(exp_dirlist,dir)
+        let [dir,exp_dir] = s:GetExpandDir(dir)
+        call add(exp_dirlist,exp_dir)
+        "record expand dir dictionary as g:atv_crossdir_dirs
+        call extend(g:atv_crossdir_dirs,{exp_dir:dir})
     endfor
-
-    "record expand dir dictionary as g:atv_crossdir_dirs
-    for idx in range(len(dirlist))
-        call extend(g:atv_crossdir_dirs,{exp_dirlist[idx]:dirlist[idx]})
-    endfor
-
     let dirlist = exp_dirlist
     "}}}3
 
-    "expand verilog list{{{3
-    let exp_vlist = []
-    for file in vlist
-        let file = expand(file)
-        let file = fnamemodify(file,':p')
-        call add(exp_vlist,file)
-    endfor
-    let vlist = exp_vlist
-    "}}}3
-    
     "expand filelist{{{3
     let exp_flist = []
     for file in flist
@@ -790,6 +779,33 @@ function s:GetVerilogLib()
     
     return [dirlist,str2nr(rec),vlist,elist,flist,tlist]
 
+endfunction
+"}}}2
+
+"{{{2 GetExpandDir 获取展开的路径
+"--------------------------------------------------
+" Function : GetExpandDir
+" Input: 
+"   directory : directory to be expanded
+" Description:
+"   get directory & expanded directory
+" Output:
+"   e.g.
+"       input : $VIM/test/
+"       output: 
+"           dir : $VIM/test
+"           expanded dir : F:/vim/test
+"---------------------------------------------------
+function s:GetExpandDir(dir)
+    "delete last /(linux) or \(windows) (e.g. F:/Vim/ -> F:/Vim)
+    let dir = substitute(a:dir,'\(\/$\)\|\(\\$\)','','')
+    "expand directories in SYSTEM VARIABLE (e.g. $VIM -> F:/Vim)
+    let exp_dir = expand(dir)
+    "expand directories to full path(e.g. ./ -> /usr/share/vim/vim74 )
+    let exp_dir = substitute(fnamemodify(exp_dir,':p'),'\/$','','')
+    "delete last /(linux) or \(windows) (e.g. F:/Vim/ -> F:/Vim)
+    let exp_dir = substitute(exp_dir,'\(\/$\)\|\(\\$\)','','')
+    return [dir,exp_dir]
 endfunction
 "}}}2
 
