@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/06/27 23:26
+" Last Modified:  2023/07/06 21:43
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -422,13 +422,13 @@ endfunction
 "       output reg [31:0] port_b
 "   );
 "   e.g io port sequences
-"   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-"   [wire,1,input,'c0','c0',clk,0,'       input       clk,']
-"   [reg,5,output,31,0,port_b,0,'    output reg [31:0] port_b']
+"   [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width ]
+"   [wire,1,input,'c0','c0',clk,0,'       input       clk,','']
+"   [reg,5,output,31,0,port_b,0,'    output reg [31:0] port_b','[31:0]']
 " Output:
 "   list of port sequences(including comment lines)
-"    0     1         2       3       4       5            6          7
-"   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+"    0     1         2       3       4       5            6          7     8
+"   [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width ]
 "---------------------------------------------------
 function g:AutoVerilog_GetIO(lines,mode)
     let idx = 0
@@ -488,16 +488,16 @@ function g:AutoVerilog_GetIO(lines,mode)
                     endif
                 endif
                 "record first null line
-                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line ]
-                let value = ['keep',seq,     '',     'c0',   'c0',   'NULL',          0,         '']
+                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line, width ]
+                let value = ['keep',seq,     '',     'c0',   'c0',   'NULL',       0,         '',   '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
             "}}}4
 
             " `ifdef `ifndef & single comment line {{{5
             elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)' || (line =~ '^\s*\/\/' && line !~ '^\s*\/\/\s*{{{')
-                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line ]
-                let value = ['keep',seq,     '',     'c0',   'c0',   line,        0,         line]
+                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line, width ]
+                let value = ['keep',seq,     '',     'c0',   'c0',    line,        0,         line, '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
             "}}}5
@@ -541,6 +541,7 @@ function g:AutoVerilog_GetIO(lines,mode)
                     "[`DEFINT_PARA]
                     if width1 == '' && width2 == ''
                         let width1 = matchstr(width,'\[\zs.*\ze\]')
+                        let width2 = 'c0'
                     "[5]
                     elseif width1 == ''
                         let width1 = 'c0'
@@ -561,14 +562,29 @@ function g:AutoVerilog_GetIO(lines,mode)
                     let line = substitute(line,'\[.*\]','','')
                 endif
 
+                "get width string
+                if g:atv_autoinst_incl_width == 0       "if config,never output width
+                    let width = ''
+                elseif width2 == 'c0'
+                    if width1 == 'c0' 
+                        let width = ''
+                    else
+                        let width = '['.width1.']'
+                    endif
+                elseif width1 != 'c0'
+                    let width = '['.width1.':'.width2.']'
+                else
+                    let width = ''
+                endif
+
                 "for types like input aa,bb,cc;
                 let names = split(line,',')
                 for name in names
                     let name = substitute(name,'\s*','','g')          "delete redundant space
                     let name = matchstr(name,'\w\+')
                     if name != ''
-                        "dict       [type,sequence,io_dir, width1, width2, signal_name, last_port, line ]
-                        let value = [type,seq,     io_dir, width1, width2, name,        0,         '']
+                        "dict       [type,sequence,io_dir, width1, width2, signal_name, last_port, line, width ]
+                        let value = [type,seq,     io_dir, width1, width2, name,        0,         '',   width]
                         call extend(io_seqs, {seq : value})
                         let seq = seq + 1
                     endif
@@ -599,8 +615,8 @@ function g:AutoVerilog_GetIO(lines,mode)
                 let ifname = matchstr(line,'\zs\w\+\.\=\w*\ze'.'\s\+'.'\w\+')
                 let name = matchstr(line,'\w\+\.\=\w*'.'\s\+'.'\zs\w\+\ze')
 
-                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line ]
-                let value = [type,  seq,      io_dir, 'c0',   'c0',   name,        0,         ifname]
+                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line,     width ]
+                let value = [type,  seq,      io_dir, 'c0',   'c0',   name,        0,         ifname,   '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
 
@@ -647,7 +663,7 @@ function g:AutoVerilog_GetIO(lines,mode)
     endwhile
     "}}}3
 
-    "remove last useless line{{{3
+    "remove useless line{{{3
     let seq = len(io_seqs)
     while seq >= 0
         let seq = seq - 1
@@ -655,16 +671,13 @@ function g:AutoVerilog_GetIO(lines,mode)
             let value = io_seqs[seq]
             let type = value[0]
             let line = value[7]
-            if type !~ 'keep' || line !~ '^\s*$'
-                break
-            else
+            if type =~ 'keep' && line =~ '^\s*$'
                 call remove(io_seqs,seq)
+            else
+                break
             end
         endif
     endwhile
-    "}}}3
-
-    "remove first useless line{{{3
     let seq = 0
     while seq <= len(io_seqs)
         let seq = seq + 1
@@ -672,10 +685,10 @@ function g:AutoVerilog_GetIO(lines,mode)
             let value = io_seqs[seq]
             let type = value[0]
             let line = value[7]
-            if type !~ 'keep' || line !~ '^\s*$'
-                break
-            else
+            if type =~ 'keep' && line =~ '^\s*$'
                 call remove(io_seqs,seq)
+            else
+                break
             end
         endif
     endwhile
@@ -819,21 +832,10 @@ function s:GetChangedInstIO(lines,io_names)
                 let type = value[0]
                 if type != 'keep' 
                     let name = value[5]
-                    if g:atv_autoinst_incl_width == 0       "if config,never output width
-                        let width = ''
-                    elseif value[4] == 'c0'
-                        if value[3] == 'c0' 
-                            let width = ''
-                        else
-                            let width = '['.value[3].']'
-                        endif
-                    elseif value[3] != 'c0'
-                        let width = '['.value[3].':'.value[4].']'
-                    else
-                        let width = ''
-                    endif
+                    let width = value[8]
                     let conn_inst = name.width
                 endif
+                "keep inst by signal name or by signal change
                 if g:atv_autoinst_keep_name == 0
                     if conn_inst != conn
                         call extend(cinst_names,{inst_name : conn})
@@ -1189,24 +1191,12 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
         let value = a:io_seqs[seq]
         let type = value[0]
 
+        "calculate maximum len of position to Draw
         if type != 'keep' 
             let name = value[5]
-            "calculate maximum len of position to Draw
-            if g:atv_autoinst_incl_width == 0       "if config,never output width
-                let width = ''
-            elseif value[4] == 'c0'
-                if value[3] == 'c0' 
-                    let width = ''
-                else
-                    let width = '['.value[3].']'
-                endif
-            elseif value[3] != 'c0'
-                let width = '['.value[3].':'.value[4].']'
-            else
-                let width = ''
-            endif
-            "io that's changed will be keeped if config 
+            let width = value[8]
             let connect = name.width
+            "io that's changed will be keeped if config 
             if g:atv_autoinst_keep_chg == 1
                 if(has_key(chg_io_names,name))
                     let connect = chg_io_names[name]
@@ -1267,19 +1257,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             "lspace
 
             "width
-            if g:atv_autoinst_incl_width == 0       "if config,never output width
-                let width = ''
-            elseif value[4] == 'c0'
-                if value[3] == 'c0' 
-                    let width = ''
-                else
-                    let width = '['.value[3].']'
-                endif
-            elseif value[3] != 'c0'
-                let width = '['.value[3].':'.value[4].']'
-            else
-                let width = ''
-            endif
+            let width = value[8]
 
             "io that's changed will be keeped if config 
             let connect = name.width
