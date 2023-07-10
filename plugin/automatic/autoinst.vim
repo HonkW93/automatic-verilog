@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/07/06 21:43
+" Last Modified:  2023/07/06 23:04
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -137,20 +137,23 @@ let g:_ATV_AUTOINST_DEFAULTS = {
             \'st_pos':      4,
             \'name_pos':    32,
             \'sym_pos':     64,
+            \'ls_cnt':      0,
+            \'rs_cnt':      0,
+            \'tail_nalign': 0,    
+            \'add_dir':     0,    
+            \'add_dir_keep':0,
+            \'tcmt_delim':  ' //',
             \'io_dir':      1,
             \'io_dir_name': 'input output inout interface',
             \'inst_new':    1,
+            \'inst_tstp':   0,
+            \'inst_tstp_fmt':"%Y.%m.%d %H:%M",
             \'inst_del':    1,
             \'keep_chg':    1,        
             \'keep_name':   1,        
-            \'ls_cnt':      0,
-            \'rs_cnt':      0,    
-            \'tail_nalign': 0,    
             \'incl_cmnt':   1,
             \'incl_ifdef':  1,    
             \'95_support':  0,    
-            \'add_dir':     0,    
-            \'add_dir_keep':0,
             \'itf_support': 0,    
             \'incl_width':  1
             \}
@@ -1302,8 +1305,11 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             "Draw IO by config
             let line = prefix.'.'.name.name2bracket.'('.s:lspace.connect.width2bracket.')'.comma
 
+            "tail comment
+            let tcmt = ''
+
             if g:atv_autoinst_io_dir == 1
-                let line = line .' //'.io_dir
+                let tcmt = tcmt.g:atv_autoinst_tcmt_delim.io_dir
             endif
 
             "empty list, default
@@ -1314,13 +1320,14 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
                 "name not exist in old io_list, add //INST_NEW
                 if io_idx == -1
                     if g:atv_autoinst_inst_new == 1
-                        let line = line . ' // INST_NEW'
-                    else
-                        let line = line
+                        let tcmt = tcmt.g:atv_autoinst_tcmt_delim.'INST_NEW'
+                        "time stamp
+                        if g:atv_autoinst_inst_tstp == 1
+                            let tcmt = tcmt.g:atv_autoinst_tcmt_delim.'@'.strftime(g:atv_autoinst_inst_tstp_fmt)
+                        endif
                     endif
                 "name already exist in old io_list,cover
                 else
-                    let line = line
                     call remove(io_list,io_idx)
                 endif
             endif
@@ -1328,7 +1335,13 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             "process sv_interface
             if type == 'interface'
                 let ifname = value[7]
-                let line = line.'//'.ifname
+                let tcmt = tcmt.g:atv_autoinst_tcmt_delim.ifname
+            endif
+
+            "add tail comment
+            if tcmt != ''
+                let tcmt =  substitute(tcmt,'\V'.escape(g:atv_autoinst_tcmt_delim,'\/'),'','')        "delete first delimiter
+                let line = line.' //'.tcmt
             endif
 
             call add(lines,line)
