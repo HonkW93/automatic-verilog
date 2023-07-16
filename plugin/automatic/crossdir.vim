@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/07/05 22:36
+" Last Modified:  2023/07/16 17:46
 " File:           crossdir.vim
 " Note:           search cross directory by tags/filelist/verilog-library
 "------------------------------------------------------------------------------
@@ -246,7 +246,7 @@ function s:GetFileDirDicFromFlist(file)
         let [dir,exp_dir] = s:GetExpandDir(dir)
         call add(exp_dirlist,exp_dir)
         "record expand dir dictionary as g:atv_crossdir_dirs
-        call extend(g:atv_crossdir_dirs,{exp_dir:dir})
+        call extend(g:atv_crossdir_dirs,{exp_dir : dir})
     endfor
     let dirlist = exp_dirlist
     "}}}3
@@ -270,7 +270,7 @@ function s:GetFileDirDicFromFlist(file)
             let dir = substitute(vfile,escape(file,'.'),'','')  "dir keep $VIM
             let [dir,exp_dir] = s:GetExpandDir(dir)
             "record expand dir dictionary as g:atv_crossdir_dirs
-            call extend(g:atv_crossdir_dirs,{exp_dir:dir})
+            call extend(g:atv_crossdir_dirs,{exp_dir : dir})
             "find file
             call extend (files,{file : exp_dir})
         else
@@ -311,7 +311,7 @@ function s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
             let dir = substitute(vfile,escape(file,'.'),'','')  "dir keep $VIM
             let [dir,exp_dir] = s:GetExpandDir(dir)
             "record expand dir dictionary as g:atv_crossdir_dirs
-            call extend(g:atv_crossdir_dirs,{exp_dir:dir})
+            call extend(g:atv_crossdir_dirs,{exp_dir : dir})
             "find file
             call extend (files,{file : exp_dir})
         else
@@ -752,7 +752,7 @@ function s:GetVerilogLib()
         let [dir,exp_dir] = s:GetExpandDir(dir)
         call add(exp_dirlist,exp_dir)
         "record expand dir dictionary as g:atv_crossdir_dirs
-        call extend(g:atv_crossdir_dirs,{exp_dir:dir})
+        call extend(g:atv_crossdir_dirs,{exp_dir : dir})
     endfor
     let dirlist = exp_dirlist
     "}}}3
