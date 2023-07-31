@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/07/06 23:04
+" Last Modified:  2023/07/31 20:10
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -149,6 +149,7 @@ let g:_ATV_AUTOINST_DEFAULTS = {
             \'inst_tstp':   0,
             \'inst_tstp_fmt':"%Y.%m.%d %H:%M",
             \'inst_del':    1,
+            \'usr_cmnt':    0,
             \'keep_chg':    1,        
             \'keep_name':   1,        
             \'incl_cmnt':   1,
@@ -278,8 +279,8 @@ function! g:AutoInst(mode)
             endif
         endif
 
-        "Get changed inst io names
-        let chg_io_names = s:GetChangedInstIO(chg_lines,io_names)
+        "Get changed inst io names && comment names
+        let [chg_io_names,tcmt_names] = s:GetChangedInstIO(chg_lines,io_names)
 
         "Remove io from io_seqs that want to be keep when autoinst
         "   value = [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
@@ -302,7 +303,8 @@ function! g:AutoInst(mode)
         "if io_seqs has same signal_name that's in upd_io_list, cover
         "if io_seqs doesn't have signal_name that's in upd_io_list, add //INST_DEL
         "if io_seqs connection has been changed, keep it
-        let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names)
+        "if io_seqs connection has comments, keep it
+        let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names,tcmt_names)
 
         "Delete current line );
         let line = substitute(getline(line('.')),')\s*;','','')
@@ -814,6 +816,7 @@ endfunction
 function s:GetChangedInstIO(lines,io_names)
     let idx = 0
     let cinst_names = {}
+    let tcmt_names = {}
     let io_names = copy(a:io_names)
     while idx < len(a:lines)
         let idx = idx + 1
@@ -824,6 +827,10 @@ function s:GetChangedInstIO(lines,io_names)
         let line = a:lines[idx-1]
         if line =~ '\.\s*\w\+\s*(.*)'
             let inst_name = matchstr(line,'\.\s*\zs\w\+\ze\s*(.*)')
+            "record user tail comment
+            let tcmt = matchstr(line,'\/\/\zs[^/]*\ze$')                            "skip //...//...
+            call extend(tcmt_names,{inst_name : tcmt})
+            "record connection
             let conn = matchstr(line,'\.\s*\w\+\s*(\zs.*\ze\(\/\/.*\)\@<!)')        "connection,skip comment
             let conn = substitute(conn,'^\s*','','')                                "delete space from the start for alignment
             let conn = substitute(conn,'\s*$','','')                                "delete space in the end for alignment
@@ -847,7 +854,7 @@ function s:GetChangedInstIO(lines,io_names)
             endif
         endif
     endwhile
-    return cinst_names
+    return [cinst_names,tcmt_names]
 endfunction
 "}}}2
 
@@ -1165,6 +1172,7 @@ endfunction
 "   io_seqs : new inst io sequences for align
 "   io_list : old inst io name list
 "   chg_io_names : old inst io names that has been changed
+"   tcmt_names : old inst io names that has tail comments
 "
 " Description:
 " e.g draw io port sequences
@@ -1182,10 +1190,11 @@ endfunction
 "   e.g
 "       .signal_name   (signal_name[width1:width2]      ), //io_dir
 "---------------------------------------------------
-function s:DrawIO(io_seqs,io_list,chg_io_names)
+function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
     let prefix = s:st_prefix.repeat(' ',4)
     let io_list = copy(a:io_list)
     let chg_io_names = copy(a:chg_io_names)
+    let tcmt_names = copy(a:tcmt_names)
 
     "guarantee spaces width{{{3
     let max_lbracket_len = 0
@@ -1341,7 +1350,20 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
             "add tail comment
             if tcmt != ''
                 let tcmt =  substitute(tcmt,'\V'.escape(g:atv_autoinst_tcmt_delim,'\/'),'','')        "delete first delimiter
-                let line = line.' //'.tcmt
+            endif
+
+            let line = line.' //'.tcmt
+
+            "add user tail comment
+            if has_key(tcmt_names,name)
+                let user_tcmt = tcmt_names[name]
+            endif
+            if g:atv_autoinst_usr_cmnt == 1 && user_tcmt != '' 
+                if (user_tcmt != io_dir) 
+              \ && (user_tcmt != 'INST_NEW')
+              \ && (user_tcmt != io_dir.g:atv_autoinst_tcmt_delim.'INST_NEW')
+                    let line = line.' //'.user_tcmt
+                endif
             endif
 
             call add(lines,line)
@@ -1366,6 +1388,10 @@ function s:DrawIO(io_seqs,io_list,chg_io_names)
         if g:atv_autoinst_inst_del == 1
             for name in io_list
                 let line = prefix.'//INST_DEL: Port '.name.' has been deleted.'
+                "time stamp
+                if g:atv_autoinst_inst_tstp == 1
+                    let line = line.g:atv_autoinst_tcmt_delim.'@'.strftime(g:atv_autoinst_inst_tstp_fmt)
+                endif
                 call add(lines,line)
             endfor
         endif
