@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/07/31 20:10
+" Last Modified:  2023/08/03 18:12
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -137,6 +137,7 @@ let g:_ATV_AUTOINST_DEFAULTS = {
             \'st_pos':      4,
             \'name_pos':    32,
             \'sym_pos':     64,
+            \'style':     0,
             \'ls_cnt':      0,
             \'rs_cnt':      0,
             \'tail_nalign': 0,    
@@ -202,8 +203,9 @@ endif
 "   Formatted autoinst code
 " Note:
 "   list of port sequences
-"            0     1        2       3       4       5            6          7
-"   value = [type, sequence,io_dir, width1, width2, signal_name, last_port, line ]
+"            0     1         2       3       4       5            6          7     8      9
+"   value = [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
+"
 "   io_seqs = {seq : value }
 "   io_names = {signal_name : value }
 "---------------------------------------------------
@@ -283,7 +285,7 @@ function! g:AutoInst(mode)
         let [chg_io_names,tcmt_names] = s:GetChangedInstIO(chg_lines,io_names)
 
         "Remove io from io_seqs that want to be keep when autoinst
-        "   value = [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+        "   value = [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
         "   io_seqs = {sequence : value }
         "   io_names = {signal_name : value }
         for name in keep_io_list
@@ -427,13 +429,13 @@ endfunction
 "       output reg [31:0] port_b
 "   );
 "   e.g io port sequences
-"   [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width ]
+"   [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
 "   [wire,1,input,'c0','c0',clk,0,'       input       clk,','']
 "   [reg,5,output,31,0,port_b,0,'    output reg [31:0] port_b','[31:0]']
 " Output:
 "   list of port sequences(including comment lines)
-"    0     1         2       3       4       5            6          7     8
-"   [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width ]
+"    0     1         2       3       4       5            6          7     8      9
+"   [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
 "---------------------------------------------------
 function g:AutoVerilog_GetIO(lines,mode)
     let idx = 0
@@ -493,16 +495,16 @@ function g:AutoVerilog_GetIO(lines,mode)
                     endif
                 endif
                 "record first null line
-                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line, width ]
-                let value = ['keep',seq,     '',     'c0',   'c0',   'NULL',       0,         '',   '']
+                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
+                let value = ['keep',seq,     '',     'c0',   'c0',   'NULL',       0,         '',   '',    '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
             "}}}4
 
             " `ifdef `ifndef & single comment line {{{5
             elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)' || (line =~ '^\s*\/\/' && line !~ '^\s*\/\/\s*{{{')
-                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line, width ]
-                let value = ['keep',seq,     '',     'c0',   'c0',    line,        0,         line, '']
+                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
+                let value = ['keep',seq,     '',     'c0',   'c0',    line,        0,         line, '',    '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
             "}}}5
@@ -588,8 +590,8 @@ function g:AutoVerilog_GetIO(lines,mode)
                     let name = substitute(name,'\s*','','g')          "delete redundant space
                     let name = matchstr(name,'\w\+')
                     if name != ''
-                        "dict       [type,sequence,io_dir, width1, width2, signal_name, last_port, line, width ]
-                        let value = [type,seq,     io_dir, width1, width2, name,        0,         '',   width]
+                        "dict       [type,sequence,io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
+                        let value = [type,seq,     io_dir, width1, width2, name,        0,         '',   width, '']
                         call extend(io_seqs, {seq : value})
                         let seq = seq + 1
                     endif
@@ -620,8 +622,8 @@ function g:AutoVerilog_GetIO(lines,mode)
                 let ifname = matchstr(line,'\zs\w\+\.\=\w*\ze'.'\s\+'.'\w\+')
                 let name = matchstr(line,'\w\+\.\=\w*'.'\s\+'.'\zs\w\+\ze')
 
-                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line,     width ]
-                let value = [type,  seq,      io_dir, 'c0',   'c0',   name,        0,         ifname,   '']
+                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line,     width, first_port ]
+                let value = [type,  seq,      io_dir, 'c0',   'c0',   name,        0,         ifname,   '',    '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
 
@@ -652,7 +654,7 @@ function g:AutoVerilog_GetIO(lines,mode)
     endwhile
     "}}}3
 
-    "find last_port{{{3
+    "find last_port&first_port{{{3
     let seq = len(io_seqs)
     while seq >= 0
         let seq = seq - 1
@@ -661,6 +663,19 @@ function g:AutoVerilog_GetIO(lines,mode)
             let type = value[0]
             if type !~ 'keep'
                 let value[6] = 1
+                call extend(io_seqs,{seq : value})
+                break
+            end
+        endif
+    endwhile
+    let seq = -1
+    while seq <= len(io_seqs)
+        let seq = seq + 1
+        if has_key(io_seqs,seq)
+            let value = io_seqs[seq]
+            let type = value[0]
+            if type !~ 'keep'
+                let value[9] = 1
                 call extend(io_seqs,{seq : value})
                 break
             end
@@ -787,6 +802,7 @@ endfunction
 "   io_names = {signal_name : value }
 " Description:
 "   Get changed inst io port info from lines
+"   Get user tail comment frome lines
 "   e.g
 "   module_name #(
 "       .A_PARAMETER (A_PARAMETER)
@@ -1217,8 +1233,14 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
                 endif
             endif
             "prefix.'.'.name.name2bracket.'('.lspace.connect.width2bracket.')'
-            let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,g:atv_autoinst_name_pos])
-            let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(s:lspace)+len(connect)+4,g:atv_autoinst_sym_pos])
+            if g:atv_autoinst_style == 0
+                let max_lbracket_len = max([max_lbracket_len,len(prefix)+len('.')+len(name)+4,g:atv_autoinst_name_pos])
+                let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(s:lspace)+len(connect)+4,g:atv_autoinst_sym_pos])
+            "prefix.','.'.'.name.name2bracket.'('.lspace.connect.width2bracket.')'
+            else
+                let max_lbracket_len = max([max_lbracket_len,len(prefix)+len(',')+len('.')+len(name)+4,g:atv_autoinst_name_pos])
+                let max_rbracket_len = max([max_rbracket_len,max_lbracket_len+len('(')+len(s:lspace)+len(connect)+4,g:atv_autoinst_sym_pos])
+            endif
         endif
     endfor
     "}}}3
@@ -1259,7 +1281,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
         "add io line{{{4
         else
             "Format IO sequences
-            "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
+            "[type,  sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
             "name
             let name = value[5]
 
@@ -1291,11 +1313,20 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
 
             "comma
             let last_port = value[6]
-            if last_port == 1
-                let comma = ' '         "space
-                let last_port_flag = 1  "special case: last port has been put in keep_io_list, there exist no last_port
+            let first_port = value[9]
+            if g:atv_autoinst_style == 0
+                if last_port == 1
+                    let comma = ' '         "space
+                    let last_port_flag = 1  "special case: last port has been put in keep_io_list, there exist no last_port
+                else
+                    let comma = ','         "comma exists
+                endif
             else
-                let comma = ','      "comma exists
+                if first_port == 1
+                    let comma = ' '         "space
+                else
+                    let comma = ','         "comma exists
+                endif
             endif
 
             "io_dir
@@ -1312,7 +1343,11 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
             endif
 
             "Draw IO by config
-            let line = prefix.'.'.name.name2bracket.'('.s:lspace.connect.width2bracket.')'.comma
+            if g:atv_autoinst_style == 0
+                let line = prefix.'.'.name.name2bracket.'('.s:lspace.connect.width2bracket.')'.comma
+            else
+                let line = prefix.comma.'.'.name.name2bracket.'('.s:lspace.connect.width2bracket.')'
+            endif
 
             "tail comment
             let tcmt = ''
@@ -1357,12 +1392,12 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
             "add user tail comment
             if has_key(tcmt_names,name)
                 let user_tcmt = tcmt_names[name]
-            endif
-            if g:atv_autoinst_usr_cmnt == 1 && user_tcmt != '' 
-                if (user_tcmt != io_dir) 
-              \ && (user_tcmt != 'INST_NEW')
-              \ && (user_tcmt != io_dir.g:atv_autoinst_tcmt_delim.'INST_NEW')
-                    let line = line.' //'.user_tcmt
+                if g:atv_autoinst_usr_cmnt == 1 && user_tcmt != '' 
+                    if (user_tcmt != io_dir) 
+                                \ && (user_tcmt != 'INST_NEW')
+                                \ && (user_tcmt != io_dir.g:atv_autoinst_tcmt_delim.'INST_NEW')
+                        let line = line.' //'.user_tcmt
+                    endif
                 endif
             endif
 
@@ -1377,9 +1412,12 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
     endfor
 
     "special case: last port has been put in keep_io_list, there exist no last_port
-    if last_port_flag == 0
-        "set last item as last_port
-        let lines[self_last_port_idx] = substitute(lines[self_last_port_idx],',',' ','') 
+    if g:atv_autoinst_style == 0
+        if last_port_flag == 0
+            "set last item as last_port
+            let lines[self_last_port_idx] = substitute(lines[self_last_port_idx],',',' ','') 
+        endif
+    "no speicial case for first port
     endif
 
     if io_list == []
