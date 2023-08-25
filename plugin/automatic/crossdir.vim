@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/07/16 17:46
+" Last Modified:  2023/08/23 15:08
 " File:           crossdir.vim
 " Note:           search cross directory by tags/filelist/verilog-library
 "------------------------------------------------------------------------------
@@ -310,9 +310,6 @@ function s:GetFileDirDicFromLib(dirlist,rec,vlist,elist)
             let file = fnamemodify(vfile,':p:t')                "get file name test.v
             let dir = substitute(vfile,escape(file,'.'),'','')  "dir keep $VIM
             let [dir,exp_dir] = s:GetExpandDir(dir)
-            "record expand dir dictionary as g:atv_crossdir_dirs
-            call extend(g:atv_crossdir_dirs,{exp_dir : dir})
-            "find file
             call extend (files,{file : exp_dir})
         else
             echohl ErrorMsg | echo "No file ".vfile." exist!"| echohl None
@@ -370,10 +367,15 @@ function s:GetFileDirDicFromLibRec(dir,rec,files,elist)
     endfor
 
     if a:rec
+        if has('win32') || has('win64')
+            let delim = '\'
+        else
+            let delim = '/'
+        endif
         "for item in readdir(a:dir)
         for item in filedirlist
-            if isdirectory(a:dir.'/'.item)
-                call s:GetFileDirDicFromLibRec(a:dir.'/'.item,1,a:files,a:elist)
+            if isdirectory(a:dir.delim.item)
+                call s:GetFileDirDicFromLibRec(a:dir.delim.item,1,a:files,a:elist)
             endif
         endfor
     endif
@@ -751,8 +753,6 @@ function s:GetVerilogLib()
     for dir in dirlist
         let [dir,exp_dir] = s:GetExpandDir(dir)
         call add(exp_dirlist,exp_dir)
-        "record expand dir dictionary as g:atv_crossdir_dirs
-        call extend(g:atv_crossdir_dirs,{exp_dir : dir})
     endfor
     let dirlist = exp_dirlist
     "}}}3
@@ -805,6 +805,8 @@ function s:GetExpandDir(dir)
     let exp_dir = substitute(fnamemodify(exp_dir,':p'),'\/$','','')
     "delete last /(linux) or \(windows) (e.g. F:/Vim/ -> F:/Vim)
     let exp_dir = substitute(exp_dir,'\(\/$\)\|\(\\$\)','','')
+    "record expand dir dictionary as g:atv_crossdir_dirs
+    call extend(g:atv_crossdir_dirs,{exp_dir : dir})
     return [dir,exp_dir]
 endfunction
 "}}}2
