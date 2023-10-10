@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/08/25 14:17
+" Last Modified:  2023/10/10 14:38
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -94,46 +94,60 @@ let s:not_keywords_pattern = s:VlogKeyWords . '\@!\(\<\w\+\>\)'
 "}}}2
 
 "AutoInst Config 自动例化配置
-"+--------------+---------------------------------------------------------------------------------------+
-"|    st_pos    |                                    start position                                     |
-"+--------------+---------------------------------------------------------------------------------------+
-"|   name_pos   |                                 signal name position                                  |
-"+--------------+---------------------------------------------------------------------------------------+
-"|   sym_pos    |                                 symbol name position                                  |
-"+--------------+---------------------------------------------------------------------------------------+
-"|    io_dir    |                    add //input or //output in the end of instance                     |
-"+--------------+---------------------------------------------------------------------------------------+
-"| io_dir_name  |                    default io_dir name, can be changed to 'I O IO'                    |
-"+--------------+---------------------------------------------------------------------------------------+
-"|   inst_new   |               add //INST_NEW if port has been newly added to the module               |
-"+--------------+---------------------------------------------------------------------------------------+
-"|   inst_del   |                add //INST_DEL if port has been deleted from the module                |
-"+--------------+---------------------------------------------------------------------------------------+
-"|   keep_chg   |                            keep changed inst io by changes                            |
-"+--------------+---------------------------------------------------------------------------------------+
-"|  keep_name   |                             keep changed inst io by name                              |
-"+--------------+---------------------------------------------------------------------------------------+
-"|    ls_cnt    |                                add left space after (                                 |
-"+--------------+---------------------------------------------------------------------------------------+
-"|    rs_cnt    |                               add right space before )                                |
-"+--------------+---------------------------------------------------------------------------------------+
-"| tail_nalign  |                       don't do alignment in tail when autoinst                        |
-"+--------------+---------------------------------------------------------------------------------------+
-"|  incl_cmnt   |              include comment line of // (/*...*/ will always be ignored)              |
-"+--------------+---------------------------------------------------------------------------------------+
-"|  incl_ifdef  |                           include ifdef like `ifdef `endif                            |
-"+--------------+---------------------------------------------------------------------------------------+
-"|  95_support  |                                 Support Verilog-1995                                  |
-"+--------------+---------------------------------------------------------------------------------------+
-"|   add_dir    |                            add //Instance ...directory...                             |
-"+--------------+---------------------------------------------------------------------------------------+
-"| add_dir_keep | add //Instance ...directory... but directory keep original format(ENV VAR like $HOME) |
-"+--------------+---------------------------------------------------------------------------------------+
-"| itf_support  |                                   iterface support                                    |
-"+--------------+---------------------------------------------------------------------------------------+
-"|  incl_width  |                             instance signal include width                             |
-"+--------------+---------------------------------------------------------------------------------------+
-let g:_ATV_AUTOINST_DEFAULTS = {
+"+------------------+----------------------------------------------------------------------------------------------+
+"| pos_st_auto      | auto detect start position of autoinst                                                       |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| pos_st           | manual start position of autoinst (valid only when pos_st_auto invalid)                      |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| pos_lbls         | position of left bracket left space (number of spaces)                                       |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| pos_lb           | position of left bracket                                                                     |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| pos_lbrs         | position of left bracket right space (number of spaces)                                      |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| pos_rbls         | position of right bracket left space (number of spaces)                                      |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| pos_rb           | position of right bracket                                                                    |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| pos_rbrs         | position of right bracket right space (number of spaces)                                     |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| pos_lalgn        | position - align left bracket                                                                |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| pos_ralgn        | position - align right bracket                                                               |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| pos_comma        | position - comma in the start of the line                                                    |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| cmt_dir          | head comment add for directory of the instance //Instance...                                 |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| cmt_dir_env      | head comment add for directory of the instance, but use original environment name like $HOME |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| cmt_delim        | line comment delimiter, deafult " //"                                                        |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| cmt_iodir        | line comment add for io direction like //input //output //inout or //interface               |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| cmt_instnew      | line comment add for new inst //INST_NEW                                                     |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| cmt_instnew_tstp | line comment add timestamp for new inst //INST_NEW @2023.8.1                                 |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| cmt_instdel      | line comment add for deleted inst //INST_DEL                                                 |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| cmt_instnew_tstp | line comment add timestamp for deleted inst //INST_DEL @2023.8.1                             |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| cmt_usr          | line comment add user own comment                                                            |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| incl_cmt         | include comment line of // (/*...*/ will always be ignored)                                  |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| incl_width       | include instance signal width like a[7:0]                                                    |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| keep_chg         | keep changed inst io by 'name' or 'full'                                                     |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| 95_support       | support verilog-1995                                                                         |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| itf_support      | support interface (beta version)                                                             |
+"+------------------+----------------------------------------------------------------------------------------------+
+"| tpl_support      | support template                                                                             |
+"+------------------+----------------------------------------------------------------------------------------------+
+let g:_AUTOVERILOG_AUTOINST_DEFAULTS = {
             \'pos_st_auto':         1,
             \'pos_st':              4,
             \'pos_lbls':            1,
@@ -163,14 +177,14 @@ let g:_ATV_AUTOINST_DEFAULTS = {
             \'tpl_support':         0
             \}
 
-for s:key in keys(g:_ATV_AUTOINST_DEFAULTS)
-    if !exists('g:atv_autoinst_' . s:key)
-        let g:atv_autoinst_{s:key} = copy(g:_ATV_AUTOINST_DEFAULTS[s:key])
+for s:key in keys(g:_AUTOVERILOG_AUTOINST_DEFAULTS)
+    if !exists('g:atv_ati_' . s:key)
+        let g:atv_ati_{s:key} = copy(g:_AUTOVERILOG_AUTOINST_DEFAULTS[s:key])
     endif
 endfor
 
 "cfg pre process
-let s:st_prefix = repeat(' ',g:atv_autoinst_pos_st)         "start position prefix
+let s:st_prefix = repeat(' ',g:atv_ati_pos_st)         "start position prefix
 
 "}}}1
 
@@ -199,27 +213,25 @@ endif
 " Note:
 "   list of port sequences
 "            0     1         2       3       4       5            6          7     8      9
-"   value = [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
+"   value = [type, sequence, iodir, width1, width2, signal_name, last_port, line, width, first_port ]
 "
 "   io_seqs = {seq : value }
 "   io_names = {signal_name : value }
 "---------------------------------------------------
 function! g:AutoInst(mode)
     "Get module-file-dir dictionary
-    let [files,modules] = g:AutoVerilog_GetModuleFileDirDic()
+    let [files,modules] = g:ATV_GetModFileDir()
 
     "Record current position
     let orig_idx = line('.')
     let orig_col = col('.')
 
-    "AutoInst all start from top line, AutoInst once start from first /*autoinst*/ line
+    "AutoInst all start from top line
+    "AutoInst once start from first /*autoinst*/ line
     if a:mode == 1
         call cursor(1,1)
-    elseif a:mode == 0
-        call cursor(line('.'),1)
     else
-        echohl ErrorMsg | echo "Error input for AutoInst(),input mode = ".a:mode| echohl None
-        return
+        call cursor(line('.'),1)
     endif
 
     while 1
@@ -233,25 +245,23 @@ function! g:AutoInst(mode)
             continue
         endif
 
-        "Get module_name & inst_name
-        let [module_name,inst_name,idx1,idx2,idx3] = g:AutoVerilog_GetInstModuleName()
-
-        "Get keep inst io & update inst io list 
-        let keep_io_list = s:GetInstIO(getline(idx1,line('.')))
-        let upd_io_list = s:GetInstIO(getline(line('.'),idx2))
-        let chg_lines = getline(line('.'),idx2)
+        "Get module name 
+        "Get inst name
+        "Get idx1: line index of inst
+        "Get idx2: line index of );
+        "Get idx3: line index of module
+        let [mname,iname,idx1,idx2,idx3] = g:ATV_GetInstModName()
 
         "Get io sequences {sequence : value}
-        if has_key(modules,module_name)
-            let file = modules[module_name]
+        if has_key(modules,mname)
+            let file = modules[mname]
             let dir = files[file]
             "read file
             let lines = readfile(dir.'/'.file)
-            "reserve only module lines, in case of multiple module in same file
-            let lines = g:AutoVerilog_RsvModuleLine(lines,module_name)
-
+            "reserve module lines, in case multiple module in same file
+            let lines = g:ATV_GetModLine(lines,mname)
             "get comment directory by g:atv_crossdir_dirs e.g. F:/vim/test.v ->$VIM/test.v
-            if g:atv_autoinst_cmt_dir_env == 1
+            if g:atv_ati_cmt_dir_env == 1
                 for exp_dir in keys(g:atv_crossdir_dirs)
                     if dir == exp_dir
                         let dir = g:atv_crossdir_dirs[exp_dir]
@@ -265,30 +275,25 @@ function! g:AutoInst(mode)
                 let delim = '/'
             endif
             let cmt_dir = dir.delim.file
-
-            "io sequences
-            let io_seqs = g:AutoVerilog_GetIO(lines,'seq')
-            let io_names = g:AutoVerilog_GetIO(lines,'name')
+            let io_seqs = g:ATV_GetIO(lines,'seq')
+            let io_names = g:ATV_GetIO(lines,'name')
         else
-            echohl ErrorMsg | echo "No file with module name ".module_name." exist in cur dir ".getcwd() | echohl None
+            echohl ErrorMsg | echo "No file with module name ".mname." exist in cur dir ".getcwd() | echohl None
             if a:mode == 1
                 continue
-            elseif a:mode == 0
-                return
-            else
-                echohl ErrorMsg | echo "Error input for AutoInst(),input mode = ".a:mode| echohl None
+            else 
                 return
             endif
         endif
 
-        "Get changed inst io names && comment names
-        let [chg_io_names,tcmt_names] = s:GetChangedInstIO(chg_lines,io_names)
+        let keep_io_names = s:GetInstIO(getline(idx1,line('.')),io_names)
+        let upd_io_names = s:GetInstIO(getline(line('.'),idx2),io_names)
 
         "Remove io from io_seqs that want to be keep when autoinst
-        "   value = [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
+        "   value = [type, sequence, iodir, width1, width2, signal_name, last_port, line, width, first_port ]
         "   io_seqs = {sequence : value }
         "   io_names = {signal_name : value }
-        for name in keep_io_list
+        for name in keys(keep_io_names)
             if has_key(io_names,name)
                 let value = io_names[name]
                 let seq = value[1]
@@ -300,13 +305,13 @@ function! g:AutoInst(mode)
         "Current position must be at /*autoinst*/ line
         call s:KillAutoInst()
 
-        "Draw io port, use io_seqs to cover update io list
-        "if io_seqs has new signal_name that's never in upd_io_list, add //INST_NEW
-        "if io_seqs has same signal_name that's in upd_io_list, cover
-        "if io_seqs doesn't have signal_name that's in upd_io_list, add //INST_DEL
-        "if io_seqs connection has been changed, keep it
-        "if io_seqs connection has comments, keep it
-        let lines = s:DrawIO(io_seqs,upd_io_list,chg_io_names,tcmt_names)
+        "Draw io port, use io_seqs & upd_io_names
+        "if io_seqs has new signal name that's never in upd_io_names, add //INST_NEW
+        "if io_seqs has same signal name that's in upd_io_names, cover
+        "if io_seqs doesn't have signal name that's in upd_io_names, add //INST_DEL
+        "if io_seqs connection in upd_io_names have been changed, keep it
+        "if io_seqs connection in upd_io_names have comments, keep it
+        let lines = s:DrawIO(io_seqs,upd_io_names)
 
         "Delete current line );
         let line = substitute(getline(line('.')),')\s*;','','')
@@ -316,7 +321,7 @@ function! g:AutoInst(mode)
         call append(line('.'),lines)
 
         "Add instance directory before autoinst
-        if g:atv_autoinst_cmt_dir == 1
+        if g:atv_ati_cmt_dir == 1
             let idx = idx3-1
             if getline(idx) =~ '^\s*/\/\Instance'
                 if getline(idx) =~ '//Instance: '.cmt_dir
@@ -405,9 +410,9 @@ endfunction
 "Sub Function 辅助函数{{{1
 
 "AutoInst-Get
-"AutoVerilog_GetIO 获取输入输出端口{{{2
+"ATV_GetIO 获取输入输出端口{{{2
 "--------------------------------------------------
-" Function: AutoVerilog_GetIO
+" Function: ATV_GetIO
 " Input: 
 "   lines : all lines to get IO port
 "   mode : different use of keys
@@ -429,15 +434,15 @@ endfunction
 "       output reg [31:0] port_b
 "   );
 "   e.g io port sequences
-"   [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
+"   [type, sequence, iodir, width1, width2, signal_name, last_port, line, width, first_port ]
 "   [wire,1,input,'c0','c0',clk,0,'       input       clk,','']
 "   [reg,5,output,31,0,port_b,0,'    output reg [31:0] port_b','[31:0]']
 " Output:
 "   list of port sequences(including comment lines)
 "    0     1         2       3       4       5            6          7     8      9
-"   [type, sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
+"   [type, sequence, iodir, width1, width2, signal_name, last_port, line, width, first_port ]
 "---------------------------------------------------
-function g:AutoVerilog_GetIO(lines,mode)
+function g:ATV_GetIO(lines,mode)
     let idx = 0
     let seq = 0
     let wait_module = 1
@@ -495,7 +500,7 @@ function g:AutoVerilog_GetIO(lines,mode)
                     endif
                 endif
                 "record first null line
-                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
+                "           [type,  sequence, iodir, width1, width2, signal_name, last_port, line, width, first_port ]
                 let value = ['keep',seq,     '',     'c0',   'c0',   'NULL',       0,         '',   '',    '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
@@ -503,7 +508,7 @@ function g:AutoVerilog_GetIO(lines,mode)
 
             " `ifdef `ifndef & single comment line {{{5
             elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)' || (line =~ '^\s*\/\/' && line !~ '^\s*\/\/\s*{{{')
-                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
+                "           [type,  sequence, iodir, width1, width2, signal_name, last_port, line, width, first_port ]
                 let value = ['keep',seq,     '',     'c0',   'c0',    line,        0,         line, '',    '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
@@ -533,7 +538,7 @@ function g:AutoVerilog_GetIO(lines,mode)
                 endif
 
                 "io direction input/output/inout
-                let io_dir = matchstr(line,s:VlogTypePorts)
+                let iodir = matchstr(line,s:VlogTypePorts)
 
                 "width
                 let width = matchstr(line,'\[.\{-\}\]')                 
@@ -558,7 +563,7 @@ function g:AutoVerilog_GetIO(lines,mode)
                 endif
 
                 "name
-                let line = substitute(line,io_dir,'','')
+                let line = substitute(line,iodir,'','')
                 let line = substitute(line,'\<reg\>\|\<wire\>\|\<real\>\|\<logic\>','','')
                 let line = substitute(line,'\[.\{-\}\]','','')
 
@@ -570,7 +575,7 @@ function g:AutoVerilog_GetIO(lines,mode)
                 endif
 
                 "get width string
-                if g:atv_autoinst_incl_width == 0       "if config,never output width
+                if g:atv_ati_incl_width == 0       "if config,never output width
                     let width = ''
                 elseif width2 == 'c0'
                     if width1 == 'c0' 
@@ -590,8 +595,8 @@ function g:AutoVerilog_GetIO(lines,mode)
                     let name = substitute(name,'\s*','','g')          "delete redundant space
                     let name = matchstr(name,'\w\+')
                     if name != ''
-                        "dict       [type,sequence,io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
-                        let value = [type,seq,     io_dir, width1, width2, name,        0,         '',   width, '']
+                        "dict       [type,sequence,iodir, width1, width2, signal_name, last_port, line, width, first_port ]
+                        let value = [type,seq,     iodir, width1, width2, name,        0,         '',   width, '']
                         call extend(io_seqs, {seq : value})
                         let seq = seq + 1
                     endif
@@ -602,7 +607,7 @@ function g:AutoVerilog_GetIO(lines,mode)
             elseif (line =~ '^\s*'    . s:not_keywords_pattern.'\.\='.'\w*'.'\s\+'.'\w\+' 
               \ || line =~ '^\s*(\s*'. s:not_keywords_pattern.'\.\='.'\w*'.'\s\+'.'\w\+' 
               \ || line =~ '^\s*,\s*'. s:not_keywords_pattern.'\.\='.'\w*'.'\s\+'.'\w\+')
-              \ && g:atv_autoinst_itf_support == 1
+              \ && g:atv_ati_itf_support == 1
 
                 let wait_port = 0
 
@@ -618,12 +623,12 @@ function g:AutoVerilog_GetIO(lines,mode)
 
                 "type interface,use line&signal_name as ifname&name
                 let type = 'interface'
-                let io_dir = 'interface'
+                let iodir = 'interface'
                 let ifname = matchstr(line,'\zs\w\+\.\=\w*\ze'.'\s\+'.'\w\+')
                 let name = matchstr(line,'\w\+\.\=\w*'.'\s\+'.'\zs\w\+\ze')
 
-                "           [type,  sequence, io_dir, width1, width2, signal_name, last_port, line,     width, first_port ]
-                let value = [type,  seq,      io_dir, 'c0',   'c0',   name,        0,         ifname,   '',    '']
+                "           [type,  sequence, iodir, width1, width2, signal_name, last_port, line,     width, first_port ]
+                let value = [type,  seq,      iodir, 'c0',   'c0',   name,        0,         ifname,   '',    '']
                 call extend(io_seqs, {seq : value})
                 let seq = seq + 1
 
@@ -644,7 +649,7 @@ function g:AutoVerilog_GetIO(lines,mode)
                 let interface_flag = 0     "break all interface
                 "verilog-1995,input/output/inout may appear outside bracket
                 "verilog-2001 or above, break here
-                if g:atv_autoinst_95_support == 0
+                if g:atv_ati_95_support == 0
                     break
                 endif
             endif
@@ -738,6 +743,7 @@ endfunction
 " Function: GetInstIO
 " Input: 
 "   lines : lines to get inst IO port
+"   io_names : old io-name dictionary
 " Description:
 "   Get inst io port info from lines
 "   e.g_1
@@ -747,7 +753,7 @@ endfunction
 "   )
 "   inst_name
 "   (
-"       .clk(clk),
+"       .clk(clk),      //test
 "       .rst(rst),
 "       /*autoinst*/
 "       .port_a(port_a),
@@ -761,78 +767,26 @@ endfunction
 "    /*autoinst*/
 "    .port_a(port_a),
 "    .port_b_valid(port_b_valid),
-"    .port_b(port_b)
+"    .port_b(conn_b)
 "   );
 "
 " Output:
-"   list of port sequences(according to input lines)
+"   dictionary of port sequences(according to input lines)
+"   [port, connection,  changed, comment,  line]
+"
 "   e.g_1
-"   inst_io_list = ['clk','rst']
+"   'clk' : ['clk','clk',0,'test','.clk(clk),      //test']
+"   'rst' : ['rst','rst',0,'','.rst(rst),']
+"
 "   e.g_2
-"   inst_io_list = ['port_a','port_b_valid','port_b']
-"---------------------------------------------------
-function s:GetInstIO(lines)
-    let idx = 0
-    let inst_io_list = []
-    while idx < len(a:lines)
-        let idx = idx + 1
-        let idx = g:AutoVerilog_SkipCommentLine(2,idx,a:lines)  "skip pair comment line
-        if idx == -1
-            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-        endif
-
-        let line = a:lines[idx-1]
-        "delete // comment
-        let line = substitute(line,'\/\/.*$','','')
-        while line =~ '\.\s*\w\+\s*(.\{-\})'
-            let port = matchstr(line,'\.\s*\zs\w\+\ze\s*(.\{-\})')
-            call add(inst_io_list,port)
-            let line = substitute(line,'\.\s*\w\+\s*(.\{-\})','','')
-        endwhile
-    endwhile
-    return inst_io_list
-endfunction
-"}}}2
-
-"GetChangedInstIO 获取修改过的例化端口{{{2
-"--------------------------------------------------
-" Function: GetChangedInstIO
-" Input: 
-"   lines : lines to get inst IO port
-"   io_names = {signal_name : value }
-" Description:
-"   Get changed inst io port info from lines
-"   Get user tail comment frome lines
-"   e.g
-"   module_name #(
-"       .A_PARAMETER (A_PARAMETER)
-"       .B_PARAMETER (B_PARAMETER)
-"   )
-"   inst_name
-"   (
-"       .clk(s_clk),
-"       .rst(s_rst),
-"       .in_test(10'd0),
-"       /*autoinst*/
-"       .port_a(port_a_o[4:0]),
-"       .port_b_valid(port_b_valid),
-"       .port_b(port_b)
-"   );
+"   'port_a' : ['port_a','port_a',0,'','.port_a(port_a),']
+"   'port_b_valid' : ['port_b_valid','port_b_valid',0,'','.port_b_valid(port_b_valid),']
+"   'port_b' : ['port_b','conn_b',1,'','.port_b(conn_b)']
 "
-" Output:
-"   dict of changed port (according to input lines)
-"   e.g_1
-"   cinst_names = {
-"                   'clk':'s_clk'
-"                   'rst':'s_rst'
-"                   'in_test':'10'd0'
-"                   'port_a':'port_a_o[4:0]'
-"                 }
 "---------------------------------------------------
-function s:GetChangedInstIO(lines,io_names)
+function s:GetInstIO(lines,io_names)
     let idx = 0
-    let cinst_names = {}
-    let tcmt_names = {}
+    let inst_io_names = {}
     let io_names = copy(a:io_names)
     while idx < len(a:lines)
         let idx = idx + 1
@@ -841,43 +795,52 @@ function s:GetChangedInstIO(lines,io_names)
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
         let line = a:lines[idx-1]
-        if line =~ '\.\s*\w\+\s*(.*)'
-            let inst_name = matchstr(line,'\.\s*\zs\w\+\ze\s*(.*)')
-            "record user tail comment
-            let tcmt = matchstr(line,'\/\/\zs[^/]*\ze$')                            "skip //...//...
-            call extend(tcmt_names,{inst_name : tcmt})
+        "record user // comment
+        let cmt = matchstr(line,'\/\/\zs[^/]*\ze$')     "skip //...//...
+        "delete // comment
+        let line = substitute(line,'\/\/.*$','','')
+        while line =~ '\.\s*\w\+\s*(.\{-\})'
+            "record port
+            let port = matchstr(line,'\.\s*\zs\w\+\ze\s*(.\{-\})')
             "record connection
-            let conn = matchstr(line,'\.\s*\w\+\s*(\zs.*\ze\(\/\/.*\)\@<!)')        "connection,skip comment
+            let conn = matchstr(line,'\.\s*\w\+\s*(\zs.\{-\}\ze\(\/\/.*\)\@<!)')        "connection,skip comment
             let conn = substitute(conn,'^\s*','','')                                "delete space from the start for alignment
             let conn = substitute(conn,'\s*$','','')                                "delete space in the end for alignment
-            let conn_name = matchstr(conn,'\w\+')                                   "connection name
-
-            if inst_name != conn_name
-                call extend(cinst_names,{inst_name : conn})
-            elseif has_key(io_names,inst_name)
-                let value = io_names[inst_name]
-                let type = value[0]
-                if type != 'keep' 
-                    let name = value[5]
-                    let width = value[8]
-                    let conn_inst = name.width
+            let changed = 0
+            if g:atv_ati_keep_chg == 'name'
+                let conn = matchstr(conn,'\w\+')    "connection name
+                if port != conn
+                    let changed = 1
                 endif
-                "keep inst by signal name or by signal change
-                if g:atv_autoinst_keep_chg == 'full'
-                    if conn_inst != conn
-                        call extend(cinst_names,{inst_name : conn})
+            elseif g:atv_ati_keep_chg == 'full' 
+                if has_key(io_names,port)
+                    let value = io_names[port]
+                    let type = value[0]
+                    if type != 'keep'
+                        let name = value[5]
+                        let width = value[8]
+                        let dft_conn = name.width
+                        if dft_conn != conn
+                            let changed = 1
+                        endif
                     endif
                 endif
+            else
+                let changed = 0
             endif
-        endif
+            "           [port, connection,  changed, comment,  line]
+            let value = [port, conn,        changed, cmt,      line]
+            call extend(inst_io_names,{port : value})
+            let line = substitute(line,'\.\s*\w\+\s*(.\{-\})','','')
+        endwhile
     endwhile
-    return [cinst_names,tcmt_names]
+    return inst_io_names
 endfunction
 "}}}2
 
-"AutoVerilog_GetInstModuleName 获取例化名和模块名{{{2
+"ATV_GetInstModName 获取例化名和模块名{{{2
 "--------------------------------------------------
-" Function: AutoVerilog_GetInstModuleName
+" Function: ATV_GetInstModName
 " Input: 
 "   Must put cursor to /*autoinst*/ position
 " Description:
@@ -898,7 +861,7 @@ endfunction
 "   idx2: line index of );
 "   idx3: line index of module_name
 "---------------------------------------------------
-function g:AutoVerilog_GetInstModuleName()
+function g:ATV_GetInstModName()
     "record original idx & col to cursor back to orginal place
     let orig_idx = line('.')
     let orig_col = col('.')
@@ -1019,7 +982,7 @@ function g:AutoVerilog_GetInstModuleName()
             let module_name = expand('<cword>')
 
             "record start position
-            if g:atv_autoinst_pos_st_auto == 1
+            if g:atv_ati_pos_st_auto == 1
                 let s:st_prefix = matchstr(getline('.'),'^\zs\s*\ze'.module_name)
             endif
 
@@ -1046,9 +1009,9 @@ function g:AutoVerilog_GetInstModuleName()
 endfunction
 "}}}2
 
-"AutoVerilog_RsvModuleLine 删除所有Module外的行{{{2
+"ATV_GetModLine 删除所有Module外的行{{{2
 "--------------------------------------------------
-" Function: AutoVerilog_RsvModuleLine()
+" Function: ATV_GetModLine()
 "
 " Description:
 "   Remove lines outside specific module, reserve module lines
@@ -1060,14 +1023,14 @@ endfunction
 "     uart #(para=2) u_uart ();
 "   endmodule
 "
-"   --->AutoVerilog_RsvModuleLine(lines,a)
+"   --->ATV_GetModLine(lines,a)
 "
 " Output:
 "   module a();
 "     uart #(para=2) u_uart ();
 "   endmodule
 "---------------------------------------------------
-function g:AutoVerilog_RsvModuleLine(lines,module)
+function g:ATV_GetModLine(lines,module)
     let find_module = 0
     let in_module = 0
     let multiline_module = ''
@@ -1192,9 +1155,7 @@ endfunction
 " Function: DrawIO
 " Input: 
 "   io_seqs : new inst io sequences for align
-"   io_list : old inst io name list
-"   chg_io_names : old inst io names that has been changed
-"   tcmt_names : old inst io names that has tail comments
+"   upd_io_names : old io name dictionary needed update
 "
 " Description:
 " e.g draw io port sequences
@@ -1210,18 +1171,16 @@ endfunction
 " Output:
 "   line that's aligned
 "   e.g
-"       .signal_name   (signal_name[width1:width2]      ), //io_dir
+"       .signal_name   (signal_name[width1:width2]      ), //iodir
 "---------------------------------------------------
-function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
+function s:DrawIO(io_seqs,upd_io_names)
     let prefix = s:st_prefix.repeat(' ',4)
-    let io_list = copy(a:io_list)
-    let chg_io_names = copy(a:chg_io_names)
-    let tcmt_names = copy(a:tcmt_names)
+    let upd_io_names = copy(a:upd_io_names)
 
     "guarantee spaces width{{{3
     let max_lb = 0
     let max_rb = 0
-    let lbrs = repeat(' ',g:atv_autoinst_pos_lbrs)
+    let lbrs = repeat(' ',g:atv_ati_pos_lbrs)
     for seq in sort(map(keys(a:io_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
         let value = a:io_seqs[seq]
         let type = value[0]
@@ -1231,17 +1190,23 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
             let width = value[8]
             let conn = name.width
             "io that's changed will be keeped if config 
-            if g:atv_autoinst_keep_chg != '' && has_key(chg_io_names,name)
-                let conn = chg_io_names[name]
+            if g:atv_ati_keep_chg != ''
+                if has_key(upd_io_names,name)
+                    let upd_value = upd_io_names[name]
+                    let changed = upd_value[2]
+                    if changed == 1
+                        let conn = upd_value[1]
+                    endif
+                endif
             endif
             "prefix.'.'.name.lbls.'('.lbrs.conn.rbls.')'
-            if g:atv_autoinst_pos_comma == 0
-                let max_lb = max([max_lb,len(prefix)+len('.')+len(name)+4,g:atv_autoinst_pos_lb])
-                let max_rb = max([max_rb,max_lb+len('(')+len(lbrs)+len(conn)+4,g:atv_autoinst_pos_rb])
+            if g:atv_ati_pos_comma == 0
+                let max_lb = max([max_lb,len(prefix)+len('.')+len(name)+4,g:atv_ati_pos_lb])
+                let max_rb = max([max_rb,max_lb+len('(')+len(lbrs)+len(conn)+4,g:atv_ati_pos_rb])
             "prefix.','.'.'.name.lbls.'('.lbrs.conn.rbls.')'
             else
-                let max_lb = max([max_lb,len(prefix)+len(',')+len('.')+len(name)+4,g:atv_autoinst_pos_lb])
-                let max_rb = max([max_rb,max_lb+len('(')+len(lbrs)+len(conn)+4,g:atv_autoinst_pos_rb])
+                let max_lb = max([max_lb,len(prefix)+len(',')+len('.')+len(name)+4,g:atv_ati_pos_lb])
+                let max_rb = max([max_rb,max_lb+len('(')+len(lbrs)+len(conn)+4,g:atv_ati_pos_rb])
             endif
         endif
     endfor
@@ -1251,11 +1216,11 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
     let lines = []
     let last_port_flag = 0
 
-    "io_list can be changed in function, therefore record if it's empty first
-    if io_list == []
-        let io_list_empty = 1
+    "upd_io_names can be changed in function, therefore record if it's empty first
+    if upd_io_names == {}
+        let upd_io_empty = 1
     else
-        let io_list_empty = 0
+        let upd_io_empty = 0
     endif
 
     for seq in sort(map(keys(a:io_seqs),'str2nr(v:val)'),g:atv_sort_funcref)
@@ -1265,14 +1230,14 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
         "add single comment/ifdef line{{{4
         if type == 'keep' 
             if line =~ '^\s*\/\/'
-                if g:atv_autoinst_incl_cmt == 1
+                if g:atv_ati_incl_cmt == 1
                     let line = prefix.substitute(line,'^\s*','','')
                     call add(lines,line)
                 else
                     "ignore comment line when not config
                 endif
             elseif line =~ '^\s*\`\(if\|elsif\|else\|endif\)'
-                if g:atv_autoinst_incl_ifdef == 1
+                if g:atv_ati_incl_ifdef == 1
                     let line = prefix.substitute(line,'^\s*','','')
                     call add(lines,line)
                 else
@@ -1283,47 +1248,53 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
         "add io line{{{4
         else
             "Format IO sequences
-            "[type,  sequence, io_dir, width1, width2, signal_name, last_port, line, width, first_port ]
+            "[type,  sequence, iodir, width1, width2, signal_name, last_port, line, width, first_port ]
             "name
             let name = value[5]
 
             "lbls align/not align
-            if g:atv_autoinst_pos_lalgn == 1
+            if g:atv_ati_pos_lalgn == 1
                 let lbls = repeat(' ',max_lb-len(prefix)-len(name)-len('.'))
             else
-                let lbls = repeat(' ',g:atv_autoinst_pos_lbls)
+                let lbls = repeat(' ',g:atv_ati_pos_lbls)
             endif
 
             "lbrs
-            let lbrs = repeat(' ',g:atv_autoinst_pos_lbrs)
+            let lbrs = repeat(' ',g:atv_ati_pos_lbrs)
 
             "width
             let width = value[8]
             let conn = name.width
             "io that's changed will be keeped if config 
-            if g:atv_autoinst_keep_chg != '' && has_key(chg_io_names,name)
-                let conn = chg_io_names[name]
+            if g:atv_ati_keep_chg != ''
+                if has_key(upd_io_names,name)
+                    let upd_value = upd_io_names[name]
+                    let changed = upd_value[2]
+                    if changed == 1
+                        let conn = upd_value[1]
+                    endif
+                endif
             endif
             
             "rbls align/not align
-            if g:atv_autoinst_pos_ralgn == 1
-                if g:atv_autoinst_pos_lalgn == 1
+            if g:atv_ati_pos_ralgn == 1
+                if g:atv_ati_pos_lalgn == 1
                     let max_lb = max_lb
                 else
                     let max_lb = len(prefix)+len('.')+len(name)+len(lbls)
                 endif
                 let rbls = repeat(' ',max_rb-max_lb-len('(')-len(lbrs)-len(conn))
             else
-                let rbls = repeat(' ',g:atv_autoinst_pos_rbls)
+                let rbls = repeat(' ',g:atv_ati_pos_rbls)
             endif
 
             "comma
             let last_port = value[6]
             let first_port = value[9]
-            if g:atv_autoinst_pos_comma == 0
+            if g:atv_ati_pos_comma == 0
                 if last_port == 1
                     let comma = ' '         "space
-                    let last_port_flag = 1  "special case: last port has been put in keep_io_list, there exist no last_port
+                    let last_port_flag = 1  "special case: last port has been moved out of upd_io_names, there exist no last_port
                 else
                     let comma = ','         "comma exists
                 endif
@@ -1336,108 +1307,114 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
             endif
 
             "rbrs
-            let rbrs = repeat(' ',g:atv_autoinst_pos_rbrs)
+            let rbrs = repeat(' ',g:atv_ati_pos_rbrs)
 
             "Draw IO by config
-            if g:atv_autoinst_pos_comma == 0
+            if g:atv_ati_pos_comma == 0
                 let line = prefix.'.'.name.lbls.'('.lbrs.conn.rbls.')'.comma.rbrs
             else
                 let line = prefix.comma.'.'.name.lbls.'('.lbrs.conn.rbls.')'.rbrs
             endif
 
-            "tail comment
+            "tail comment (iodir+instnew+ifname)
             let tcmt = ''
 
-            "io_dir
-            let io_dir = value[2]
-            if g:atv_autoinst_cmt_iodir != ''
+            "record user tail comment (in case inst new delete upd_io_names)
+            let usr_io_names = copy(upd_io_names)
+
+            "iodir
+            let iodir = value[2]
+            if g:atv_ati_cmt_iodir != ''
                 "map input -> I output -> O inout -> IO interface -> IF
                 let iodir_dlist = ['input','output','inout','interface']    "default
-                let iodir_list = split(g:atv_autoinst_cmt_iodir)
+                let iodir_list = split(g:atv_ati_cmt_iodir)
                 let idx = 0
                 while idx < len(iodir_list)
-                    if io_dir == iodir_dlist[idx]
-                        let io_dir = iodir_list[idx]
+                    if iodir == iodir_dlist[idx]
+                        let iodir = iodir_list[idx]
                     endif
                     let idx = idx + 1
                 endwhile
-                let tcmt = tcmt.g:atv_autoinst_cmt_delim.io_dir
+                let tcmt = tcmt.g:atv_ati_cmt_delim.iodir
             endif
 
             "inst new
-            if io_list_empty == 0       "draw when list not empty
-                "process //INST_NEW
-                let io_idx = index(io_list,name) 
-                "name not exist in old io_list, add //INST_NEW
-                if io_idx == -1
-                    if g:atv_autoinst_cmt_instnew == 1
-                        let tcmt = tcmt.g:atv_autoinst_cmt_delim.'INST_NEW'
+            if upd_io_empty == 0       "draw when upd_io_names not empty
+                if g:atv_ati_cmt_instnew == 1
+                    "name not exist in old upd_io_names, add //INST_NEW
+                    if has_key(upd_io_names,name) != 1
+                        let tcmt = tcmt.g:atv_ati_cmt_delim.'INST_NEW'
                         "time stamp
-                        if g:atv_autoinst_cmt_instnew_tstp == ''
+                        if g:atv_ati_cmt_instnew_tstp == ''
                             let tstp = ''
                         else
-                            let tstp = g:atv_autoinst_cmt_delim.'@'.strftime(g:atv_autoinst_cmt_instnew_tstp)
+                            let tstp = g:atv_ati_cmt_delim.'@'.strftime(g:atv_ati_cmt_instnew_tstp)
                         endif
                         let tcmt = tcmt.tstp
+                    "name already exist in old upd_io_names,cover
+                    else
+                        call remove(upd_io_names,name)
                     endif
-                "name already exist in old io_list,cover
-                else
-                    call remove(io_list,io_idx)
                 endif
             endif
 
             "sv interface
             if type == 'interface'
                 let ifname = value[7]
-                let tcmt = tcmt.g:atv_autoinst_cmt_delim.ifname
+                let tcmt = tcmt.g:atv_ati_cmt_delim.ifname
             endif
 
             "add tail comment
             if tcmt != ''
-                let tcmt =  substitute(tcmt,'\V'.escape(g:atv_autoinst_cmt_delim,'\/'),'','')        "delete first delimiter
+                let tcmt = substitute(tcmt,'\V'.escape(g:atv_ati_cmt_delim,'\/'),'','')        "delete first delimiter
                 let line = line.'//'.tcmt
             endif
 
             "add user tail comment
-            if has_key(tcmt_names,name)
-                let user_tcmt = tcmt_names[name]
-                if g:atv_autoinst_cmt_usr == 1 && user_tcmt != '' 
-                    if (user_tcmt != io_dir) 
-                  \ && (user_tcmt != 'INST_NEW')
-                  \ && (user_tcmt != io_dir.g:atv_autoinst_cmt_delim.'INST_NEW')
-                        let line = line.'//'.user_tcmt
+            if g:atv_ati_cmt_usr == 1 
+                if has_key(usr_io_names,name)
+                    let upd_value = usr_io_names[name]
+                    let utcmt = upd_value[3]
+                    if utcmt != '' 
+                        "in case multiple adding user comment
+                        if strpart(utcmt,0,len(tcmt)) != tcmt
+                            let line = line.'//'.utcmt
+                        endif
                     endif
                 endif
             endif
 
             call add(lines,line)
 
-            "in case special case happen(last port has been put in keep_io_list, there exist no last_port)
+            "in case special case happen(last port has been moved out of upd_io_names, there exist no last_port)
             "same time last line is not an io type, must record last_port index here
-            let self_last_port_idx = index(lines,line) 
+            let last_idx = index(lines,line) 
 
         endif
     "}}}4
     endfor
 
     "special case: last port has been put in keep_io_list, there exist no last_port
-    if g:atv_autoinst_pos_comma == 0
+    if g:atv_ati_pos_comma == 0
         if last_port_flag == 0
             "set last item as last_port
-            let lines[self_last_port_idx] = substitute(lines[self_last_port_idx],',',' ','') 
+            let lines[last_idx] = substitute(lines[last_idx],',',' ','') 
         endif
     "no speicial case for first port
     endif
 
-    if io_list == []
-    "remain port in io_list
-    else
-        if g:atv_autoinst_cmt_instdel == 1
-            for name in io_list
-                let line = prefix.'//INST_DEL: Port '.name.' has been deleted.'
+    "inst delete
+    if g:atv_ati_cmt_instdel == 1
+        if upd_io_names == {}
+            "remain port in upd_io_names
+        else
+            for name in keys(upd_io_names)
+                let upd_value = upd_io_names[name]
+                let conn = upd_value[1]
+                let line = prefix.'//INST_DEL: Port '.'.'.name.'('.conn.')'.' has been deleted'
                 "time stamp
-                if g:atv_autoinst_cmt_instdel_tstp != ''
-                    let line = line.g:atv_autoinst_cmt_delim.'@'.strftime(g:atv_autoinst_cmt_instdel_tstp)
+                if g:atv_ati_cmt_instdel_tstp != ''
+                    let line = line.g:atv_ati_cmt_delim.'@'.strftime(g:atv_ati_cmt_instdel_tstp)
                 endif
                 call add(lines,line)
             endfor
@@ -1446,7 +1423,7 @@ function s:DrawIO(io_seqs,io_list,chg_io_names,tcmt_names)
     "}}}3
 
     if lines == []
-        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly written in verilog-95 but atv_autoinst_95_support not open, or bracket not match in inst list " | echohl None
+        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly written in verilog-95 but atv_ati_95_support not open, or bracket not match in inst list " | echohl None
     endif
 
     return lines

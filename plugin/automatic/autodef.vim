@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/06/29 23:13
+" Last Modified:  2023/09/12 16:26
 " File:           autodef.vim
 " Note:           AutoDef function partly from zhangguo's vimscript
 "                 Progress bar based off code from "progressbar widget" plugin by
@@ -1407,13 +1407,13 @@ function s:GetiWire(lines,files,modules,reg_width_names,decl_reg,io_names)
             call cursor(idx,1)
             try
                 "Get module_name & inst_name
-                let [module_name,inst_name,idx1,idx2,idx3] = g:AutoVerilog_GetInstModuleName()
+                let [module_name,inst_name,idx1,idx2,idx3] = g:ATV_GetInstModName()
 
                 "Get io names {name: value}
                 if has_key(a:modules,module_name)
                     let file = a:modules[module_name]
                     let dir = a:files[file]
-                    let inst_io_names = g:AutoVerilog_GetIO(readfile(dir.'/'.file),'name')
+                    let inst_io_names = g:ATV_GetIO(readfile(dir.'/'.file),'name')
                 else
                     echohl ErrorMsg | echo "file: ".module_name.".v does not exist in cur dir ".getcwd() | echohl None
                     let inst_io_names = {}
@@ -2294,7 +2294,7 @@ function TestAutoVerilog() "{{{2
 "
 "    "gather all signals together
 "
-"    let io_names = g:AutoVerilog_GetIO(lines,'name')
+"    let io_names = g:ATV_GetIO(lines,'name')
 "    
 "    let reg_names = reg_width_names
 "
@@ -2864,7 +2864,7 @@ function s:GetAllSig(lines,mode)
     "   list of port sequences(including comment lines)
     "    0     1         2       3       4       5            6          7
     "   [type, sequence, io_dir, width1, width2, signal_name, last_port, line ]
-    let io_names = g:AutoVerilog_GetIO(a:lines,'name')
+    let io_names = g:ATV_GetIO(a:lines,'name')
     for name in keys(io_names)
         let value = io_names[name]
         let type = value[0]
@@ -3081,7 +3081,7 @@ function s:GetAllSig(lines,mode)
     "    0     1            2           3             4            5
     "   [seqs, signal_name, lines,      module_names, conn_widths, resolved]
     "Get module-file-dir dictionary
-    let [files,modules] = g:AutoVerilog_GetModuleFileDirDic()
+    let [files,modules] = g:ATV_GetModFileDir()
 
     "Get iwire
     "remove io, declared register and register from them

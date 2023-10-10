@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/12/06 23:20
+" Last Modified:  2023/09/12 16:25
 " File:           autopara.vim
 " Note:           AutoPara function self-made
 "------------------------------------------------------------------------------
@@ -93,7 +93,7 @@ endif
 "---------------------------------------------------
 function! g:AutoPara(mode)
     "Get module-file-dir dictionary
-    let [files,modules] = g:AutoVerilog_GetModuleFileDirDic()
+    let [files,modules] = g:ATV_GetModFileDir()
 
     "Record current position
     let orig_idx = line('.')
@@ -136,7 +136,7 @@ function! g:AutoPara(mode)
             "read file
             let lines = readfile(dir.'/'.file)
             "reserve only module lines, in case of multiple module in same file
-            let lines = g:AutoVerilog_RsvModuleLine(lines,module_name)
+            let lines = g:ATV_GetModLine(lines,module_name)
             "parameter sequences
             let para_seqs = s:GetPara(lines,'seq')
             let para_names = s:GetPara(lines,'name')
@@ -217,7 +217,7 @@ endfunction
 "---------------------------------------------------
 function! g:AutoParaValue(mode)
     "Get module-file-dir dictionary
-    let [files,modules] = g:AutoVerilog_GetModuleFileDirDic()
+    let [files,modules] = g:ATV_GetModFileDir()
 
     "Record current position
     let orig_idx = line('.')
@@ -253,7 +253,7 @@ function! g:AutoParaValue(mode)
             "read file
             let lines = readfile(dir.'/'.file)
             "reserve only module lines, in case of multiple module in same file
-            let lines = g:AutoVerilog_RsvModuleLine(lines,module_name)
+            let lines = g:ATV_GetModLine(lines,module_name)
             "parameter sequences
             let para_seqs = s:GetPara(lines,'seq')
             let para_names = s:GetPara(lines,'name')

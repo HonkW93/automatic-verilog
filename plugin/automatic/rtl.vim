@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/06/29 23:18
+" Last Modified:  2023/09/12 16:25
 " File:           rtl.vim
 " Note:           RtlTree function refactor from zhangguo's original script
 "------------------------------------------------------------------------------
@@ -284,7 +284,7 @@ function s:CloseRtl() abort "{{{3
 endfunction
 "}}}3
 function s:OpenRtl(file) abort "{{{3
-    let [s:files,s:modules] = g:AutoVerilog_GetModuleFileDirDic()
+    let [s:files,s:modules] = g:ATV_GetModFileDir()
     "Get top file
     let s:rtl_top_file = fnamemodify(a:file,':p')
     let lines = readfile(s:rtl_top_file)
@@ -612,7 +612,7 @@ endfunction
 "---------------------------------------------------
 function s:GetModuleInst(lines,mname)
     let lines = s:RemoveCommentLine(a:lines)
-    let lines = g:AutoVerilog_RsvModuleLine(a:lines,a:mname)
+    let lines = g:ATV_GetModLine(a:lines,a:mname)
     let module_lines = []
     let in_module = 0
     let module_seqs ={}

@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/08/23 15:08
+" Last Modified:  2023/09/12 16:25
 " File:           crossdir.vim
 " Note:           search cross directory by tags/filelist/verilog-library
 "------------------------------------------------------------------------------
@@ -45,9 +45,9 @@ for s:key in keys(g:_ATV_CROSSDIR_DEFAULTS)
 endfor
 "}}}1
             
-"{{{1 AutoVerilog_GetModuleFileDirDic 主函数 获取模块名-文件名-文件夹位置关系
+"{{{1 ATV_GetModFileDir 主函数 获取模块名-文件名-文件夹位置关系
 "--------------------------------------------------
-" Function: AutoVerilog_GetModuleFileDirDic
+" Function: ATV_GetModFileDir
 " Input: 
 "   mode 
 "     0 : normal(automatic get)
@@ -63,7 +63,7 @@ endfor
 " Output:
 "   [files,modules]
 "---------------------------------------------------
-function g:AutoVerilog_GetModuleFileDirDic()
+function g:ATV_GetModFileDir()
     "normal
     if g:atv_crossdir_mode == 0
         "Get directory list by scaning line
@@ -92,7 +92,7 @@ function g:AutoVerilog_GetModuleFileDirDic()
 endfunction
 "}}}1
 
-"{{{1 AutoVerilog_GetModuleFileDirDic Subfunction 子函数
+"{{{1 ATV_GetModFileDir Subfunction 子函数
 
 "GetModuleFileDirDicFromTags 从Tags获取文件名-文件夹-模块名关系{{{2
 "--------------------------------------------------

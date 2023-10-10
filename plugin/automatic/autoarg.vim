@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2022/09/03 23:37
+" Last Modified:  2023/10/10 14:23
 " File:           autoarg.vim
 " Note:           AutoArg function self-made
 "------------------------------------------------------------------------------
@@ -71,8 +71,8 @@ endif
 "---------------------------------------------------
 function! g:AutoArg() abort
     "AutoArg must open 95_support
-    if g:atv_autoinst_95_support == 0
-        echohl ErrorMsg | echo "Error because AutoArg must be used in verilog-95 but atv_autoinst_95_support not open! " | echohl None
+    if g:atv_ati_95_support == 0
+        echohl ErrorMsg | echo "Error because AutoArg must be used in verilog-95 but atv_ati_95_support not open! " | echohl None
     endif
 
     "Record current position
@@ -95,8 +95,8 @@ function! g:AutoArg() abort
 
         "Get io sequences {sequence : value} from current buffer
         let lines = getline(1,line('$'))
-        let io_seqs = g:AutoVerilog_GetIO(lines,'seq')
-        let io_names = g:AutoVerilog_GetIO(lines,'name')
+        let io_seqs = g:ATV_GetIO(lines,'seq')
+        let io_names = g:ATV_GetIO(lines,'name')
 
         "Kill all contents under /*autoarg*/
         "Current position must be at /*autoarg*/ line
@@ -136,8 +136,8 @@ endfunction
 function! g:KillAutoArg() abort
 
     "AutoArg must open 95_support
-    if g:atv_autoinst_95_support == 0
-        echohl ErrorMsg | echo "Error because KillAutoArg must be used in verilog-95 but atv_autoinst_95_support not open! " | echohl None
+    if g:atv_ati_95_support == 0
+        echohl ErrorMsg | echo "Error because KillAutoArg must be used in verilog-95 but atv_ati_95_support not open! " | echohl None
     endif
 
     "Record current position
@@ -492,7 +492,7 @@ function s:DrawArg(io_seqs)
     "}}}3
 
     if lines == []
-        echohl ErrorMsg | echo "Error io_seqs input for function DrawArg! io_seqs has no input/output definition! Possibly written in verilog-95 but atv_autoinst_95_support not open " | echohl None
+        echohl ErrorMsg | echo "Error io_seqs input for function DrawArg! io_seqs has no input/output definition! Possibly written in verilog-95 but atv_ati_95_support not open " | echohl None
     endif
 
     return lines
