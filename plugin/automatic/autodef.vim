@@ -588,7 +588,7 @@ function s:GetfReg(lines)
 
     while idx < len(a:lines)
         "skip comment line
-        let idx = g:AutoVerilog_SkipCommentLine(0,idx,a:lines)
+        let idx = g:ATV_SkipCmtLine(0,idx,a:lines)
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
@@ -599,7 +599,7 @@ function s:GetfReg(lines)
             "find signals in block
             while 1
                 "skip comment line
-                let idx_inblock = g:AutoVerilog_SkipCommentLine(0,idx_inblock,a:lines)
+                let idx_inblock = g:ATV_SkipCmtLine(0,idx_inblock,a:lines)
                 if idx_inblock == -1
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
                 endif
@@ -681,7 +681,7 @@ function s:GetcReg(lines)
 
     while idx < len(a:lines)
         "skip comment line
-        let idx = g:AutoVerilog_SkipCommentLine(0,idx,a:lines)
+        let idx = g:ATV_SkipCmtLine(0,idx,a:lines)
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
@@ -695,7 +695,7 @@ function s:GetcReg(lines)
             "find signals in block
             while 1
                 "skip comment line
-                let idx_inblock = g:AutoVerilog_SkipCommentLine(0,idx_inblock,a:lines)
+                let idx_inblock = g:ATV_SkipCmtLine(0,idx_inblock,a:lines)
                 if idx_inblock == -1
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
                 endif
@@ -798,7 +798,7 @@ function s:GetDeclReg(lines)
 
     while idx < len(a:lines)
         "skip comment line
-        let idx = g:AutoVerilog_SkipCommentLine(2,idx,a:lines)
+        let idx = g:ATV_SkipCmtLine(2,idx,a:lines)
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
@@ -1250,7 +1250,7 @@ function s:GetaWire(lines)
 
     while idx < len(a:lines)
         "skip comment line
-        let idx = g:AutoVerilog_SkipCommentLine(0,idx,a:lines)
+        let idx = g:ATV_SkipCmtLine(0,idx,a:lines)
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
@@ -1269,7 +1269,7 @@ function s:GetaWire(lines)
             "find signals in block
             while 1
                 "skip comment line
-                let idx_inblock = g:AutoVerilog_SkipCommentLine(0,idx_inblock,a:lines)
+                let idx_inblock = g:ATV_SkipCmtLine(0,idx_inblock,a:lines)
                 if idx_inblock == -1
                     echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
                 endif
@@ -1389,7 +1389,7 @@ function s:GetiWire(lines,files,modules,reg_width_names,decl_reg,io_names)
         endif
 
         "Skip Comment{{{3
-        let idx = g:AutoVerilog_SkipCommentLine(2,idx,lines)  "skip pair comment line
+        let idx = g:ATV_SkipCmtLine(2,idx,lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
@@ -1718,7 +1718,7 @@ function s:GetDeclWire(lines)
 
     while idx < len(a:lines)
         "skip comment line
-        let idx = g:AutoVerilog_SkipCommentLine(2,idx,a:lines)
+        let idx = g:ATV_SkipCmtLine(2,idx,a:lines)
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
@@ -2240,7 +2240,7 @@ function s:DefMove()
     "mark all definie outside automatic define
     while idx < len(lines)
         let idx = idx + 1
-        let idx = g:AutoVerilog_SkipCommentLine(2,idx,lines)  "skip pair comment line
+        let idx = g:ATV_SkipCmtLine(2,idx,lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif

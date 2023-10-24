@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/10/10 14:38
+" Last Modified:  2023/10/24 17:52
 " File:           autoinst.vim
 " Note:           AutoInst function partly from zhangguo's vimscript
 "------------------------------------------------------------------------------
@@ -12,6 +12,7 @@ if exists("g:loaded_automatic_verilog_autoinst")
     finish
 endif
 let g:loaded_automatic_verilog_autoinst = 1
+let s:sfile = fnamemodify(expand("<sfile>"),":t")
 "}}}1
 
 "Defaults 默认配置{{{1
@@ -278,7 +279,7 @@ function! g:AutoInst(mode)
             let io_seqs = g:ATV_GetIO(lines,'seq')
             let io_names = g:ATV_GetIO(lines,'name')
         else
-            echohl ErrorMsg | echo "No file with module name ".mname." exist in cur dir ".getcwd() | echohl None
+            call g:ATV_ErrEchohl("1","[".s:sfile."-".expand("<sflnum>")."]","Error Get Module. No file with module name ".mname." exist!")
             if a:mode == 1
                 continue
             else 
@@ -369,14 +370,12 @@ function! g:KillAutoInst(mode) abort
     let orig_idx = line('.')
     let orig_col = col('.')
 
-    "AutoInst all start from top line, AutoInst once start from first /*autoinst*/ line
+    "AutoInst all start from top line
+    "AutoInst once start from first /*autoinst*/ line
     if a:mode == 1
         call cursor(1,1)
-    elseif a:mode == 0
-        call cursor(line('.'),1)
     else
-        echohl ErrorMsg | echo "Error input for KillAutoInst(),input mode = ".a:mode| echohl None
-        return
+        call cursor(line('.'),1)
     endif
 
     while 1
@@ -448,16 +447,13 @@ function g:ATV_GetIO(lines,mode)
     let wait_module = 1
     let wait_port = 1
     let func_flag = 0
-    let interface_flag = 1
+    let itf_flag = 1
     let io_seqs = {}
 
     "get io seqs from line {{{3
     while idx < len(a:lines)
         let idx = idx + 1
-        let idx = g:AutoVerilog_SkipCommentLine(2,idx,a:lines)  "skip pair comment line
-        if idx == -1
-            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-        endif
+        let idx = g:ATV_SkipCmtLine(2,idx,a:lines)  "skip pair comment line
         let line = a:lines[idx-1]
 
         "find module first
@@ -608,11 +604,10 @@ function g:ATV_GetIO(lines,mode)
               \ || line =~ '^\s*(\s*'. s:not_keywords_pattern.'\.\='.'\w*'.'\s\+'.'\w\+' 
               \ || line =~ '^\s*,\s*'. s:not_keywords_pattern.'\.\='.'\w*'.'\s\+'.'\w\+')
               \ && g:atv_ati_itf_support == 1
-
                 let wait_port = 0
 
                 "skip matcth outside module(); no interface
-                if interface_flag == 0
+                if itf_flag == 0
                     continue
                 endif
 
@@ -640,18 +635,18 @@ function g:ATV_GetIO(lines,mode)
             "abnormal break
             if line =~ '^\s*\<always\>' || line =~ '^\s*\<assign\>' || line =~ '^\s*\<endmodule\>'
                 if wait_port == 1
-                    echohl ErrorMsg | echo "Error when GetIO! No io port but always/assign/endmodule show up!"| echohl None
+                    call g:ATV_ErrEchohl("3","[".s:sfile."-".expand("<sflnum>")."]","Error GetIO. No io port but always/assign/endmodule show up!")
                 endif
                 break
             endif
             
             if line =~ ')\s*;\s*$' "find end of port declaration
-                let interface_flag = 0     "break all interface
                 "verilog-1995,input/output/inout may appear outside bracket
                 "verilog-2001 or above, break here
                 if g:atv_ati_95_support == 0
                     break
                 endif
+                let itf_flag = 0   "break all interface
             endif
             "}}}4
 
@@ -722,7 +717,7 @@ function g:ATV_GetIO(lines,mode)
     "output by mode{{{3
     if a:mode == 'seq'
         return io_seqs
-    elseif a:mode == 'name'
+    else
         let io_names = {}
         for seq in keys(io_seqs)
             let value = io_seqs[seq]
@@ -730,8 +725,6 @@ function g:ATV_GetIO(lines,mode)
             call extend(io_names,{name : value})
         endfor
         return io_names
-    else
-        echohl ErrorMsg | echo "Error mode input for function GetIO! mode = ".a:mode| echohl None
     endif
     "}}}3
 
@@ -771,7 +764,7 @@ endfunction
 "   );
 "
 " Output:
-"   dictionary of port sequences(according to input lines)
+"   inst_names : dictionary of port sequences(according to input lines)
 "   [port, connection,  changed, comment,  line]
 "
 "   e.g_1
@@ -786,24 +779,20 @@ endfunction
 "---------------------------------------------------
 function s:GetInstIO(lines,io_names)
     let idx = 0
-    let inst_io_names = {}
+    let inst_names = {}
     let io_names = copy(a:io_names)
     while idx < len(a:lines)
         let idx = idx + 1
-        let idx = g:AutoVerilog_SkipCommentLine(2,idx,a:lines)  "skip pair comment line
-        if idx == -1
-            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-        endif
+        let idx = g:ATV_SkipCmtLine(2,idx,a:lines)  "skip pair comment line
         let line = a:lines[idx-1]
         "record user // comment
-        let cmt = matchstr(line,'\/\/\zs[^/]*\ze$')     "skip //...//...
-        "delete // comment
-        let line = substitute(line,'\/\/.*$','','')
+        let cmt = matchstr(line,'\/\/\zs[^/]*\ze$')             "skip //...//...
+        let line = substitute(line,'\/\/.*$','','')             "delete // comment
         while line =~ '\.\s*\w\+\s*(.\{-\})'
             "record port
             let port = matchstr(line,'\.\s*\zs\w\+\ze\s*(.\{-\})')
             "record connection
-            let conn = matchstr(line,'\.\s*\w\+\s*(\zs.\{-\}\ze\(\/\/.*\)\@<!)')        "connection,skip comment
+            let conn = matchstr(line,'\.\s*\w\+\s*(\zs.\{-\}\ze\(\/\/.*\)\@<!)')    "connection,skip comment
             let conn = substitute(conn,'^\s*','','')                                "delete space from the start for alignment
             let conn = substitute(conn,'\s*$','','')                                "delete space in the end for alignment
             let changed = 0
@@ -830,11 +819,11 @@ function s:GetInstIO(lines,io_names)
             endif
             "           [port, connection,  changed, comment,  line]
             let value = [port, conn,        changed, cmt,      line]
-            call extend(inst_io_names,{port : value})
+            call extend(inst_names,{port : value})
             let line = substitute(line,'\.\s*\w\+\s*(.\{-\})','','')
         endwhile
     endwhile
-    return inst_io_names
+    return inst_names
 endfunction
 "}}}2
 
@@ -856,46 +845,40 @@ endfunction
 "       ......
 "   );
 " Output:
-"   module_name and inst_name
-"   idx1: line index of inst_name
+"   module name and inst name
+"   idx1: line index of inst name
 "   idx2: line index of );
-"   idx3: line index of module_name
+"   idx3: line index of module name
 "---------------------------------------------------
 function g:ATV_GetInstModName()
     "record original idx & col to cursor back to orginal place
     let orig_idx = line('.')
     let orig_col = col('.')
 
-    "get module_name & inst_name by search function
+    "get module name & inst name by search function
     let idx = line('.')
-    let inst_name = ''
-    let module_name= ''
-    let wait_semicolon_pair = 0
-    let wait_module_name = 0
+    let mname= ''
+    let iname = ''
+    let wait_semicolon = 0
+    let wait_mname = 0
 
     while 1
         "skip function must have lines input
-        let idx = g:AutoVerilog_SkipCommentLine(1,idx,getline(1,line('$')))
-        if idx == -1
-            echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
-        endif
+        let idx = g:ATV_SkipCmtLine(1,idx,getline(1,line('$')))
         "afer skip, still use current buffer
         let line = getline(idx)
 
         "abnormal break
-        if wait_semicolon_pair == 1
+        if wait_semicolon == 1
             if idx == 0 || getline(idx) =~ '^\s*module' || getline(idx) =~ ');' || getline(idx) =~ '(.*)\s*;'
-                echohl ErrorMsg | echo "Abnormal break when GetInstModuleName, idx = ".idx| echohl None
-                let [module_name,inst_name,idx1,idx2,idx3] = ['','',0,0,0]
+                call g:ATV_ErrEchohl("5","[".s:sfile."-".expand("<sflnum>")."]","Error GetInstModName. line = ".idx)
+                let [mname,iname,idx1,idx2,idx3] = ['','',0,0,0]
                 break
             endif
         endif
 
-        "get inst_name
+        "get inst name
         if line =~ '('
-            let left_simicolon_list = []
-            call substitute(line,'(','\=add(left_simicolon_list,submatch(0))','g')
-
             "find position of '('
             "in case of problem like 
             "   Register #(.WIDTH(32), .INIT(EXC_Vector_Base_Reset)) PC (
@@ -916,8 +899,9 @@ function g:ATV_GetInstModName()
                 if searchpair('(','',')','nW') <= 0
                     let index = line('.')
                     let col = col('.')
-                    echohl ErrorMsg | echo "() pair not-match in autoinst, line: ".index." colunm: ".col | echohl None
-                    return
+                    call g:ATV_ErrEchohl("6","[".s:sfile."-".expand("<sflnum>")."]","Error GetInstModName. () inst pair not-match, line = ".index." colunm = ".col)
+                    let [mname,iname,idx1,idx2,idx3] = ['','',0,0,0]
+                    return [mname,iname,idx1,idx2,idx3]
                 else
                     "searchpair() may err pair when 
                     "( ..... //)
@@ -932,13 +916,13 @@ function g:ATV_GetInstModName()
                 call search('\(\/\/.*\)\@<![^ \/]')
                 "if it is ';' then pair
                 if getline('.')[col('.')-1] == ';'
-                    let wait_semicolon_pair = 1
+                    let wait_semicolon = 1
                     break
                 endif
-                let wait_semicolon_pair = 0
+                let wait_semicolon = 0
             endfor
 
-            if wait_semicolon_pair == 1
+            if wait_semicolon == 1
                 "place cursor back to where ')' pair
                 call cursor(index,col)
 
@@ -948,45 +932,42 @@ function g:ATV_GetInstModName()
                 "call searchpair('(','',')','bW')
                 execute 'normal %'
 
-                "find position of inst_name,skip comment
+                "find position of inst name,skip comment
                 call search('\(\/\/.*\)\@<!\w\+','b')
-                "get inst_name
-                let inst_name = expand('<cword>')
+                "get inst name
+                let iname = expand('<cword>')
 
-                "record inst_name position
+                "record inst name position
                 let idx1 = line('.')
 
-                let wait_module_name = 1
+                let wait_mname = 1
             endif
         endif
 
-        "get module_name
-        if wait_module_name == 1
+        "get module name
+        if wait_mname == 1
             "search for last none-blank character,skip comment
             call search('\(\/\/.*\)\@<![^ \/]','bW')
             "parameter exists
             if getline('.')[col('.')-1] == ')'
-                if searchpair('(','',')','bW','getline(".")=~"^\\s*\/\/"') > 0
-                    let index = line('.')
-                    let col = col('.')
-                else
-                    let index = line('.')
-                    let col = col('.')
-                    echohl ErrorMsg | echo "() pair not-match in parameter, line: ".index." colunm: ".col | echohl None
+                if searchpair('(','',')','bW','getline(".")=~"^\\s*\/\/"') <= 0
+                    call g:ATV_ErrEchohl("7","[".s:sfile."-".expand("<sflnum>")."]","Error GetInstModName. () parameter pair not-match, line = ".index." colunm = ".col)
+                    let [mname,iname,idx1,idx2,idx3] = ['','',0,0,0]
+                    return [mname,iname,idx1,idx2,idx3]
                 endif
                 call search('\(\/\/.*\)\@<!\w\+','bW')
-            "find position of module_name,skip comment
+            "find position of module name,skip comment
             else
                 call search('\(\/\/.*\)\@<!\w\+','bW')
             endif
-            let module_name = expand('<cword>')
+            let mname = expand('<cword>')
 
             "record start position
             if g:atv_ati_pos_st_auto == 1
-                let s:st_prefix = matchstr(getline('.'),'^\zs\s*\ze'.module_name)
+                let s:st_prefix = matchstr(getline('.'),'^\zs\s*\ze'.mname)
             endif
 
-            "record module_name position
+            "record module name position
             let idx3 = line('.')
             break
         endif
@@ -998,13 +979,7 @@ function g:ATV_GetInstModName()
     "cursor back
     call cursor(orig_idx,orig_col)
 
-    "erorr process
-    if module_name == '' || inst_name == ''
-        echohl ErrorMsg | echo "Cannot find module_name or inst_name from ".orig_idx.','.orig_col | echohl None
-        return ['','',0,0,0]
-    endif
-
-    return [module_name,inst_name,idx1,idx2,idx3]
+    return [mname,iname,idx1,idx2,idx3]
 
 endfunction
 "}}}2
@@ -1012,6 +987,10 @@ endfunction
 "ATV_GetModLine 删除所有Module外的行{{{2
 "--------------------------------------------------
 " Function: ATV_GetModLine()
+"
+" Output:
+"   lines : lines to reserve module line
+"   mname : module name to be reserved
 "
 " Description:
 "   Remove lines outside specific module, reserve module lines
@@ -1030,19 +1009,19 @@ endfunction
 "     uart #(para=2) u_uart ();
 "   endmodule
 "---------------------------------------------------
-function g:ATV_GetModLine(lines,module)
+function g:ATV_GetModLine(lines,mname)
     let find_module = 0
     let in_module = 0
-    let multiline_module = ''
+    let module = ''
     let proc_lines = []
     for line in a:lines
         "single line
         if line =~ '^\s*module'
-            if line =~ '^\s*module'.'\s\+'.'\<'.a:module.'\>'
+            if line =~ '^\s*module'.'\s\+'.'\<'.a:mname.'\>'
                 call add(proc_lines,line)
                 let in_module = 1
             elseif line =~ '^\s*module\s*$'
-                let multiline_module = matchstr(line,'^\s*module')
+                let module = matchstr(line,'^\s*module')
                 let find_module = 1
             else
                 call add(proc_lines,'')
@@ -1051,8 +1030,8 @@ function g:ATV_GetModLine(lines,module)
         endif
         "multi line
         if find_module == 1 && in_module == 0
-            if line =~ '^\s*'.'\<'.a:module.'\>'
-                call add(proc_lines,multiline_module)
+            if line =~ '^\s*'.'\<'.a:mname.'\>'
+                call add(proc_lines,module)
                 call add(proc_lines,line)
                 let in_module = 1
                 continue
@@ -1077,6 +1056,7 @@ function g:ATV_GetModLine(lines,module)
     endfor
 
     return proc_lines
+
 endfunction
 "}}}2
 
@@ -1132,7 +1112,7 @@ function s:KillAutoInst()
                     break
                 "abnormal end
                 elseif line =~ 'endmodule' || idx == line('$')
-                    echohl ErrorMsg | echo "Error running KillAutoInst! Kill abnormally till the end!"| echohl None
+                    call g:ATV_ErrEchohl("2","[".s:sfile."-".expand("<sflnum>")."]","KillAutoInst end abnormally !")
                     break
                 "middle
                 else
@@ -1141,8 +1121,6 @@ function s:KillAutoInst()
                 endif
             endwhile
         endif
-    else
-        echohl ErrorMsg | echo "Error running KillAutoInst! Kill line not match /*autoinst*/ !"| echohl None
     endif
     "cursor back
     call cursor(orig_idx,orig_col)
@@ -1214,6 +1192,7 @@ function s:DrawIO(io_seqs,upd_io_names)
 
     "draw io{{{3
     let lines = []
+    let last_idx = 0
     let last_port_flag = 0
 
     "upd_io_names can be changed in function, therefore record if it's empty first
@@ -1396,7 +1375,7 @@ function s:DrawIO(io_seqs,upd_io_names)
 
     "special case: last port has been put in keep_io_list, there exist no last_port
     if g:atv_ati_pos_comma == 0
-        if last_port_flag == 0
+        if last_port_flag == 0 && last_idx != 0
             "set last item as last_port
             let lines[last_idx] = substitute(lines[last_idx],',',' ','') 
         endif
@@ -1423,7 +1402,7 @@ function s:DrawIO(io_seqs,upd_io_names)
     "}}}3
 
     if lines == []
-        echohl ErrorMsg | echo "Error io_seqs input for function DrawIO! io_seqs has no input/output definition! Possibly written in verilog-95 but atv_ati_95_support not open, or bracket not match in inst list " | echohl None
+        call g:ATV_ErrEchohl("4","[".s:sfile."-".expand("<sflnum>")."]","Error DrawIO. No io input. Possibly g:atv_ati_95_support not open, or bracket () not match")
     endif
 
     return lines

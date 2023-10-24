@@ -2,7 +2,7 @@
 " Vim Plugin for Verilog Code Automactic Generation 
 " Author:         HonkW
 " Website:        https://honk.wang
-" Last Modified:  2023/09/12 16:25
+" Last Modified:  2023/10/24 18:01
 " File:           crossdir.vim
 " Note:           search cross directory by tags/filelist/verilog-library
 "------------------------------------------------------------------------------
@@ -12,7 +12,7 @@ if exists("g:loaded_automatic_verilog_crossdir")
     finish
 endif
 let g:loaded_automatic_verilog_crossdir = 1
-
+let s:sfile = fnamemodify(expand("<sfile>"),":t")
 "}}}1
 
 "{{{1 debug注释行
@@ -84,8 +84,6 @@ function g:ATV_GetModFileDir()
         "Get module-file-dir dictionary from tags
         let file = s:GetTags()
         let [files,modules] = s:GetModuleFileDirDicFromTags(file)
-    else
-        echohl ErrorMsg | echo "Error mode input for GetModuleFileDirDic"| echohl None
     endif
 
     return [files,modules]
@@ -813,9 +811,9 @@ endfunction
 
 "}}}1
 
-"AutoVerilog_SkipCommentLine 跳过注释行{{{1
+"ATV_SkipCmtLine 跳过注释行{{{1
 "--------------------------------------------------
-" Function: AutoVerilog_SkipCommentLine
+" Function: ATV_SkipCmtLine
 " Input: 
 "   mode : mode for search up/down
 "          0 -> search down
@@ -835,7 +833,7 @@ endfunction
 " Output:
 "   next line index that's not a comment line
 "---------------------------------------------------
-function g:AutoVerilog_SkipCommentLine(mode,idx,lines)
+function g:ATV_SkipCmtLine(mode,idx,lines)
     let comment_pair = 0
     if a:mode == 0
         let start_pattern = '^\s*/\*'
@@ -893,11 +891,9 @@ function g:AutoVerilog_SkipCommentLine(mode,idx,lines)
     endfor
 
     if s:skip_cmt_debug == 1
-        echohl ErrorMsg | echo "Possibly last line is a comment line"| echohl None
-        return -1
-    else
-        return idx
+        call g:ATV_ErrEchohl("1","[".s:sfile."-".expand("<sflnum>")."]","Skip pair comment line /*...*/ abnormally end. Possibly last line is a comment line!")
     endif
+    return idx
 
 endfunction
 "}}}1
@@ -906,7 +902,7 @@ endfunction
 
 "SortNaturalOrder sort函数Funcref（用于sort函数排序）{{{2
 " Comparator function for natural ordering of numbers
-function g:AutoVerilog_SortNaturalOrder(firstNr, secondNr)
+function g:ATV_SortNaturalOrder(firstNr, secondNr)
   if a:firstNr < a:secondNr
     return -1
   elseif a:firstNr > a:secondNr
@@ -922,12 +918,22 @@ elseif v:version == 704
     if has("patch341") 
         let g:atv_sort_funcref = 'n'
     else
-        let g:atv_sort_funcref = 'g:AutoVerilog_SortNaturalOrder'
+        let g:atv_sort_funcref = 'g:ATV_SortNaturalOrder'
     endif
 elseif v:version == 703
-    let g:atv_sort_funcref = 'g:AutoVerilog_SortNaturalOrder'
+    let g:atv_sort_funcref = 'g:ATV_SortNaturalOrder'
 endif
 
+"}}}2
+
+"}}}1
+
+"ATV_Echohl Error报警{{{1
+function g:ATV_ErrEchohl(err_num,err_line,err_msg)
+    echohl ErrorMsg | echo 'ERR-'.a:err_num | echohl None
+    echohl LineNr | echon a:err_line | echohl None
+    echohl WarningMsg | echon a:err_msg | echohl None
+endfunction
 "}}}2
 
 "}}}1

@@ -436,7 +436,7 @@ function s:GetPara(lines,mode)
     "get parameter seqs from line {{{3
     while idx < len(a:lines)
         let idx = idx + 1
-        let idx = g:AutoVerilog_SkipCommentLine(2,idx,a:lines)  "skip pair comment line
+        let idx = g:ATV_SkipCmtLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
@@ -803,7 +803,7 @@ function s:GetInstPara(lines)
     let inst_para_list = []
     while idx < len(a:lines)
         let idx = idx + 1
-        let idx = g:AutoVerilog_SkipCommentLine(2,idx,a:lines)  "skip pair comment line
+        let idx = g:ATV_SkipCmtLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
@@ -845,7 +845,7 @@ function s:GetChangedPara(lines)
     let cpara_names = {}
     while idx < len(a:lines)
         let idx = idx + 1
-        let idx = g:AutoVerilog_SkipCommentLine(2,idx,a:lines)  "skip pair comment line
+        let idx = g:ATV_SkipCmtLine(2,idx,a:lines)  "skip pair comment line
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
@@ -897,7 +897,7 @@ function s:GetParaModuleName()
 
     while 1
         "skip function must have lines input
-        let idx = g:AutoVerilog_SkipCommentLine(1,idx,getline(1,line('$')))
+        let idx = g:ATV_SkipCmtLine(1,idx,getline(1,line('$')))
         if idx == -1
             echohl ErrorMsg | echo "Error when SkipCommentLine! return -1"| echohl None
         endif
